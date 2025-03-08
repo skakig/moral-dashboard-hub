@@ -26,7 +26,7 @@ serve(async (req) => {
     // Get all API keys with their service name and status
     const { data: apiKeys, error: apiKeysError } = await supabaseAdmin
       .from("api_keys")
-      .select("id, service_name, category, api_key, base_url, status, created_at, last_validated");
+      .select("id, service_name, category, base_url, status, created_at, last_validated");
 
     if (apiKeysError) {
       console.error("Database error (api_keys):", apiKeysError);
@@ -45,10 +45,7 @@ serve(async (req) => {
 
     if (mappingsError) {
       console.error("Database error (api_function_mapping):", mappingsError);
-      return new Response(
-        JSON.stringify({ success: false, error: mappingsError.message }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
+      // Don't fail the entire request for this
     }
 
     // Get API usage data if available
@@ -56,12 +53,14 @@ serve(async (req) => {
       .from("api_usage_logs")
       .select("service_name, created_at, success, response_time_ms")
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(100)
+      .catch(err => ({ data: null, error: err }));
 
     // Get rate limits data
     const { data: rateLimits, error: limitsError } = await supabaseAdmin
       .from("api_rate_limits")
-      .select("*");
+      .select("*")
+      .catch(err => ({ data: null, error: err }));
 
     // Categorize API keys based on service name or provided category
     const apiKeysByCategory = {};
@@ -156,7 +155,7 @@ serve(async (req) => {
       
       // Calculate averages
       Object.values(usageStats.byService).forEach((stats: any) => {
-        if (stats.responseTimes.length > 0) {
+        if (stats.responseTimes?.length > 0) {
           stats.avgResponseTime = stats.responseTimes.reduce((sum: number, time: number) => sum + time, 0) / stats.responseTimes.length;
         }
         delete stats.responseTimes; // Don't need to send the raw data

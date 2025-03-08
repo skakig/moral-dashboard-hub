@@ -21,7 +21,10 @@ export function useAPIData() {
       if (error) {
         console.error('Failed to fetch API keys status:', error);
         toast.error('Unable to load API key status');
-      } else if (data && data.success) {
+        return;
+      } 
+      
+      if (data && data.success) {
         console.log("API keys data received:", data.data);
         setApiData(data.data);
       } else {

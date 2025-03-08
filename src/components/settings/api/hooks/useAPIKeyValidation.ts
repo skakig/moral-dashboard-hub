@@ -35,13 +35,14 @@ export function useAPIKeyValidation({
     
     try {
       console.log("Submitting API key for validation:", values.serviceName);
+      console.log("Category:", category || getCategoryForService(values.serviceName));
       
       const { data, error } = await supabase.functions.invoke('validate-api-key', {
         body: {
           serviceName: values.serviceName,
           category: category || getCategoryForService(values.serviceName),
           apiKey: values.apiKey,
-          baseUrl: values.baseUrl,
+          baseUrl: values.baseUrl || '',
         },
       });
       

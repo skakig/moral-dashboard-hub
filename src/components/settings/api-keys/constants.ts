@@ -26,6 +26,18 @@ export const API_CATEGORIES = {
 };
 
 /**
+ * Function categories for API function mapping
+ */
+export const FUNCTION_CATEGORIES = {
+  'Content Generation': 'AI content creation functions',
+  'Embeddings & Search': 'Vector storage and semantic search',
+  'Analytics': 'Data analysis and reporting',
+  'Authentication': 'User authentication services',
+  'Media Processing': 'Audio, video, and image processing',
+  'Communication': 'Messaging and notification services'
+};
+
+/**
  * Determine if a service requires a base URL
  * @param serviceName The service to check
  * @returns Boolean indicating if base URL is needed

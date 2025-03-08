@@ -1,25 +1,33 @@
 
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
+/**
+ * Combines class names using clsx and tailwind-merge
+ */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
- * Format a date string into a human-readable format
- * @param dateString ISO date string or null/undefined
- * @param fallback String to return if dateString is null/undefined
- * @returns Formatted date string or fallback value
+ * Format a date string to a more readable format
+ * @param dateString - The date string to format
+ * @returns Formatted date string or "Never" if null/undefined
  */
-export function formatDate(dateString: string | null | undefined, fallback: string = 'Never'): string {
-  if (!dateString) return fallback;
+export function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) return "Never";
   
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   } catch (error) {
-    console.error('Error formatting date:', error);
-    return fallback;
+    console.error("Error formatting date:", error);
+    return "Invalid date";
   }
 }

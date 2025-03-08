@@ -1,4 +1,3 @@
-
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
@@ -193,7 +192,14 @@ export function APIKeyCard({
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Status</span>
-                <APIKeyStatus isActive={isActive} />
+                <APIKeyStatus 
+                  isConfigured={isConfigured} 
+                  isActive={isActive} 
+                  lastValidated={lastValidated} 
+                  createdAt={createdAt}
+                  isToggling={isToggling}
+                  toggleActiveStatus={toggleActiveStatus}
+                />
               </div>
               
               {baseUrl && (

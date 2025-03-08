@@ -58,26 +58,32 @@ async function validateApiKey(serviceName: string, apiKey: string, baseUrl: stri
       }
     }
     else if (serviceName.toLowerCase().includes("stable") && serviceName.toLowerCase().includes("diffusion")) {
-      // For demo purposes, we'll just check if it matches a certain pattern
-      result.isValid = apiKey.length > 30;
+      // For Stable Diffusion, we'll make a simple validation check
+      // This can be enhanced with actual API call if you have the endpoint
+      result.isValid = apiKey.length > 20;
       if (!result.isValid) {
         result.errorMessage = "Stable Diffusion API key appears to be invalid";
       }
     }
     else if (serviceName.toLowerCase().includes("runway")) {
       // RunwayML validation logic
-      const response = await fetch(`${baseUrl}/user`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-      });
-      
-      if (response.status === 200) {
-        result.isValid = true;
-      } else {
-        result.errorMessage = "Invalid RunwayML API key";
+      const apiBase = baseUrl || "https://api.runwayml.com";
+      try {
+        const response = await fetch(`${apiBase}/v1/user`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (response.status === 200) {
+          result.isValid = true;
+        } else {
+          result.errorMessage = "Invalid RunwayML API key";
+        }
+      } catch (error) {
+        result.errorMessage = `RunwayML API error: ${error.message}`;
       }
     }
     else if (serviceName.toLowerCase().includes("pika")) {
@@ -85,6 +91,38 @@ async function validateApiKey(serviceName: string, apiKey: string, baseUrl: stri
       result.isValid = apiKey.length > 20 && apiKey.startsWith("pika_");
       if (!result.isValid) {
         result.errorMessage = "Pika API key appears to be invalid";
+      }
+    }
+    else if (serviceName.toLowerCase().includes("meta") || 
+             serviceName.toLowerCase().includes("facebook") || 
+             serviceName.toLowerCase().includes("instagram")) {
+      // Meta API validation
+      result.isValid = apiKey.length > 20;
+      if (!result.isValid) {
+        result.errorMessage = "Meta API key appears to be invalid";
+      }
+    }
+    else if (serviceName.toLowerCase().includes("tiktok")) {
+      // TikTok API validation
+      result.isValid = apiKey.length > 15;
+      if (!result.isValid) {
+        result.errorMessage = "TikTok API key appears to be invalid";
+      }
+    }
+    else if (serviceName.toLowerCase().includes("youtube") || 
+             serviceName.toLowerCase().includes("google")) {
+      // YouTube/Google API validation
+      result.isValid = apiKey.length > 20;
+      if (!result.isValid) {
+        result.errorMessage = "YouTube/Google API key appears to be invalid";
+      }
+    }
+    else if (serviceName.toLowerCase().includes("twitter") || 
+             serviceName.toLowerCase().includes("x")) {
+      // Twitter/X API validation
+      result.isValid = apiKey.length > 20;
+      if (!result.isValid) {
+        result.errorMessage = "Twitter/X API key appears to be invalid";
       }
     }
     else {
@@ -124,7 +162,57 @@ serve(async (req) => {
     // Log validation attempt
     console.log(`Validating ${serviceName} API key in category: ${category}`);
     
-    // Validate API key based on service
+    // For demo or testing purposes, if apiKey starts with "TEST_" consider it valid
+    if (apiKey.startsWith("TEST_")) {
+      console.log(`Using test API key for ${serviceName}`);
+      
+      // Update or insert the test API key
+      const { data: existingKey } = await supabaseAdmin
+        .from("api_keys")
+        .select("id")
+        .eq("service_name", serviceName)
+        .eq("category", category)
+        .single();
+      
+      let result;
+      if (existingKey) {
+        result = await supabaseAdmin
+          .from("api_keys")
+          .update({ 
+            api_key: apiKey,
+            base_url: baseUrl || '',
+            last_validated: new Date().toISOString(),
+            status: 'active'
+          })
+          .eq("id", existingKey.id);
+      } else {
+        result = await supabaseAdmin
+          .from("api_keys")
+          .insert({ 
+            service_name: serviceName,
+            category: category,
+            api_key: apiKey,
+            base_url: baseUrl || '',
+            last_validated: new Date().toISOString(),
+            status: 'active'
+          });
+      }
+      
+      if (result.error) {
+        console.error("Database error:", result.error);
+        return new Response(
+          JSON.stringify({ success: false, error: result.error.message }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, message: `Test ${serviceName} API key saved successfully` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Validate the API key
     const validation = await validateApiKey(serviceName, apiKey, baseUrl || "");
     
     // If validation was successful, update the key in the database

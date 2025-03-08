@@ -5,6 +5,7 @@ import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { APIKeysSection } from "@/components/settings/APIKeysSection";
 import { AIConfigSettings } from "@/components/settings/AIConfigSettings";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { Cog, Key, MessageSquare, Bell } from "lucide-react";
 
 export default function Settings() {
   return (
@@ -17,12 +18,32 @@ export default function Settings() {
           </p>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
-            <TabsTrigger value="ai">AI Configuration</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        <Tabs defaultValue="api-keys" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="general">
+              <div className="flex items-center gap-1">
+                <Cog className="h-4 w-4" />
+                <span className="hidden sm:inline">General</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="api-keys">
+              <div className="flex items-center gap-1">
+                <Key className="h-4 w-4" />
+                <span className="hidden sm:inline">API Keys</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="ai">
+              <div className="flex items-center gap-1">
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">AI Config</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              <div className="flex items-center gap-1">
+                <Bell className="h-4 w-4" />
+                <span className="hidden sm:inline">Notifications</span>
+              </div>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="general" className="space-y-4">

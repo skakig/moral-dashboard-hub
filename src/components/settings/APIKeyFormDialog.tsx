@@ -11,6 +11,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 
 // Define suggested services by category
 const SUGGESTED_SERVICES = {
@@ -18,7 +19,7 @@ const SUGGESTED_SERVICES = {
   "Voice Generation": ["ElevenLabs", "OpenAI TTS"],
   "Image Generation": ["Stable Diffusion", "DALL-E"],
   "Video Generation": ["RunwayML", "Pika Labs"],
-  "Social Media": ["Meta API", "TikTok API", "YouTube API"]
+  "Social Media": ["Meta API", "TikTok API", "YouTube API", "Twitter/X API"]
 };
 
 // Schema for new API key form
@@ -36,6 +37,7 @@ interface APIKeyFormDialogProps {
 export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationProgress, setValidationProgress] = useState(0);
 
   const form = useForm<z.infer<typeof newApiKeySchema>>({
     resolver: zodResolver(newApiKeySchema),
@@ -48,11 +50,22 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
 
   const watchedServiceName = form.watch('serviceName');
   const needsBaseUrl = watchedServiceName?.toLowerCase().includes('runway') || 
-                        watchedServiceName?.toLowerCase().includes('custom');
+                        watchedServiceName?.toLowerCase().includes('custom') ||
+                        watchedServiceName?.toLowerCase().includes('meta') ||
+                        watchedServiceName?.toLowerCase().includes('tiktok');
 
   const onSubmit = async (values: z.infer<typeof newApiKeySchema>) => {
     setLoading(true);
     setError(null);
+    setValidationProgress(0);
+    
+    // Start progress simulation
+    const progressInterval = setInterval(() => {
+      setValidationProgress(prev => {
+        const newProgress = prev + (5 * Math.random());
+        return newProgress < 95 ? newProgress : 95;
+      });
+    }, 150);
     
     try {
       const { data, error } = await supabase.functions.invoke('validate-api-key', {
@@ -64,11 +77,16 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
         },
       });
       
+      // Complete progress
+      clearInterval(progressInterval);
+      setValidationProgress(100);
+      
       if (error) {
         console.error('API validation error:', error);
         setError(error.message || `Failed to validate ${values.serviceName} API key`);
         toast.error(`Failed to validate ${values.serviceName} API key`);
         setLoading(false);
+        setTimeout(() => setValidationProgress(0), 1000);
         return;
       }
       
@@ -76,6 +94,7 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
         setError(data.error || `Failed to validate ${values.serviceName} API key`);
         toast.error(data.error || `Failed to validate ${values.serviceName} API key`);
         setLoading(false);
+        setTimeout(() => setValidationProgress(0), 1000);
         return;
       }
       
@@ -90,7 +109,28 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
       setError(err.message || 'An unexpected error occurred');
       toast.error(`Failed to add ${values.serviceName} API key`);
     } finally {
+      clearInterval(progressInterval);
       setLoading(false);
+      setTimeout(() => setValidationProgress(0), 1000);
+    }
+  };
+
+  const getTestKey = () => {
+    // This provides a test key format for demo purposes
+    if (!watchedServiceName) return '';
+    return `TEST_${watchedServiceName.toUpperCase().replace(/\s+/g, '_')}_KEY_123`;
+  };
+
+  const useDemoKey = () => {
+    if (!watchedServiceName) {
+      toast.error("Please select a service first");
+      return;
+    }
+    
+    form.setValue('apiKey', getTestKey());
+    // Set a sample base URL if needed
+    if (needsBaseUrl) {
+      form.setValue('baseUrl', `https://api.${watchedServiceName.toLowerCase().replace(/\s+/g, '')}.com/v1`);
     }
   };
 
@@ -163,11 +203,11 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
             name="baseUrl"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Base URL (Optional)</FormLabel>
+                <FormLabel>Base URL {watchedServiceName?.toLowerCase().includes('custom') ? '' : '(Optional)'}</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
-                    placeholder="e.g., https://api.example.com/v1"
+                    placeholder={watchedServiceName ? `e.g., https://api.${watchedServiceName.toLowerCase().replace(/\s+/g, '')}.com/v1` : "e.g., https://api.example.com/v1"}
                   />
                 </FormControl>
                 <FormMessage />
@@ -183,10 +223,21 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
           </Alert>
         )}
 
-        <div className="flex justify-end space-x-2 pt-4">
+        {loading && validationProgress > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Validating API key...</span>
+              <span>{Math.round(validationProgress)}%</span>
+            </div>
+            <Progress value={validationProgress} />
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-2 pt-4">
           <Button 
             type="submit" 
             disabled={loading}
+            className="w-full"
           >
             {loading ? (
               <>
@@ -196,6 +247,16 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
             ) : (
               <>Add API Key</>
             )}
+          </Button>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={useDemoKey}
+            disabled={loading || !watchedServiceName}
+            className="w-full"
+          >
+            Use Demo Key
           </Button>
         </div>
       </form>

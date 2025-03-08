@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ShieldAlert, Loader2, RefreshCw, Plus } from "lucide-react";
+import { ShieldAlert, Loader2, RefreshCw, Plus, Gauge, BarChart3 } from "lucide-react";
 import { APIKeysForm } from "@/components/settings/APIKeysForm";
 import { APIFunctionMapping } from "@/components/settings/APIFunctionMapping";
 import { APIUsageStats } from "@/components/settings/APIUsageStats";
@@ -17,9 +17,9 @@ import { APIKeyFormDialog } from "@/components/settings/APIKeyFormDialog";
 const API_CATEGORIES = {
   "Text Generation": ["OpenAI", "Anthropic", "Mistral AI", "Other Text AI"],
   "Voice Generation": ["ElevenLabs", "OpenAI TTS", "Other Voice AI"],
-  "Image Generation": ["Stable Diffusion", "Other Image AI"],
+  "Image Generation": ["Stable Diffusion", "DALL-E", "Other Image AI"],
   "Video Generation": ["RunwayML", "Pika Labs", "Other Video AI"],
-  "Social Media": ["Meta API", "TikTok API", "YouTube API", "Other Social API"]
+  "Social Media": ["Meta API", "Instagram API", "Facebook API", "TikTok API", "YouTube API", "Twitter/X API", "Other Social API"]
 };
 
 export function APIKeysSection() {
@@ -72,13 +72,23 @@ export function APIKeysSection() {
           <TabsList className="grid grid-cols-4 mb-4">
             <TabsTrigger value="keys">API Keys</TabsTrigger>
             <TabsTrigger value="mappings">Function Mapping</TabsTrigger>
-            <TabsTrigger value="usage">Usage Stats</TabsTrigger>
-            <TabsTrigger value="limits">Rate Limits</TabsTrigger>
+            <TabsTrigger value="usage">
+              <div className="flex items-center gap-1">
+                <BarChart3 className="h-4 w-4" />
+                <span>Usage Stats</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="limits">
+              <div className="flex items-center gap-1">
+                <Gauge className="h-4 w-4" />
+                <span>Rate Limits</span>
+              </div>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="keys" className="space-y-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">API Keys Management</h3>
+              <h3 className="text-lg font-medium">AI & Social Media API Keys</h3>
               <Button onClick={() => fetchApiKeysStatus()} variant="outline" size="sm">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
@@ -127,7 +137,7 @@ export function APIKeysSection() {
             <Dialog open={isAddKeyDialogOpen} onOpenChange={setIsAddKeyDialogOpen}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Add New API Key</DialogTitle>
+                  <DialogTitle>Add New {selectedCategory} API Key</DialogTitle>
                 </DialogHeader>
                 <APIKeyFormDialog 
                   category={selectedCategory}
@@ -157,7 +167,7 @@ export function APIKeysSection() {
                     <li>Keys are never exposed to the client-side code</li>
                     <li>All API requests are made through secure Edge Functions</li>
                     <li>Keys can be rotated or revoked at any time</li>
-                    <li>Access is restricted to admin users only</li>
+                    <li>For testing, you can use "TEST_" prefixed keys</li>
                   </ul>
                 </div>
               </CardContent>

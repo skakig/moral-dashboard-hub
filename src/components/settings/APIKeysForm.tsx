@@ -12,6 +12,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 
 const apiKeySchema = z.object({
   apiKey: z.string().min(1, { message: 'API key is required' }),
@@ -45,6 +46,7 @@ export function APIKeysForm({
   const [showForm, setShowForm] = useState(!isConfigured);
   const [error, setError] = useState<string | null>(null);
   const [isToggling, setIsToggling] = useState(false);
+  const [validationProgress, setValidationProgress] = useState(0);
 
   const form = useForm<z.infer<typeof apiKeySchema>>({
     resolver: zodResolver(apiKeySchema),
@@ -54,8 +56,44 @@ export function APIKeysForm({
     },
   });
 
+  // Determine if this service requires a base URL
   const needsBaseUrl = serviceName.toLowerCase().includes('runway') || 
-                      serviceName.toLowerCase().includes('custom');
+                      serviceName.toLowerCase().includes('custom') ||
+                      serviceName.toLowerCase().includes('meta') ||
+                      serviceName.toLowerCase().includes('tiktok');
+
+  useEffect(() => {
+    // Reset progress when not loading
+    if (!loading) {
+      setValidationProgress(0);
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    // Simulate progress during validation
+    let interval: number | null = null;
+    
+    if (loading) {
+      interval = setInterval(() => {
+        setValidationProgress(prev => {
+          const newProgress = prev + (5 * Math.random());
+          return newProgress < 95 ? newProgress : 95;
+        });
+      }, 150) as unknown as number;
+    } else if (validationProgress > 0) {
+      // When done loading, complete the progress bar
+      setValidationProgress(100);
+      // Reset after animation completes
+      const timeout = setTimeout(() => {
+        setValidationProgress(0);
+      }, 1000);
+      return () => clearTimeout(timeout);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [loading, validationProgress]);
 
   const onSubmit = async (values: z.infer<typeof apiKeySchema>) => {
     setLoading(true);
@@ -105,18 +143,42 @@ export function APIKeysForm({
   const toggleActiveStatus = async () => {
     setIsToggling(true);
     try {
-      // We'd need to create a proper endpoint for this in a real implementation
-      // For now we'll just show the toast
-      toast.success(`${serviceName} API ${isActive ? 'disabled' : 'enabled'} successfully`);
+      const { data, error } = await supabase.functions.invoke('update-api-status', {
+        body: {
+          serviceName,
+          category,
+          isActive: !isActive,
+        },
+      });
       
-      if (onSuccess) {
-        onSuccess();
+      if (error) {
+        console.error('Failed to toggle API status:', error);
+        toast.error(`Failed to update ${serviceName} status`);
+      } else {
+        toast.success(`${serviceName} API ${isActive ? 'disabled' : 'enabled'} successfully`);
+        
+        if (onSuccess) {
+          onSuccess();
+        }
       }
     } catch (error) {
       console.error('Failed to toggle API status:', error);
       toast.error(`Failed to update ${serviceName} status`);
     } finally {
       setIsToggling(false);
+    }
+  };
+
+  const getTestKey = () => {
+    // This provides a test key format for demo purposes
+    return `TEST_${serviceName.toUpperCase().replace(/\s+/g, '_')}_KEY_123`;
+  };
+
+  const useDemoKey = () => {
+    form.setValue('apiKey', getTestKey());
+    // Set a sample base URL if needed
+    if (needsBaseUrl) {
+      form.setValue('baseUrl', `https://api.${serviceName.toLowerCase().replace(/\s+/g, '')}.com/v1`);
     }
   };
 
@@ -185,11 +247,11 @@ export function APIKeysForm({
                   name="baseUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Base URL (Optional)</FormLabel>
+                      <FormLabel>Base URL {serviceName.toLowerCase().includes('custom') ? '' : '(Optional)'}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="e.g., https://api.example.com/v1"
+                          placeholder={`e.g., https://api.${serviceName.toLowerCase().replace(/\s+/g, '')}.com/v1`}
                         />
                       </FormControl>
                       <FormMessage />
@@ -205,20 +267,42 @@ export function APIKeysForm({
                 </Alert>
               )}
 
-              <Button 
-                type="submit" 
-                disabled={loading}
-                className="w-full"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Validating...
-                  </>
-                ) : (
-                  <>Validate & Save API Key</>
-                )}
-              </Button>
+              {loading && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Validating API key...</span>
+                    <span>{Math.round(validationProgress)}%</span>
+                  </div>
+                  <Progress value={validationProgress} />
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Validating...
+                    </>
+                  ) : (
+                    <>Validate & Save API Key</>
+                  )}
+                </Button>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={useDemoKey}
+                  disabled={loading}
+                  className="w-full"
+                >
+                  Use Demo Key
+                </Button>
+              </div>
             </form>
           </Form>
         )}

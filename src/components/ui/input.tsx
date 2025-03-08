@@ -14,10 +14,6 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         )}
         ref={ref}
         {...props}
-        // Remove any potential paste event blockers
-        onCopy={(e) => e.stopPropagation()}
-        onCut={(e) => e.stopPropagation()}
-        onPaste={(e) => e.stopPropagation()}
       />
     )
   }

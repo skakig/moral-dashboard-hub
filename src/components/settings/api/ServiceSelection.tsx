@@ -1,70 +1,64 @@
 
-import { FormField, FormControl, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectGroup, SelectItem, SelectLabel } from '@/components/ui/select';
-import { UseFormReturn } from 'react-hook-form';
-import { APIKeyFormValues } from './hooks/useAPIKeyValidation';
-import { Input } from '@/components/ui/input';
-import { useState } from 'react';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { UseFormReturn } from "react-hook-form";
+import { APIKeyFormValues } from "./hooks/useAPIKeyValidation";
 
 interface ServiceSelectionProps {
   form: UseFormReturn<APIKeyFormValues>;
   suggestedServices: string[];
   onServiceChange: (value: string) => void;
-  allowCustom?: boolean;
 }
 
 export function ServiceSelection({ 
   form, 
   suggestedServices, 
-  onServiceChange,
-  allowCustom = true
+  onServiceChange 
 }: ServiceSelectionProps) {
-  const [customService, setCustomService] = useState(false);
+  const showCustomInput = form.watch('serviceName')?.toLowerCase().includes('custom');
   
-  const handleServiceChange = (value: string) => {
-    setCustomService(value === 'Custom Service');
+  const handleServiceSelection = (value: string) => {
+    form.setValue('serviceName', value);
     onServiceChange(value);
+    
+    // Clear custom service name when not selecting a custom option
+    if (!value.toLowerCase().includes('custom')) {
+      form.setValue('customServiceName', undefined);
+    }
   };
 
   return (
-    <div className="space-y-4">
+    <>
       <FormField
         control={form.control}
         name="serviceName"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Service</FormLabel>
-            <FormControl>
-              <Select 
-                value={field.value} 
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  handleServiceChange(value);
-                }}
-              >
+            <Select
+              value={field.value}
+              onValueChange={handleServiceSelection}
+            >
+              <FormControl>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {suggestedServices.map((service) => (
-                      <SelectItem key={service} value={service}>
-                        {service}
-                      </SelectItem>
-                    ))}
-                    {allowCustom && (
-                      <SelectItem value="Custom Service">Custom Service</SelectItem>
-                    )}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </FormControl>
+              </FormControl>
+              <SelectContent>
+                {suggestedServices.map((service) => (
+                  <SelectItem key={service} value={service}>
+                    {service}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <FormMessage />
           </FormItem>
         )}
       />
-
-      {customService && (
+      
+      {showCustomInput && (
         <FormField
           control={form.control}
           name="customServiceName"
@@ -75,11 +69,14 @@ export function ServiceSelection({
                 <Input
                   {...field}
                   placeholder="Enter custom service name"
+                  value={field.value || ''}
                   onChange={(e) => {
                     field.onChange(e);
-                    // Update service name with custom value
+                    // Also update the main service name to include the custom value
                     if (e.target.value) {
-                      form.setValue('serviceName', e.target.value);
+                      const customName = `Custom (${e.target.value})`;
+                      form.setValue('serviceName', customName);
+                      onServiceChange(customName);
                     }
                   }}
                 />
@@ -89,6 +86,6 @@ export function ServiceSelection({
           )}
         />
       )}
-    </div>
+    </>
   );
 }

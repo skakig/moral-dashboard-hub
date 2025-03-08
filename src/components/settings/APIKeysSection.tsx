@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldAlert, Loader2, RefreshCw, Plus, Gauge, BarChart3 } from "lucide-react";
-import { APIKeysForm } from "@/components/settings/APIKeysForm";
+import { APIKeysForm } from "@/components/settings/api/APIKeysForm";
 import { APIFunctionMapping } from "@/components/settings/APIFunctionMapping";
 import { APIUsageStats } from "@/components/settings/APIUsageStats";
 import { APIRateLimits } from "@/components/settings/APIRateLimits";
@@ -13,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { APIKeyFormDialog } from "@/components/settings/APIKeyFormDialog";
 
-// Define API categories
 const API_CATEGORIES = {
   "Text Generation": ["OpenAI", "Anthropic", "Mistral AI", "Other Text AI"],
   "Voice Generation": ["ElevenLabs", "OpenAI TTS", "Other Voice AI"],
@@ -114,7 +112,6 @@ export function APIKeysSection() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {/* Display existing API keys for this category */}
                     {apiData.apiKeysByCategory[category]?.map((keyData: any) => (
                       <APIKeysForm
                         key={keyData.id}

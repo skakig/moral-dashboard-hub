@@ -24,8 +24,8 @@ serve(async (req) => {
     );
 
     // Create helpful database functions
-    const { error } = await supabaseAdmin.rpc('exec_sql', { 
-      sql: `
+    // First, try direct SQL execution to create the functions
+    const createFunctionsQuery = `
       -- Function to get enum values
       CREATE OR REPLACE FUNCTION get_enum_values(enum_name text)
       RETURNS TABLE (enum_value text) 
@@ -46,12 +46,15 @@ serve(async (req) => {
       
       -- Function to execute SQL
       CREATE OR REPLACE FUNCTION exec_sql(sql text)
-      RETURNS void
+      RETURNS SETOF RECORD
       LANGUAGE plpgsql
       SECURITY DEFINER
       AS $$
       BEGIN
-        EXECUTE sql;
+        RETURN QUERY EXECUTE sql;
+      EXCEPTION
+        WHEN others THEN
+          RAISE EXCEPTION 'Error executing SQL: %', SQLERRM;
       END;
       $$;
       
@@ -76,15 +79,27 @@ serve(async (req) => {
         RETURN column_exists;
       END;
       $$;
-      `
-    });
+    `;
+
+    // Execute the SQL directly
+    const { error } = await supabaseAdmin.rpc('exec_sql', { sql: createFunctionsQuery });
     
     if (error) {
-      console.error('Error creating SQL functions:', error);
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
+      // If the first attempt fails, try creating functions individually via direct SQL
+      console.error('Error creating SQL functions through RPC:', error);
+      
+      // Use direct SQL execution as fallback
+      const { error: directError } = await supabaseAdmin.from('_sql_execution').insert({
+        query: createFunctionsQuery
+      }).select();
+
+      if (directError) {
+        console.error('Fallback direct SQL execution failed:', directError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create database functions: " + directError.message }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        );
+      }
     }
 
     return new Response(

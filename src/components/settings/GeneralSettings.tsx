@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface SiteSettings {
   id: string;
@@ -20,6 +22,7 @@ interface SiteSettings {
 export function GeneralSettings() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<SiteSettings>({
     id: "",
     site_name: "The Moral Hierarchy",
@@ -32,14 +35,17 @@ export function GeneralSettings() {
     async function fetchSettings() {
       try {
         setLoading(true);
+        setError(null);
         
-        // Explicitly use raw SQL to fetch settings since the TypeScript types might not be updated
-        const { data, error } = await supabase.rpc('exec_sql', { 
-          sql: `SELECT * FROM site_settings LIMIT 1`
-        });
+        // Use direct query instead of RPC
+        const { data, error } = await supabase
+          .from('site_settings')
+          .select('*')
+          .limit(1);
 
         if (error) {
           console.error("Error fetching settings:", error);
+          setError(`Failed to load settings: ${error.message}`);
           toast.error("Failed to load settings: " + error.message);
           return;
         }
@@ -60,9 +66,24 @@ export function GeneralSettings() {
         } else {
           console.warn("No settings found in database");
           toast.warning("Using default settings. Please save to create settings record.");
+          
+          // If no settings found, try to create a default record
+          const { error: insertError } = await supabase
+            .from('site_settings')
+            .insert([{
+              site_name: "The Moral Hierarchy",
+              admin_email: "admin@tmh.com",
+              timezone: "utc",
+              maintenance_mode: false
+            }]);
+            
+          if (insertError) {
+            console.error("Error creating default settings:", insertError);
+          }
         }
       } catch (error: any) {
         console.error("Exception fetching settings:", error);
+        setError(`An unexpected error occurred: ${error.message}`);
         toast.error("An unexpected error occurred: " + error.message);
       } finally {
         setLoading(false);
@@ -75,6 +96,7 @@ export function GeneralSettings() {
   const handleSave = async () => {
     try {
       setSaving(true);
+      setError(null);
       
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -86,23 +108,22 @@ export function GeneralSettings() {
 
       console.log("Saving settings:", settings);
       
-      // Use raw SQL to update settings
-      const { error } = await supabase.rpc('exec_sql', { 
-        sql: `
-        UPDATE site_settings
-        SET 
-          site_name = '${settings.site_name.replace(/'/g, "''")}',
-          admin_email = '${settings.admin_email.replace(/'/g, "''")}',
-          timezone = '${settings.timezone}',
-          maintenance_mode = ${settings.maintenance_mode},
-          updated_at = now()
-        WHERE id = '${settings.id}'
-        `
-      });
+      // Use direct update query instead of RPC
+      const { error: updateError } = await supabase
+        .from('site_settings')
+        .update({
+          site_name: settings.site_name,
+          admin_email: settings.admin_email,
+          timezone: settings.timezone,
+          maintenance_mode: settings.maintenance_mode,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', settings.id);
 
-      if (error) {
-        console.error("Error saving settings:", error);
-        toast.error("Failed to save settings: " + error.message);
+      if (updateError) {
+        console.error("Error saving settings:", updateError);
+        setError(`Failed to save settings: ${updateError.message}`);
+        toast.error("Failed to save settings: " + updateError.message);
         return;
       }
 
@@ -110,6 +131,7 @@ export function GeneralSettings() {
       console.log("Settings updated successfully");
     } catch (error: any) {
       console.error("Exception saving settings:", error);
+      setError(`An unexpected error occurred: ${error.message}`);
       toast.error("An unexpected error occurred: " + error.message);
     } finally {
       setSaving(false);
@@ -136,6 +158,14 @@ export function GeneralSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="space-y-2">
           <Label htmlFor="site-name">Site Name</Label>
           <Input 

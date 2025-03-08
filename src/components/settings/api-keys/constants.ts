@@ -1,119 +1,75 @@
 
-// API Categories and related constants
+/**
+ * API Service Categories and available services for each category
+ */
 export const API_CATEGORIES = {
-  "Text Generation": [
-    "OpenAI",
-    "Claude",
-    "Anthropic",
-    "Google AI Studio",
-    "Mistral",
-    "Gemini",
-    "Custom Text Generation"
-  ],
-  "Image Generation": [
-    "DALL-E",
-    "Midjourney",
-    "Stable Diffusion",
-    "Leonardo.ai",
-    "Adobe Firefly",
-    "Custom Image Generation"
-  ],
-  "Video Generation": [
-    "Runway",
-    "Pika Labs",
-    "Synthesia",
-    "D-ID",
-    "Custom Video Generation"
-  ],
-  "Audio Generation": [
-    "ElevenLabs",
-    "Play.ht",
-    "Resemble.ai",
-    "Descript",
-    "Custom Audio Generation"
-  ],
-  "Social Media": [
-    "Facebook",
-    "Instagram",
-    "Twitter",
-    "LinkedIn",
-    "TikTok",
-    "YouTube",
-    "Pinterest",
-    "Custom Social Media"
-  ],
-  "CRM & Analytics": [
-    "Hubspot",
-    "Salesforce",
-    "Google Analytics",
-    "Custom CRM"
-  ],
-  "Other": [
-    "Custom API"
-  ]
+  'Text Generation': {
+    description: 'Power AI text generation, chat, and completion features',
+    services: ['OpenAI', 'Anthropic', 'Cohere', 'Custom Text API']
+  },
+  'Image Generation': {
+    description: 'Create AI-generated images and graphics',
+    services: ['Stable Diffusion', 'DALL-E', 'Midjourney API', 'Custom Image API']
+  },
+  'Video Generation': {
+    description: 'Generate AI-powered videos and animations',
+    services: ['Runway', 'Synthesia', 'Custom Video API']
+  },
+  'Audio Generation': {
+    description: 'Create AI voice, audio clips, and music',
+    services: ['ElevenLabs', 'PlayHT', 'Mubert', 'Custom Audio API']
+  },
+  'Embeddings': {
+    description: 'Vector embeddings for semantic search and similarity',
+    services: ['OpenAI Embeddings', 'Cohere Embeddings', 'Custom Embeddings API']
+  },
 };
 
-// Helper functions for API key management
-export const needsBaseUrlForService = (serviceName: string): boolean => {
+/**
+ * Determine if a service requires a base URL
+ * @param serviceName The service to check
+ * @returns Boolean indicating if base URL is needed
+ */
+export function needsBaseUrlForService(serviceName: string): boolean {
   if (!serviceName) return false;
   
-  const serviceNameLower = serviceName.toLowerCase();
+  // These services usually don't need a base URL
+  const noBaseUrlServices = [
+    'OpenAI',
+    'Anthropic',
+    'Cohere',
+    'DALL-E',
+    'ElevenLabs',
+  ];
   
-  // Services that definitely need a base URL
-  if (
-    serviceNameLower.includes('custom') || 
-    serviceNameLower.includes('runway') ||
-    serviceNameLower.includes('replicate') ||
-    serviceNameLower.includes('salesforce') ||
-    serviceNameLower.includes('hubspot')
-  ) {
+  // If service name contains 'custom', it likely needs a base URL
+  if (serviceName.toLowerCase().includes('custom')) {
     return true;
   }
   
-  return false;
-};
+  return !noBaseUrlServices.includes(serviceName);
+}
 
-export const getTestKeyForService = (serviceName: string): string => {
+/**
+ * Get a test key for a service (for demo purposes)
+ * @param serviceName The service name
+ * @returns A placeholder test key
+ */
+export function getTestKeyForService(serviceName: string): string {
   if (!serviceName) return 'TEST_api_key';
   
-  const serviceNameLower = serviceName.toLowerCase();
+  // Map service names to appropriate test key formats
+  const testKeyMap: Record<string, string> = {
+    'OpenAI': 'TEST_sk-openaiapikey123456789',
+    'Anthropic': 'TEST_anthropic-api-key-123456',
+    'Cohere': 'TEST_cohere-api-key-123456',
+    'Stable Diffusion': 'TEST_sd-api-key-123456',
+    'DALL-E': 'TEST_dalle-api-key-123456',
+    'Midjourney API': 'TEST_mj-api-key-123456',
+    'Runway': 'TEST_runway-api-key-123456',
+    'ElevenLabs': 'TEST_eleven-api-key-123456',
+    'PlayHT': 'TEST_playht-api-key-123456',
+  };
   
-  // Generate service-specific test keys
-  if (serviceNameLower.includes('openai')) {
-    return 'TEST_sk-openai-key';
-  } else if (serviceNameLower.includes('elevenlabs')) {
-    return 'TEST_eleven-labs-key';
-  } else if (serviceNameLower.includes('stable')) {
-    return 'TEST_stable-diffusion-key';
-  } else if (serviceNameLower.includes('runway')) {
-    return 'TEST_runway-key';
-  } else if (serviceNameLower.includes('pika')) {
-    return 'TEST_pika-labs-key';
-  } else if (serviceNameLower.includes('facebook') || 
-             serviceNameLower.includes('meta') || 
-             serviceNameLower.includes('instagram')) {
-    return 'TEST_meta-platform-key';
-  } else if (serviceNameLower.includes('twitter') || 
-             serviceNameLower.includes('x')) {
-    return 'TEST_twitter-api-key';
-  } else if (serviceNameLower.includes('tiktok')) {
-    return 'TEST_tiktok-api-key';
-  } else if (serviceNameLower.includes('youtube') || 
-             serviceNameLower.includes('google')) {
-    return 'TEST_google-api-key';
-  } else if (serviceNameLower.includes('custom')) {
-    return 'TEST_custom-service-key';
-  }
-  
-  // Default for any other service
-  return `TEST_${serviceName.toLowerCase().replace(/\s+/g, '-')}-key`;
-};
-
-// Function categories mapping for default functions
-export const FUNCTION_CATEGORIES = {
-  "Text Generation": ["generateContent", "createReport", "summarizeText", "translateContent"],
-  "Image Generation": ["generateImage", "editImage", "createThumbnail"],
-  "Video Generation": ["generateVideo", "createAnimation"],
-  "Audio Generation": ["textToSpeech", "createVoiceover", "generateMusic"],
-  "Social Media": ["postToSocial", "schedulePost", "analyzeSocialMetrics"]
-};
+  return testKeyMap[serviceName] || `TEST_${serviceName.toLowerCase().replace(/\s+/g, '-')}-key-123456`;
+}

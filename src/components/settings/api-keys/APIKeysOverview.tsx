@@ -92,6 +92,27 @@ export function APIKeysOverview({ apiKeysByCategory, onRefresh }: APIKeysOvervie
     setFilters(newFilters);
   };
 
+  const handleSuccessfulAddKey = () => {
+    setIsAddKeyDialogOpen(false);
+    onRefresh(); // Ensure we refresh the list after adding a key
+  };
+
+  // If we don't have any API keys yet, create empty categories for the main ones
+  const categoriesWithEmptyFallback = useMemo(() => {
+    if (hasAnyApiKeys) {
+      return filteredApiKeys; 
+    }
+    
+    // Create empty categories for visualization if no keys exist
+    const result: Record<string, any[]> = {};
+    ['Text Generation', 'Image Generation', 'Video Generation', 'Audio Generation'].forEach(category => {
+      if (!result[category]) {
+        result[category] = [];
+      }
+    });
+    return result;
+  }, [filteredApiKeys, hasAnyApiKeys]);
+
   return (
     <>
       <div className="flex justify-between items-center mb-4">
@@ -135,7 +156,7 @@ export function APIKeysOverview({ apiKeysByCategory, onRefresh }: APIKeysOvervie
         </Alert>
       )}
 
-      {Object.entries(filteredApiKeys).map(([category, keys]) => (
+      {Object.entries(categoriesWithEmptyFallback).map(([category, keys]) => (
         <CategoryView 
           key={category}
           category={category}
@@ -152,10 +173,7 @@ export function APIKeysOverview({ apiKeysByCategory, onRefresh }: APIKeysOvervie
           </DialogHeader>
           <APIKeyFormDialog 
             category={selectedCategory}
-            onSuccess={() => {
-              onRefresh();
-              setIsAddKeyDialogOpen(false);
-            }}
+            onSuccess={handleSuccessfulAddKey} // Use our enhanced handler
             onCancel={() => setIsAddKeyDialogOpen(false)}
           />
         </DialogContent>

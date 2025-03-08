@@ -1,10 +1,10 @@
 
-import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Plus } from 'lucide-react';
 import { FunctionMappingTable } from './FunctionMappingTable';
 import { AddFunctionMappingDialog } from './AddFunctionMappingDialog';
+import { useFunctionMapping } from './useFunctionMapping';
 
 interface APIFunctionMappingProps {
   functionMappings: any[];
@@ -13,7 +13,7 @@ interface APIFunctionMappingProps {
 }
 
 export function APIFunctionMapping({ functionMappings, apiKeys, onSuccess }: APIFunctionMappingProps) {
-  const [isAddMappingOpen, setIsAddMappingOpen] = useState(false);
+  const { isAddMappingOpen, setIsAddMappingOpen } = useFunctionMapping({ onSuccess });
   
   // Create a flat list of all available services from all categories
   const availableServices = Object.values(apiKeys).flat().map(key => key.serviceName);

@@ -54,11 +54,13 @@ export function useAPIData() {
     usageStats: { byService: {}, byCategory: {} }
   });
 
+  // Function to fetch API data from Supabase function
   const fetchApiData = async () => {
     setApiKeysLoading(true);
     setLoadError(null);
     
     try {
+      // Call the Supabase edge function to get API key status
       const { data, error } = await supabase.functions.invoke('get-api-keys-status');
       
       if (error) {
@@ -72,20 +74,9 @@ export function useAPIData() {
         return;
       }
       
-      // Group API keys by category
-      const apiKeysByCategory: Record<string, APIKey[]> = {};
-      
-      if (data.apiKeys && Array.isArray(data.apiKeys)) {
-        data.apiKeys.forEach((key: APIKey) => {
-          if (!apiKeysByCategory[key.category]) {
-            apiKeysByCategory[key.category] = [];
-          }
-          apiKeysByCategory[key.category].push(key);
-        });
-      }
-      
+      // Use data directly as it's already formatted by the edge function
       setApiData({
-        apiKeysByCategory,
+        apiKeysByCategory: data.apiKeysByCategory || {},
         functionMappings: data.functionMappings || [],
         rateLimits: data.rateLimits || [],
         usageStats: data.usageStats || { byService: {}, byCategory: {} }
@@ -98,6 +89,7 @@ export function useAPIData() {
     }
   };
 
+  // Fetch data on component mount
   useEffect(() => {
     fetchApiData();
   }, []);

@@ -1,10 +1,33 @@
+
 export interface ValidationResult {
   isValid: boolean;
   errorMessage?: string;
 }
 
-// Collection of validation functions for different service types
-const validators = {
+// Basic validators for simple API key pattern matching
+const basicValidators = {
+  // Simple length and pattern validation
+  validateLength: (apiKey: string, minLength: number = 10): ValidationResult => {
+    const isValid = apiKey.length >= minLength;
+    return {
+      isValid,
+      errorMessage: isValid ? undefined : `API key is too short (minimum ${minLength} characters)`
+    };
+  },
+  
+  // Validate key pattern starting with specific prefix
+  validatePattern: (apiKey: string, prefix: string): ValidationResult => {
+    const isValid = apiKey.startsWith(prefix);
+    return {
+      isValid,
+      errorMessage: isValid ? undefined : `API key should start with '${prefix}'`
+    };
+  }
+};
+
+// API validators for services that require actual API calls
+const apiValidators = {
+  // OpenAI API key validation
   openai: async (apiKey: string): Promise<ValidationResult> => {
     try {
       const response = await fetch("https://api.openai.com/v1/models", {
@@ -32,6 +55,7 @@ const validators = {
     }
   },
   
+  // ElevenLabs API key validation
   elevenlabs: async (apiKey: string): Promise<ValidationResult> => {
     try {
       const response = await fetch("https://api.elevenlabs.io/v1/voices", {
@@ -66,15 +90,7 @@ const validators = {
     }
   },
   
-  stableDiffusion: (apiKey: string): ValidationResult => {
-    // Simple validation for Stable Diffusion
-    const isValid = apiKey.length > 20;
-    return {
-      isValid,
-      errorMessage: isValid ? undefined : "Stable Diffusion API key appears to be invalid"
-    };
-  },
-  
+  // RunwayML API key validation
   runway: async (apiKey: string, baseUrl: string): Promise<ValidationResult> => {
     try {
       const apiBase = baseUrl || "https://api.runwayml.com";
@@ -100,63 +116,67 @@ const validators = {
         errorMessage: `RunwayML API error: ${error.message}` 
       };
     }
+  }
+};
+
+// Service-specific validators
+const serviceValidators = {
+  // Image generation services
+  stableDiffusion: (apiKey: string): ValidationResult => {
+    return basicValidators.validateLength(apiKey, 20);
   },
   
   pika: (apiKey: string): ValidationResult => {
-    // Simple validation for Pika Labs
-    const isValid = apiKey.length > 20 && apiKey.startsWith("pika_");
-    return {
-      isValid,
-      errorMessage: isValid ? undefined : "Pika API key appears to be invalid"
-    };
+    // Check both length and pattern
+    const lengthResult = basicValidators.validateLength(apiKey, 20);
+    if (!lengthResult.isValid) return lengthResult;
+    
+    return basicValidators.validatePattern(apiKey, "pika_");
   },
   
+  // Social media services
   meta: (apiKey: string): ValidationResult => {
-    // Simple validation for Meta APIs
-    const isValid = apiKey.length > 20;
-    return {
-      isValid,
-      errorMessage: isValid ? undefined : "Meta API key appears to be invalid"
-    };
+    return basicValidators.validateLength(apiKey, 20);
   },
   
   tiktok: (apiKey: string): ValidationResult => {
-    // Simple validation for TikTok
-    const isValid = apiKey.length > 15;
-    return {
-      isValid,
-      errorMessage: isValid ? undefined : "TikTok API key appears to be invalid"
-    };
+    return basicValidators.validateLength(apiKey, 15);
   },
   
   google: (apiKey: string): ValidationResult => {
-    // Simple validation for Google/YouTube
-    const isValid = apiKey.length > 20;
-    return {
-      isValid,
-      errorMessage: isValid ? undefined : "YouTube/Google API key appears to be invalid"
-    };
+    return basicValidators.validateLength(apiKey, 20);
   },
   
   twitter: (apiKey: string): ValidationResult => {
-    // Simple validation for Twitter/X
-    const isValid = apiKey.length > 20;
-    return {
-      isValid,
-      errorMessage: isValid ? undefined : "Twitter/X API key appears to be invalid"
-    };
+    return basicValidators.validateLength(apiKey, 20);
   },
   
   // Generic fallback validation for new or custom service types
   generic: (apiKey: string, serviceName: string): ValidationResult => {
-    // For generic validation, we'll just check if the key is reasonably long
-    const isValid = apiKey.length > 10;
-    return {
-      isValid,
-      errorMessage: isValid ? undefined : `${serviceName} API key appears to be invalid`
-    };
+    const result = basicValidators.validateLength(apiKey, 10);
+    if (!result.isValid) {
+      result.errorMessage = `${serviceName} API key appears to be invalid`;
+    }
+    return result;
   }
 };
+
+// Utility function to match service name to appropriate validator
+function getValidatorForService(serviceName: string): string {
+  const serviceNameLower = serviceName.toLowerCase();
+  
+  if (serviceNameLower.includes("openai")) return "openai";
+  if (serviceNameLower.includes("elevenlabs")) return "elevenlabs";
+  if (serviceNameLower.includes("stable") && serviceNameLower.includes("diffusion")) return "stableDiffusion";
+  if (serviceNameLower.includes("runway")) return "runway";
+  if (serviceNameLower.includes("pika")) return "pika";
+  if (serviceNameLower.includes("meta") || serviceNameLower.includes("facebook") || serviceNameLower.includes("instagram")) return "meta";
+  if (serviceNameLower.includes("tiktok")) return "tiktok";
+  if (serviceNameLower.includes("youtube") || serviceNameLower.includes("google")) return "google";
+  if (serviceNameLower.includes("twitter") || serviceNameLower.includes("x")) return "twitter";
+  
+  return "generic";
+}
 
 // Main validation handler for all API keys
 export async function validateApiKey(serviceName: string, apiKey: string, baseUrl: string): Promise<ValidationResult> {
@@ -167,47 +187,43 @@ export async function validateApiKey(serviceName: string, apiKey: string, baseUr
       return { isValid: true };
     }
     
-    // Normalize service name for matching
-    const serviceNameLower = serviceName.toLowerCase();
-    
-    // Match the service to the appropriate validator
+    // Get the appropriate validator for this service
+    const validatorType = getValidatorForService(serviceName);
     let result: ValidationResult;
     
-    if (serviceNameLower.includes("openai")) {
-      result = await validators.openai(apiKey);
-    } 
-    else if (serviceNameLower.includes("elevenlabs")) {
-      result = await validators.elevenlabs(apiKey);
-    }
-    else if (serviceNameLower.includes("stable") && serviceNameLower.includes("diffusion")) {
-      result = validators.stableDiffusion(apiKey);
-    }
-    else if (serviceNameLower.includes("runway")) {
-      result = await validators.runway(apiKey, baseUrl);
-    }
-    else if (serviceNameLower.includes("pika")) {
-      result = validators.pika(apiKey);
-    }
-    else if (serviceNameLower.includes("meta") || 
-             serviceNameLower.includes("facebook") || 
-             serviceNameLower.includes("instagram")) {
-      result = validators.meta(apiKey);
-    }
-    else if (serviceNameLower.includes("tiktok")) {
-      result = validators.tiktok(apiKey);
-    }
-    else if (serviceNameLower.includes("youtube") || 
-             serviceNameLower.includes("google")) {
-      result = validators.google(apiKey);
-    }
-    else if (serviceNameLower.includes("twitter") || 
-             serviceNameLower.includes("x")) {
-      result = validators.twitter(apiKey);
-    }
-    else {
-      // Use generic validation for any service not explicitly handled
-      console.log(`Using generic validation for ${serviceName}`);
-      result = validators.generic(apiKey, serviceName);
+    console.log(`Using ${validatorType} validator for ${serviceName}`);
+    
+    // Call the appropriate validator
+    switch (validatorType) {
+      case "openai":
+        result = await apiValidators.openai(apiKey);
+        break;
+      case "elevenlabs":
+        result = await apiValidators.elevenlabs(apiKey);
+        break;
+      case "runway":
+        result = await apiValidators.runway(apiKey, baseUrl);
+        break;
+      case "stableDiffusion":
+        result = serviceValidators.stableDiffusion(apiKey);
+        break;
+      case "pika":
+        result = serviceValidators.pika(apiKey);
+        break;
+      case "meta":
+        result = serviceValidators.meta(apiKey);
+        break;
+      case "tiktok":
+        result = serviceValidators.tiktok(apiKey);
+        break;
+      case "google":
+        result = serviceValidators.google(apiKey);
+        break;
+      case "twitter":
+        result = serviceValidators.twitter(apiKey);
+        break;
+      default:
+        result = serviceValidators.generic(apiKey, serviceName);
     }
     
     return result;

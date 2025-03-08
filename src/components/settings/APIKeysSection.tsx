@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { APIKeyFormDialog } from "@/components/settings/APIKeyFormDialog";
+import { APIKeyFormDialog } from "@/components/settings/api/APIKeyFormDialog";
 
 const API_CATEGORIES = {
   "Text Generation": ["OpenAI", "Anthropic", "Mistral AI", "Other Text AI"],

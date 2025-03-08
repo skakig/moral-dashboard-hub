@@ -32,7 +32,8 @@ export function GeneralSettings() {
     async function fetchSettings() {
       try {
         setLoading(true);
-        // Use the raw query method to get around type issues
+        
+        // Use raw querying since the table might not be in the TypeScript definitions
         const { data, error } = await supabase
           .from('site_settings')
           .select('*')
@@ -41,14 +42,12 @@ export function GeneralSettings() {
 
         if (error) {
           console.error("Error fetching settings:", error);
-          toast("Error", {
-            description: "Failed to load settings. Please try again."
-          });
+          toast.error("Failed to load settings. Please try again.");
           return;
         }
 
         if (data) {
-          // Type assertion to ensure TS understands this is our SiteSettings type
+          // Explicitly map the fields to ensure type safety
           setSettings({
             id: data.id,
             site_name: data.site_name,
@@ -56,12 +55,12 @@ export function GeneralSettings() {
             timezone: data.timezone,
             maintenance_mode: data.maintenance_mode
           });
+          
+          console.log("Settings loaded:", data);
         }
       } catch (error) {
         console.error("Exception fetching settings:", error);
-        toast("Error", {
-          description: "An unexpected error occurred while loading settings."
-        });
+        toast.error("An unexpected error occurred while loading settings.");
       } finally {
         setLoading(false);
       }
@@ -77,13 +76,13 @@ export function GeneralSettings() {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(settings.admin_email)) {
-        toast("Invalid Email", {
-          description: "Please enter a valid email address"
-        });
+        toast.error("Please enter a valid email address");
         setSaving(false);
         return;
       }
 
+      console.log("Saving settings:", settings);
+      
       // Use raw query to update settings
       const { error } = await supabase
         .from('site_settings')
@@ -97,20 +96,15 @@ export function GeneralSettings() {
 
       if (error) {
         console.error("Error saving settings:", error);
-        toast("Error", {
-          description: "Failed to save settings. Please try again."
-        });
+        toast.error("Failed to save settings: " + error.message);
         return;
       }
 
-      toast("Settings saved", {
-        description: "Your changes have been successfully saved"
-      });
-    } catch (error) {
+      toast.success("Settings saved successfully");
+      console.log("Settings updated successfully");
+    } catch (error: any) {
       console.error("Exception saving settings:", error);
-      toast("Error", {
-        description: "An unexpected error occurred while saving settings."
-      });
+      toast.error("An unexpected error occurred: " + error.message);
     } finally {
       setSaving(false);
     }

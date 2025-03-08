@@ -35,7 +35,29 @@ serve(async (req) => {
     
     console.log(`Setting key ${id} as primary for category ${category}`);
     
-    // First, get the service name of the key we're making primary
+    // First, check if we have is_primary column in the api_keys table
+    try {
+      const { data: columnData, error: columnError } = await supabaseAdmin.rpc('check_column_exists', {
+        table_name: 'api_keys',
+        column_name: 'is_primary'
+      });
+      
+      if (columnError) {
+        console.warn("Could not check for is_primary column, assuming it exists:", columnError);
+        // Continue anyway
+      } else if (!columnData) {
+        console.error("is_primary column doesn't exist in api_keys table");
+        return new Response(
+          JSON.stringify({ success: false, error: "Database schema error: is_primary column missing" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        );
+      }
+    } catch (checkError) {
+      console.warn("Exception checking column existence, continuing:", checkError);
+      // Continue anyway
+    }
+    
+    // Get the service name of the key we're making primary
     const { data: keyData, error: keyError } = await supabaseAdmin
       .from("api_keys")
       .select("service_name")
@@ -85,17 +107,22 @@ serve(async (req) => {
     }
     
     // Update function mappings that use this service to use this key as preferred
-    const { error: updateMappingsError } = await supabaseAdmin
-      .from("api_function_mapping")
-      .update({ 
-        preferred_service: keyData.service_name,
-        updated_at: new Date().toISOString()
-      })
-      .eq("category", category);
-      
-    if (updateMappingsError) {
-      console.log("Note: Could not update function mappings:", updateMappingsError);
-      // Continue, this is not a critical error
+    try {
+      const { error: updateMappingsError } = await supabaseAdmin
+        .from("api_function_mapping")
+        .update({ 
+          preferred_service: keyData.service_name,
+          updated_at: new Date().toISOString()
+        })
+        .eq("category", category);
+        
+      if (updateMappingsError) {
+        console.log("Note: Could not update function mappings:", updateMappingsError);
+        // Continue, this is not a critical error
+      }
+    } catch (mappingError) {
+      console.log("Exception updating mappings, continuing:", mappingError);
+      // Continue anyway
     }
     
     return new Response(

@@ -2,13 +2,11 @@
 import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAPIKeyDialogForm } from './useAPIKeyDialogForm';
 import { useServiceSelection } from './useServiceSelection';
 import { ServiceSelection } from './ServiceSelection';
 import { FormField, FormControl, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Progress } from '@/components/ui/progress';
 import { APIKeyErrorDisplay } from './APIKeyErrorDisplay';
 import { APIKeyValidationProgress } from './APIKeyValidationProgress';
 
@@ -59,6 +57,10 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
                   {...field}
                   type="password"
                   placeholder="Enter API key"
+                  onPaste={(e) => {
+                    // Explicitly allow paste events
+                    e.stopPropagation();
+                  }}
                 />
               </FormControl>
               <FormMessage />
@@ -77,6 +79,10 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
                   <Input
                     {...field}
                     placeholder={serviceName ? `e.g., https://api.${serviceName.toLowerCase().replace(/\s+/g, '')}.com/v1` : "e.g., https://api.example.com/v1"}
+                    onPaste={(e) => {
+                      // Explicitly allow paste events
+                      e.stopPropagation();
+                    }}
                   />
                 </FormControl>
                 <FormMessage />

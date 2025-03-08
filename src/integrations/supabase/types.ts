@@ -36,6 +36,154 @@ export type Database = {
         }
         Relationships: []
       }
+      article_analytics: {
+        Row: {
+          article_id: string
+          average_time_on_page: number | null
+          bounce_rate: number | null
+          conversion_count: number | null
+          created_at: string | null
+          date_recorded: string
+          id: string
+          social_shares: number | null
+          source_breakdown: Json | null
+          visit_count: number | null
+        }
+        Insert: {
+          article_id: string
+          average_time_on_page?: number | null
+          bounce_rate?: number | null
+          conversion_count?: number | null
+          created_at?: string | null
+          date_recorded: string
+          id?: string
+          social_shares?: number | null
+          source_breakdown?: Json | null
+          visit_count?: number | null
+        }
+        Update: {
+          article_id?: string
+          average_time_on_page?: number | null
+          bounce_rate?: number | null
+          conversion_count?: number | null
+          created_at?: string | null
+          date_recorded?: string
+          id?: string
+          social_shares?: number | null
+          source_breakdown?: Json | null
+          visit_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_analytics_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      article_social_posts: {
+        Row: {
+          article_id: string
+          content: string
+          created_at: string | null
+          engagement_metrics: Json | null
+          id: string
+          image_url: string | null
+          platform: string
+          post_url: string | null
+          posted_at: string | null
+          scheduled_for: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          article_id: string
+          content: string
+          created_at?: string | null
+          engagement_metrics?: Json | null
+          id?: string
+          image_url?: string | null
+          platform: string
+          post_url?: string | null
+          posted_at?: string | null
+          scheduled_for?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          article_id?: string
+          content?: string
+          created_at?: string | null
+          engagement_metrics?: Json | null
+          id?: string
+          image_url?: string | null
+          platform?: string
+          post_url?: string | null
+          posted_at?: string | null
+          scheduled_for?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_social_posts_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      articles: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          engagement_score: number | null
+          featured_image: string | null
+          id: string
+          meta_description: string | null
+          publish_date: string | null
+          seo_keywords: string[] | null
+          status: string
+          title: string
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          engagement_score?: number | null
+          featured_image?: string | null
+          id?: string
+          meta_description?: string | null
+          publish_date?: string | null
+          seo_keywords?: string[] | null
+          status?: string
+          title: string
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          engagement_score?: number | null
+          featured_image?: string | null
+          id?: string
+          meta_description?: string | null
+          publish_date?: string | null
+          seo_keywords?: string[] | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
       assessment_categories: {
         Row: {
           id: string
@@ -158,6 +306,209 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      commission_tiers: {
+        Row: {
+          commission_rate: number
+          created_at: string
+          description: string | null
+          id: string
+          label: string
+          max_level: number
+          min_level: number
+          updated_at: string
+        }
+        Insert: {
+          commission_rate: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          label: string
+          max_level: number
+          min_level: number
+          updated_at?: string
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string
+          max_level?: number
+          min_level?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      content_themes: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          name: string
+          recommended_frequency: number | null
+          target_audience: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          name: string
+          recommended_frequency?: number | null
+          target_audience?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          name?: string
+          recommended_frequency?: number | null
+          target_audience?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      influencer_assessments: {
+        Row: {
+          ai_analysis: string | null
+          created_at: string
+          end_time: string | null
+          id: string
+          influencer_id: string
+          moral_level: number | null
+          passed: boolean | null
+          responses: Json | null
+          score: number | null
+          start_time: string
+          status: string | null
+        }
+        Insert: {
+          ai_analysis?: string | null
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          influencer_id: string
+          moral_level?: number | null
+          passed?: boolean | null
+          responses?: Json | null
+          score?: number | null
+          start_time?: string
+          status?: string | null
+        }
+        Update: {
+          ai_analysis?: string | null
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          influencer_id?: string
+          moral_level?: number | null
+          passed?: boolean | null
+          responses?: Json | null
+          score?: number | null
+          start_time?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "influencer_assessments_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      influencer_materials: {
+        Row: {
+          content_url: string
+          created_at: string
+          description: string | null
+          id: string
+          material_type: string
+          min_moral_level: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          content_url: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          material_type: string
+          min_moral_level: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          content_url?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          material_type?: string
+          min_moral_level?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      influencers: {
+        Row: {
+          can_retry: boolean | null
+          commission_rate: number | null
+          cooldown_until: string | null
+          created_at: string
+          current_moral_level: number | null
+          email: string
+          followers_count: number | null
+          id: string
+          last_assessment_date: string | null
+          name: string
+          social_platforms: Json | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_retry?: boolean | null
+          commission_rate?: number | null
+          cooldown_until?: string | null
+          created_at?: string
+          current_moral_level?: number | null
+          email: string
+          followers_count?: number | null
+          id?: string
+          last_assessment_date?: string | null
+          name: string
+          social_platforms?: Json | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_retry?: boolean | null
+          commission_rate?: number | null
+          cooldown_until?: string | null
+          created_at?: string
+          current_moral_level?: number | null
+          email?: string
+          followers_count?: number | null
+          id?: string
+          last_assessment_date?: string | null
+          name?: string
+          social_platforms?: Json | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       memes: {
         Row: {

@@ -16,6 +16,7 @@ import AIInsights from "@/pages/AIInsights";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import AIContent from "@/pages/AIContent";
+import Articles from "@/pages/Articles";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/ai-insights" element={<AIInsights />} />
             <Route path="/ai-content" element={<AIContent />} />
+            <Route path="/articles" element={<Articles />} />
             <Route path="/login" element={<Login />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

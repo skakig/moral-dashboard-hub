@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MemePreview } from "./MemePreview";
 import { MemesList } from "./MemesList";
+import { Meme } from "@/types/content";
 
 const memeFormSchema = z.object({
   memeText: z.string().min(5, { message: "Meme text must be at least 5 characters" }),
@@ -42,7 +42,6 @@ export function MemeGenerator() {
     try {
       toast.info("Generating meme with AI...");
       
-      // Call our Supabase Edge Function to generate content
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: { 
           contentType: "meme", 
@@ -77,7 +76,7 @@ export function MemeGenerator() {
           image_url: previewImage,
           platform_tags: form.getValues("targetPlatforms"),
           engagement_score: Math.random() * 10,
-        })
+        } as any)
         .select();
       
       if (error) throw error;

@@ -1,36 +1,32 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Video } from "lucide-react";
-
-interface AIVideo {
-  id: string;
-  video_url: string;
-  script_text: string;
-  voice_style: string;
-  platform_targeting: string[];
-  created_at: string;
-}
+import { AIVideo } from "@/types/content";
 
 export function VideosList() {
   const { data: videos, isLoading } = useQuery({
     queryKey: ['videos'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ai_videos')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(6);
-      
-      if (error) {
-        console.error("Error fetching videos:", error);
+      try {
+        const { data, error } = await supabase
+          .from('ai_videos')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(6);
+        
+        if (error) {
+          console.error("Error fetching videos:", error);
+          return [] as AIVideo[];
+        }
+        
+        return data as AIVideo[];
+      } catch (err) {
+        console.error("Failed to fetch videos:", err);
         return [] as AIVideo[];
       }
-      
-      return data as AIVideo[];
     },
   });
 
@@ -54,7 +50,7 @@ export function VideosList() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {videos.map((video) => (
+      {videos && videos.map((video) => (
         <Card key={video.id} className="overflow-hidden">
           <div className="bg-slate-800 h-32 flex items-center justify-center text-white">
             <Video size={24} className="mr-2" />

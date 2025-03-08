@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_videos: {
+        Row: {
+          created_at: string
+          id: string
+          platform_targeting: string[] | null
+          script_text: string
+          video_url: string
+          voice_style: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform_targeting?: string[] | null
+          script_text: string
+          video_url: string
+          voice_style: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform_targeting?: string[] | null
+          script_text?: string
+          video_url?: string
+          voice_style?: string
+        }
+        Relationships: []
+      }
       assessment_categories: {
         Row: {
           id: string
@@ -131,6 +158,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      memes: {
+        Row: {
+          created_at: string
+          engagement_score: number | null
+          id: string
+          image_url: string
+          meme_text: string
+          platform_tags: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          engagement_score?: number | null
+          id?: string
+          image_url: string
+          meme_text: string
+          platform_tags?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          engagement_score?: number | null
+          id?: string
+          image_url?: string
+          meme_text?: string
+          platform_tags?: string[] | null
+        }
+        Relationships: []
       }
       moral_levels: {
         Row: {

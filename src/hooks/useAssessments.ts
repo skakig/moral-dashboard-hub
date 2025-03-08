@@ -1,47 +1,43 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Assessment } from "@/components/assessments/AssessmentsTable";
+
+export interface Category {
+  id: string;
+  name: string;
+}
+
+export interface MoralLevel {
+  id: number;
+  level: number;
+  name: string;
+}
+
+export interface Assessment {
+  id: string;
+  title: string;
+  category: { id: string; name: string };
+  level: { id: number; level: number; name: string };
+  status: string;
+  description: string | null;
+  questions_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  time_limit_seconds?: number;
+  sequential_logic_enabled?: boolean;
+}
 
 export function useAssessments() {
-  const [filterLevel, setFilterLevel] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-
   // Fetch assessments from Supabase
-  const { data: assessments, isLoading, error, refetch } = useQuery({
-    queryKey: ['assessments', filterLevel, searchTerm],
+  const { data: assessments, isLoading, error } = useQuery({
+    queryKey: ['assessments'],
     queryFn: async () => {
-      // Start with a base query
-      let query = supabase
+      const { data, error } = await supabase
         .from('assessments')
-        .select(`
-          id, 
-          title, 
-          category_id,
-          level_id,
-          status, 
-          description,
-          questions_count,
-          is_active,
-          created_at,
-          updated_at
-        `)
+        .select('*, category:category_id(id, name), level:level_id(id, level, name)')
         .order('created_at', { ascending: false });
-
-      // Apply level filtering if needed
-      if (filterLevel !== "all") {
-        const [min, max] = filterLevel.split("-").map(Number);
-        query = query.gte('level_id', min).lte('level_id', max);
-      }
-
-      // Apply search term if provided
-      if (searchTerm) {
-        query = query.ilike('title', `%${searchTerm}%`);
-      }
-
-      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching assessments:", error);
@@ -49,59 +45,39 @@ export function useAssessments() {
         return [];
       }
 
-      // Transform the data to match the expected format in the UI
-      if (data) {
-        return data.map(assessment => ({
-          ...assessment,
-          category: {
-            id: assessment.category_id,
-            name: assessment.category_id
-          },
-          level: {
-            id: assessment.level_id,
-            level: assessment.level_id,
-            name: `Level ${assessment.level_id}`
-          },
-          // Add missing properties required by the Assessment type
-          time_limit_seconds: 30, // Default value
-          sequential_logic_enabled: false // Default value
-        })) as Assessment[];
-      }
-      
-      return [];
+      return data;
     },
   });
 
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('assessments')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error("Error deleting assessment:", error);
-        toast.error("Failed to delete assessment");
-        return;
-      }
-
-      toast.success("Assessment deleted successfully");
-      refetch();
-    } catch (error) {
-      console.error("Error in delete operation:", error);
-      toast.error("An unexpected error occurred");
-    }
+  const formatAssessments = (data: any[]): Assessment[] => {
+    return data.map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: {
+        id: item.category.id,
+        name: item.category.name,
+      },
+      level: {
+        id: item.level.id,
+        level: item.level.level,
+        name: item.level.name,
+      },
+      status: item.status,
+      description: item.description,
+      questions_count: item.questions_count,
+      is_active: item.is_active,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      time_limit_seconds: 60, // Default value as fallback
+      sequential_logic_enabled: false, // Default value as fallback
+    }));
   };
 
+  const formattedAssessments = assessments ? formatAssessments(assessments) : [];
+
   return {
-    assessments,
+    assessments: formattedAssessments,
     isLoading,
     error,
-    refetch,
-    handleDelete,
-    filterLevel,
-    setFilterLevel,
-    searchTerm,
-    setSearchTerm
   };
 }

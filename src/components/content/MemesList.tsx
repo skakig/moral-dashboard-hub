@@ -1,36 +1,32 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface Meme {
-  id: string;
-  meme_text: string;
-  image_url: string;
-  platform_tags: string[];
-  engagement_score: number;
-  created_at: string;
-}
+import { Meme } from "@/types/content";
 
 export function MemesList() {
   const { data: memes, isLoading } = useQuery({
     queryKey: ['memes'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('memes')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(6);
-      
-      if (error) {
-        console.error("Error fetching memes:", error);
+      try {
+        const { data, error } = await supabase
+          .from('memes')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(6);
+        
+        if (error) {
+          console.error("Error fetching memes:", error);
+          return [] as Meme[];
+        }
+        
+        return data as Meme[];
+      } catch (err) {
+        console.error("Failed to fetch memes:", err);
         return [] as Meme[];
       }
-      
-      return data as Meme[];
     },
   });
 
@@ -54,7 +50,7 @@ export function MemesList() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {memes.map((meme) => (
+      {memes && memes.map((meme) => (
         <Card key={meme.id} className="overflow-hidden">
           <img src={meme.image_url} alt={meme.meme_text} className="w-full h-36 object-cover" />
           <div className="p-3">

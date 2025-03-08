@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { VideosList } from "./VideosList";
+import { AIVideo } from "@/types/content";
 
 const videoFormSchema = z.object({
   scriptText: z.string().min(20, { message: "Script must be at least 20 characters" }),
@@ -80,7 +81,7 @@ export function VideoGenerator() {
           video_url: previewUrl,
           voice_style: form.getValues("voiceStyle"),
           platform_targeting: [form.getValues("platform")],
-        })
+        } as any)
         .select();
       
       if (error) throw error;

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -25,19 +26,34 @@ export interface Assessment {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  time_limit_seconds?: number;
-  sequential_logic_enabled?: boolean;
+  time_limit_seconds: number;
+  sequential_logic_enabled: boolean;
 }
 
 export function useAssessments() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterLevel, setFilterLevel] = useState('all');
+
   // Fetch assessments from Supabase
-  const { data: assessments, isLoading, error } = useQuery({
-    queryKey: ['assessments'],
+  const { data: assessments, isLoading, error, refetch } = useQuery({
+    queryKey: ['assessments', searchTerm, filterLevel],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('assessments')
-        .select('*, category:category_id(id, name), level:level_id(id, level, name)')
-        .order('created_at', { ascending: false });
+        .select('*, category:category_id(id, name), level:level_id(id, level, name)');
+
+      // Apply search filter if provided
+      if (searchTerm) {
+        query = query.ilike('title', `%${searchTerm}%`);
+      }
+
+      // Apply level filter if provided
+      if (filterLevel !== 'all') {
+        const [minLevel, maxLevel] = filterLevel.split('-').map(Number);
+        query = query.gte('level_id', minLevel).lte('level_id', maxLevel);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         console.error("Error fetching assessments:", error);
@@ -54,13 +70,13 @@ export function useAssessments() {
       id: item.id,
       title: item.title,
       category: {
-        id: item.category.id,
-        name: item.category.name,
+        id: item.category?.id || '',
+        name: item.category?.name || '',
       },
       level: {
-        id: item.level.id,
-        level: item.level.level,
-        name: item.level.name,
+        id: item.level?.id || 0,
+        level: item.level?.level || 0,
+        name: item.level?.name || '',
       },
       status: item.status,
       description: item.description,
@@ -75,9 +91,37 @@ export function useAssessments() {
 
   const formattedAssessments = assessments ? formatAssessments(assessments) : [];
 
+  // Handle deleting an assessment
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('assessments')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error("Error deleting assessment:", error);
+        toast.error("Failed to delete assessment");
+        return;
+      }
+
+      toast.success("Assessment deleted successfully");
+      refetch();
+    } catch (error) {
+      console.error("Error deleting assessment:", error);
+      toast.error("An unexpected error occurred");
+    }
+  };
+
   return {
     assessments: formattedAssessments,
     isLoading,
     error,
+    refetch,
+    handleDelete,
+    searchTerm,
+    setSearchTerm,
+    filterLevel,
+    setFilterLevel
   };
 }

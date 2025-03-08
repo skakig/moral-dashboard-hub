@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Clock, Shuffle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-// Define the type for our assessment data
+// Use the same Assessment type definition across components
 export interface Assessment {
   id: string;
   title: string;
-  description?: string;
+  description?: string | null;
   category: {
     id: string;
     name: string;
@@ -25,6 +25,8 @@ export interface Assessment {
   sequential_logic_enabled: boolean;
   created_at: string;
   status: string;
+  is_active: boolean;
+  updated_at: string;
 }
 
 interface AssessmentsTableProps {

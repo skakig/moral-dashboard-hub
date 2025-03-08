@@ -78,9 +78,18 @@ export function APIKeysForm({ title, description, serviceName, onSuccess }: APIK
         },
       });
       
-      if (error || !data.success) {
-        setError(error?.message || data.error || 'Failed to validate API key');
+      if (error) {
+        console.error('API validation error:', error);
+        setError(error.message || `Failed to validate ${serviceName} API key`);
         toast.error(`Failed to validate ${serviceName} API key`);
+        setLoading(false);
+        return;
+      }
+      
+      if (!data.success) {
+        setError(data.error || `Failed to validate ${serviceName} API key`);
+        toast.error(data.error || `Failed to validate ${serviceName} API key`);
+        setLoading(false);
         return;
       }
       
@@ -92,8 +101,9 @@ export function APIKeysForm({ title, description, serviceName, onSuccess }: APIK
         onSuccess();
       }
     } catch (err: any) {
+      console.error('Exception during validation:', err);
       setError(err.message || 'An unexpected error occurred');
-      toast.error('Failed to save API key');
+      toast.error(`Failed to save ${serviceName} API key`);
     } finally {
       setLoading(false);
     }

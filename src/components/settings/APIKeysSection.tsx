@@ -3,14 +3,11 @@ import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import { APIKeysForm } from "@/components/settings/APIKeysForm";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function APIKeysSection() {
   const [apiKeysLoading, setApiKeysLoading] = useState(true);
-  const [apiKeysConfigured, setApiKeysConfigured] = useState<{[key: string]: boolean}>({
-    OpenAI: false,
-    ElevenLabs: false,
-    StableDiffusion: false
-  });
 
   useEffect(() => {
     fetchApiKeysStatus();
@@ -19,18 +16,17 @@ export function APIKeysSection() {
   const fetchApiKeysStatus = async () => {
     setApiKeysLoading(true);
     try {
-      const { data: response } = await fetch('/api/settings/api-keys').then(res => res.json());
-      const configuredKeys: {[key: string]: boolean} = {};
+      const { data, error } = await supabase.functions.invoke('get-api-keys-status');
       
-      if (response?.data) {
-        response.data.forEach((key: {serviceName: string, isConfigured: boolean}) => {
-          configuredKeys[key.serviceName] = key.isConfigured;
-        });
-        setApiKeysConfigured(configuredKeys);
+      if (error) {
+        console.error('Failed to fetch API keys status:', error);
+        toast.error('Unable to load API key status');
       }
+      
+      setApiKeysLoading(false);
     } catch (error) {
       console.error('Failed to fetch API keys status:', error);
-    } finally {
+      toast.error('Unable to load API key status');
       setApiKeysLoading(false);
     }
   };

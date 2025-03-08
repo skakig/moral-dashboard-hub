@@ -80,19 +80,39 @@ serve(async (req) => {
     
     // If validation was successful, update the key in the database
     if (isValid) {
-      const { data, error } = await supabaseAdmin
+      // Check if the service exists first to handle the unique constraint
+      const { data: existingKey } = await supabaseAdmin
         .from("api_keys")
-        .upsert({ 
-          service_name: serviceName, 
-          api_key: apiKey,
-          last_validated: new Date().toISOString(),
-          is_active: true
-        })
-        .select();
+        .select("id")
+        .eq("service_name", serviceName)
+        .single();
       
-      if (error) {
+      let result;
+      if (existingKey) {
+        // Update existing record
+        result = await supabaseAdmin
+          .from("api_keys")
+          .update({ 
+            api_key: apiKey,
+            last_validated: new Date().toISOString(),
+            is_active: true
+          })
+          .eq("service_name", serviceName);
+      } else {
+        // Insert new record
+        result = await supabaseAdmin
+          .from("api_keys")
+          .insert({ 
+            service_name: serviceName, 
+            api_key: apiKey,
+            last_validated: new Date().toISOString(),
+            is_active: true
+          });
+      }
+      
+      if (result.error) {
         return new Response(
-          JSON.stringify({ success: false, error: error.message }),
+          JSON.stringify({ success: false, error: result.error.message }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }

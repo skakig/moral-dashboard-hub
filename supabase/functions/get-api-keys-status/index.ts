@@ -21,12 +21,13 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get all API keys status (configured or not)
+    // Get all API keys status
     const { data, error } = await supabaseAdmin
       .from("api_keys")
-      .select("service_name, is_active, last_validated");
+      .select("service_name, api_key, is_active, last_validated");
 
     if (error) {
+      console.error("Database error:", error);
       return new Response(
         JSON.stringify({ success: false, error: error.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }

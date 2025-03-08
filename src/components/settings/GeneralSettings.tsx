@@ -8,7 +8,6 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 interface SiteSettings {
   id: string;
@@ -28,15 +27,14 @@ export function GeneralSettings() {
     timezone: "utc",
     maintenance_mode: false
   });
-  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchSettings() {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from("site_settings")
-          .select("*")
+          .from('site_settings')
+          .select('*')
           .limit(1)
           .single();
 
@@ -51,7 +49,13 @@ export function GeneralSettings() {
         }
 
         if (data) {
-          setSettings(data);
+          setSettings({
+            id: data.id,
+            site_name: data.site_name,
+            admin_email: data.admin_email,
+            timezone: data.timezone,
+            maintenance_mode: data.maintenance_mode
+          });
         }
       } catch (error) {
         console.error("Exception fetching settings:", error);
@@ -66,7 +70,7 @@ export function GeneralSettings() {
     }
 
     fetchSettings();
-  }, [toast]);
+  }, []);
 
   const handleSave = async () => {
     try {
@@ -85,7 +89,7 @@ export function GeneralSettings() {
       }
 
       const { error } = await supabase
-        .from("site_settings")
+        .from('site_settings')
         .update({
           site_name: settings.site_name,
           admin_email: settings.admin_email,

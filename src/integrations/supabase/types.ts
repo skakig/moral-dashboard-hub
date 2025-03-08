@@ -881,6 +881,36 @@ export type Database = {
           },
         ]
       }
+      site_settings: {
+        Row: {
+          admin_email: string
+          created_at: string | null
+          id: string
+          maintenance_mode: boolean
+          site_name: string
+          timezone: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_email: string
+          created_at?: string | null
+          id?: string
+          maintenance_mode?: boolean
+          site_name: string
+          timezone?: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_email?: string
+          created_at?: string | null
+          id?: string
+          maintenance_mode?: boolean
+          site_name?: string
+          timezone?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_moral_level_progress: {
         Row: {
           ai_feedback: string | null

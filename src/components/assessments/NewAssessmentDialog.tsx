@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,12 +31,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+
+// Types for categories and moral levels
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface MoralLevel {
+  id: number;
+  level: number;
+  name: string;
+}
 
 // Schema for form validation
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters" }),
-  category: z.string().min(2, { message: "Please select a category" }),
-  level: z.string().min(1, { message: "Please select a moral level" }),
+  category_id: z.string().min(2, { message: "Please select a category" }),
+  level_id: z.string().min(1, { message: "Please select a moral level" }),
   description: z.string().optional(),
   status: z.enum(["draft", "active", "inactive"]),
 });
@@ -45,7 +58,7 @@ const formSchema = z.object({
 interface NewAssessmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit?: (data: z.infer<typeof formSchema>) => void;
+  onSubmit?: (data: any) => void;
 }
 
 export function NewAssessmentDialog({
@@ -53,31 +66,89 @@ export function NewAssessmentDialog({
   onOpenChange,
   onSubmit,
 }: NewAssessmentDialogProps) {
+  // Fetch categories from Supabase
+  const { data: categories, isLoading: loadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessment_categories')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error("Error fetching categories:", error);
+        toast.error("Failed to load categories");
+        return [];
+      }
+      
+      return data as Category[];
+    },
+  });
+
+  // Fetch moral levels from Supabase
+  const { data: moralLevels, isLoading: loadingLevels } = useQuery({
+    queryKey: ['moralLevels'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('moral_levels')
+        .select('*')
+        .order('level');
+      
+      if (error) {
+        console.error("Error fetching moral levels:", error);
+        toast.error("Failed to load moral levels");
+        return [];
+      }
+      
+      return data as MoralLevel[];
+    },
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      category: "",
-      level: "",
+      category_id: "",
+      level_id: "",
       description: "",
       status: "draft",
     },
   });
 
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    // For now, just show success toast and log data
-    // Later this would be connected to Supabase
-    console.log("New assessment data:", values);
-    toast.success("Assessment created successfully");
-    
-    // Call the parent's onSubmit if provided
-    if (onSubmit) {
-      onSubmit(values);
+  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      // Insert the new assessment into Supabase
+      const { data, error } = await supabase
+        .from('assessments')
+        .insert({
+          title: values.title,
+          category_id: values.category_id,
+          level_id: parseInt(values.level_id),
+          description: values.description || "",
+          status: values.status,
+        })
+        .select();
+
+      if (error) {
+        console.error("Error creating assessment:", error);
+        toast.error("Failed to create assessment: " + error.message);
+        return;
+      }
+
+      toast.success("Assessment created successfully");
+      
+      // Call the parent's onSubmit if provided
+      if (onSubmit && data) {
+        onSubmit(data[0]);
+      }
+      
+      // Reset form and close dialog
+      form.reset();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error in form submission:", error);
+      toast.error("An unexpected error occurred");
     }
-    
-    // Reset form and close dialog
-    form.reset();
-    onOpenChange(false);
   };
 
   return (
@@ -111,13 +182,14 @@ export function NewAssessmentDialog({
 
             <FormField
               control={form.control}
-              name="category"
+              name="category_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    disabled={loadingCategories}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -125,11 +197,11 @@ export function NewAssessmentDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Moral Dilemma">Moral Dilemma</SelectItem>
-                      <SelectItem value="Professional Ethics">Professional Ethics</SelectItem>
-                      <SelectItem value="Social Dynamics">Social Dynamics</SelectItem>
-                      <SelectItem value="Global Ethics">Global Ethics</SelectItem>
-                      <SelectItem value="Personal Values">Personal Values</SelectItem>
+                      {categories?.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormDescription>
@@ -142,13 +214,14 @@ export function NewAssessmentDialog({
 
             <FormField
               control={form.control}
-              name="level"
+              name="level_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Moral Level</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    disabled={loadingLevels}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -156,9 +229,9 @@ export function NewAssessmentDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => (
-                        <SelectItem key={level} value={level.toString()}>
-                          Level {level}
+                      {moralLevels?.map((level) => (
+                        <SelectItem key={level.id} value={level.id.toString()}>
+                          Level {level.level}: {level.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

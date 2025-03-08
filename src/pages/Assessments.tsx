@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,76 +10,97 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewAssessmentDialog } from "@/components/assessments/NewAssessmentDialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
-// Mock assessment data
-const assessments = [
-  {
-    id: 1,
-    title: "The Trolley Problem",
-    category: "Moral Dilemma",
-    level: 5,
-    questions: 6,
-    createdAt: "2023-05-15",
-    status: "active",
-  },
-  {
-    id: 2,
-    title: "Medical Ethics Scenario",
-    category: "Professional Ethics",
-    level: 7,
-    questions: 8,
-    createdAt: "2023-06-22",
-    status: "active",
-  },
-  {
-    id: 3,
-    title: "Personal vs Community Values",
-    category: "Social Dynamics",
-    level: 4,
-    questions: 5,
-    createdAt: "2023-07-10",
-    status: "draft",
-  },
-  {
-    id: 4,
-    title: "Business Decision Ethics",
-    category: "Professional Ethics",
-    level: 6,
-    questions: 7,
-    createdAt: "2023-08-05",
-    status: "active",
-  },
-  {
-    id: 5,
-    title: "Environmental Responsibility",
-    category: "Global Ethics",
-    level: 3,
-    questions: 4,
-    createdAt: "2023-09-18",
-    status: "inactive",
-  },
-];
+// Define the type for our assessment data
+interface Assessment {
+  id: string;
+  title: string;
+  category: {
+    id: string;
+    name: string;
+  };
+  level: {
+    id: number;
+    level: number;
+    name: string;
+  };
+  questions_count: number;
+  created_at: string;
+  status: string;
+}
 
 export default function Assessments() {
   const [isNewAssessmentOpen, setIsNewAssessmentOpen] = useState(false);
-  const [assessmentsList, setAssessmentsList] = useState(assessments);
+  const [filterLevel, setFilterLevel] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Fetch assessments from Supabase
+  const { data: assessments, isLoading, error, refetch } = useQuery({
+    queryKey: ['assessments', filterLevel, searchTerm],
+    queryFn: async () => {
+      // Start with a base query
+      let query = supabase
+        .from('assessments')
+        .select(`
+          id, 
+          title, 
+          status, 
+          questions_count, 
+          created_at,
+          category:category_id(id, name), 
+          level:level_id(id, level, name)
+        `)
+        .order('created_at', { ascending: false });
+
+      // Apply level filtering if needed
+      if (filterLevel !== "all") {
+        const [min, max] = filterLevel.split("-").map(Number);
+        query = query.gte('level.level', min).lte('level.level', max);
+      }
+
+      // Apply search term if provided
+      if (searchTerm) {
+        query = query.ilike('title', `%${searchTerm}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching assessments:", error);
+        toast.error("Failed to load assessments");
+        return [];
+      }
+
+      return data as Assessment[];
+    },
+  });
 
   const handleCreateAssessment = (formData: any) => {
-    // Create a new assessment with the form data
-    const newAssessment = {
-      id: assessmentsList.length + 1,
-      title: formData.title,
-      category: formData.category,
-      level: parseInt(formData.level),
-      questions: 0, // New assessments start with 0 questions
-      createdAt: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
-      status: formData.status,
-    };
+    // Refetch assessments after creating a new one
+    refetch();
+  };
 
-    // Add to the assessments list
-    setAssessmentsList([newAssessment, ...assessmentsList]);
-    
-    toast.success(`Assessment "${formData.title}" created successfully`);
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('assessments')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error("Error deleting assessment:", error);
+        toast.error("Failed to delete assessment");
+        return;
+      }
+
+      toast.success("Assessment deleted successfully");
+      refetch();
+    } catch (error) {
+      console.error("Error in delete operation:", error);
+      toast.error("An unexpected error occurred");
+    }
   };
 
   return (
@@ -110,10 +131,15 @@ export default function Assessments() {
                   <Input
                     placeholder="Search assessments..."
                     className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Select defaultValue="all">
+                  <Select 
+                    defaultValue="all"
+                    onValueChange={setFilterLevel}
+                  >
                     <SelectTrigger className="w-full md:w-[180px]">
                       <div className="flex items-center gap-2">
                         <Filter className="h-4 w-4" />
@@ -127,8 +153,8 @@ export default function Assessments() {
                       <SelectItem value="7-9">Level 7-9</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="icon">
-                    <RefreshCw className="h-4 w-4" />
+                  <Button variant="outline" size="icon" onClick={() => refetch()}>
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
               </div>
@@ -147,44 +173,71 @@ export default function Assessments() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {assessmentsList.map((assessment) => (
-                      <TableRow key={assessment.id}>
-                        <TableCell className="font-medium">{assessment.title}</TableCell>
-                        <TableCell>{assessment.category}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center text-xs font-medium">
-                              {assessment.level}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{assessment.questions}</TableCell>
-                        <TableCell>{assessment.createdAt}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              assessment.status === "active"
-                                ? "default"
-                                : assessment.status === "draft"
-                                ? "outline"
-                                : "secondary"
-                            }
-                          >
-                            {assessment.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-10">
+                          Loading assessments...
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : error ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-10 text-red-500">
+                          Error loading assessments. Please try again.
+                        </TableCell>
+                      </TableRow>
+                    ) : assessments?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                          No assessments found. Create your first assessment.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      assessments?.map((assessment) => (
+                        <TableRow key={assessment.id}>
+                          <TableCell className="font-medium">{assessment.title}</TableCell>
+                          <TableCell>{assessment.category?.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center text-xs font-medium text-white">
+                                {assessment.level?.level}
+                              </span>
+                              <span className="hidden md:inline text-xs text-muted-foreground">
+                                {assessment.level?.name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{assessment.questions_count}</TableCell>
+                          <TableCell>{new Date(assessment.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                assessment.status === "active"
+                                  ? "default"
+                                  : assessment.status === "draft"
+                                  ? "outline"
+                                  : "secondary"
+                              }
+                            >
+                              {assessment.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="icon">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleDelete(assessment.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

@@ -50,10 +50,6 @@ export function APIKeyFormFields({
                   {...field}
                   type="password"
                   placeholder={`Enter your ${serviceName} API key`}
-                  onPaste={(e) => {
-                    // Explicitly allow paste events
-                    e.stopPropagation();
-                  }}
                 />
               </FormControl>
               <FormMessage />
@@ -72,10 +68,6 @@ export function APIKeyFormFields({
                   <Input
                     {...field}
                     placeholder={`e.g., https://api.${serviceName.toLowerCase().replace(/\s+/g, '')}.com/v1`}
-                    onPaste={(e) => {
-                      // Explicitly allow paste events
-                      e.stopPropagation();
-                    }}
                   />
                 </FormControl>
                 <FormMessage />

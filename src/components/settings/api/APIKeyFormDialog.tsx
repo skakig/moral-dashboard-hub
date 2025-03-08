@@ -57,10 +57,6 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
                   {...field}
                   type="password"
                   placeholder="Enter API key"
-                  onPaste={(e) => {
-                    // Explicitly allow paste events
-                    e.stopPropagation();
-                  }}
                 />
               </FormControl>
               <FormMessage />
@@ -79,10 +75,6 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
                   <Input
                     {...field}
                     placeholder={serviceName ? `e.g., https://api.${serviceName.toLowerCase().replace(/\s+/g, '')}.com/v1` : "e.g., https://api.example.com/v1"}
-                    onPaste={(e) => {
-                      // Explicitly allow paste events
-                      e.stopPropagation();
-                    }}
                   />
                 </FormControl>
                 <FormMessage />

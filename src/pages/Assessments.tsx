@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Filter, RefreshCw, Plus, Search, Edit, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NewAssessmentDialog } from "@/components/assessments/NewAssessmentDialog";
+import { toast } from "sonner";
 
 // Mock assessment data
 const assessments = [
@@ -58,6 +61,27 @@ const assessments = [
 ];
 
 export default function Assessments() {
+  const [isNewAssessmentOpen, setIsNewAssessmentOpen] = useState(false);
+  const [assessmentsList, setAssessmentsList] = useState(assessments);
+
+  const handleCreateAssessment = (formData: any) => {
+    // Create a new assessment with the form data
+    const newAssessment = {
+      id: assessmentsList.length + 1,
+      title: formData.title,
+      category: formData.category,
+      level: parseInt(formData.level),
+      questions: 0, // New assessments start with 0 questions
+      createdAt: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
+      status: formData.status,
+    };
+
+    // Add to the assessments list
+    setAssessmentsList([newAssessment, ...assessmentsList]);
+    
+    toast.success(`Assessment "${formData.title}" created successfully`);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -68,7 +92,7 @@ export default function Assessments() {
               Manage moral assessment questions and scenarios
             </p>
           </div>
-          <Button>
+          <Button onClick={() => setIsNewAssessmentOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> New Assessment
           </Button>
         </div>
@@ -123,7 +147,7 @@ export default function Assessments() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {assessments.map((assessment) => (
+                    {assessmentsList.map((assessment) => (
                       <TableRow key={assessment.id}>
                         <TableCell className="font-medium">{assessment.title}</TableCell>
                         <TableCell>{assessment.category}</TableCell>
@@ -177,6 +201,13 @@ export default function Assessments() {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Assessment Dialog */}
+      <NewAssessmentDialog 
+        open={isNewAssessmentOpen} 
+        onOpenChange={setIsNewAssessmentOpen}
+        onSubmit={handleCreateAssessment}
+      />
     </AppLayout>
   );
 }

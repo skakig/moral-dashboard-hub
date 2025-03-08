@@ -8,20 +8,49 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { APIKeysForm } from "@/components/settings/APIKeysForm";
+import { Loader2, ShieldAlert } from "lucide-react";
 
 export default function Settings() {
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
+  const [apiKeysLoading, setApiKeysLoading] = useState(true);
+  const [apiKeysConfigured, setApiKeysConfigured] = useState<{[key: string]: boolean}>({
+    OpenAI: false,
+    ElevenLabs: false,
+    StableDiffusion: false
+  });
+
+  useEffect(() => {
+    fetchApiKeysStatus();
+  }, []);
+
+  const fetchApiKeysStatus = async () => {
+    setApiKeysLoading(true);
+    try {
+      const { data: response } = await fetch('/api/settings/api-keys').then(res => res.json());
+      const configuredKeys: {[key: string]: boolean} = {};
+      
+      if (response?.data) {
+        response.data.forEach((key: {serviceName: string, isConfigured: boolean}) => {
+          configuredKeys[key.serviceName] = key.isConfigured;
+        });
+        setApiKeysConfigured(configuredKeys);
+      }
+    } catch (error) {
+      console.error('Failed to fetch API keys status:', error);
+    } finally {
+      setApiKeysLoading(false);
+    }
+  };
 
   const handleSave = () => {
     setSaving(true);
     // Mock API call
     setTimeout(() => {
       setSaving(false);
-      toast({
-        title: "Settings saved",
+      toast.success("Settings saved", {
         description: "Your changes have been successfully saved",
       });
     }, 1000);
@@ -40,8 +69,8 @@ export default function Settings() {
         <Tabs defaultValue="general" className="space-y-4">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="ai">AI Configuration</TabsTrigger>
-            <TabsTrigger value="api">API Keys</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
           
@@ -94,6 +123,58 @@ export default function Settings() {
             </Card>
           </TabsContent>
           
+          <TabsContent value="api-keys" className="space-y-4">
+            {apiKeysLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <APIKeysForm 
+                  title="OpenAI API"
+                  description="Required for AI-generated content, assessments, and chat features"
+                  serviceName="OpenAI"
+                  onSuccess={fetchApiKeysStatus}
+                />
+                <APIKeysForm 
+                  title="ElevenLabs API"
+                  description="Required for AI-generated voices in TMH content"
+                  serviceName="ElevenLabs"
+                  onSuccess={fetchApiKeysStatus}
+                />
+                <APIKeysForm 
+                  title="Stable Diffusion API"
+                  description="Required for AI-generated images and social media visuals"
+                  serviceName="StableDiffusion"
+                  onSuccess={fetchApiKeysStatus}
+                />
+              </div>
+            )}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5" />
+                  API Key Security
+                </CardTitle>
+                <CardDescription>
+                  Information about how your API keys are stored and used
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-md bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200">
+                  <p className="font-medium mb-2">API Key Security Information</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>API keys are stored securely in your Supabase database</li>
+                    <li>Keys are never exposed to the client-side code</li>
+                    <li>All API requests are made through secure Edge Functions</li>
+                    <li>Keys can be rotated or revoked at any time</li>
+                    <li>Access is restricted to admin users only</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
           <TabsContent value="ai" className="space-y-4">
             <Card>
               <CardHeader>
@@ -136,36 +217,6 @@ export default function Settings() {
                     </p>
                   </div>
                   <Switch id="log-predictions" defaultChecked />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="api" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>API Key Management</CardTitle>
-                <CardDescription>
-                  Manage API keys for third-party services
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="openai-key">OpenAI API Key</Label>
-                  <Input id="openai-key" type="password" defaultValue="sk-••••••••••••••••••••••••••••••" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supabase-url">Supabase URL</Label>
-                  <Input id="supabase-url" defaultValue="https://example.supabase.co" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supabase-key">Supabase API Key</Label>
-                  <Input id="supabase-key" type="password" defaultValue="sb-••••••••••••••••••••••••••••••" />
                 </div>
               </CardContent>
               <CardFooter>

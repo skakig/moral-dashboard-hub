@@ -36,6 +36,36 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_validated: string | null
+          service_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_validated?: string | null
+          service_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_validated?: string | null
+          service_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       article_analytics: {
         Row: {
           article_id: string

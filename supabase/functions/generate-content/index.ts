@@ -23,18 +23,18 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { contentType, text, moralLevel, platform } = await req.json();
+    const { contentType, text, moralLevel, platform, voiceStyle, duration } = await req.json();
     console.log(`Generating ${contentType} content with text: "${text}" for moral level ${moralLevel} on ${platform}`);
 
-    // Mock response for now - in a real implementation, this would call 
-    // OpenAI, ElevenLabs, or another AI service
+    // Generate Mock responses for now - in a real implementation, these would be API calls
+    // to AI services like OpenAI, ElevenLabs, Stable Diffusion, etc.
     let response;
     
     if (contentType === "meme") {
       // This would call a service like Stable Diffusion or DALL-E
       response = {
         success: true,
-        imageUrl: "https://placehold.co/600x400/png?text=AI+Generated+Meme",
+        imageUrl: "https://placehold.co/600x400/png?text=TMH+AI+Generated+Meme",
         engagementScore: Math.random() * 10,
       };
     } else if (contentType === "video") {

@@ -63,7 +63,7 @@ export function VideosList() {
           <div className="p-3">
             <p className="text-sm font-medium line-clamp-2">{video.script_text}</p>
             <div className="flex flex-wrap gap-1 mt-2">
-              {video.platform_targeting.map((platform) => (
+              {Array.isArray(video.platform_targeting) && video.platform_targeting.map((platform) => (
                 <Badge key={platform} variant="outline" className="text-xs">
                   {platform}
                 </Badge>

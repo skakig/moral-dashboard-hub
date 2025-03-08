@@ -61,7 +61,10 @@ export function useAssessments() {
             id: assessment.level_id,
             level: assessment.level_id,
             name: `Level ${assessment.level_id}`
-          }
+          },
+          // Add missing properties required by the Assessment type
+          time_limit_seconds: 30, // Default value
+          sequential_logic_enabled: false // Default value
         })) as Assessment[];
       }
       

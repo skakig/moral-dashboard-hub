@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,13 +42,19 @@ export function VideoGenerator() {
     try {
       toast.info("Generating video with AI...");
       
-      // In a real implementation, this would call a Supabase Edge Function
-      // that connects to a video generation API and ElevenLabs for voice
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: { 
+          contentType: "video", 
+          text: values.scriptText,
+          moralLevel: values.moralLevel,
+          platform: values.platform,
+          voiceStyle: values.voiceStyle,
+          duration: values.duration
+        }
+      });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      if (error) throw error;
       
-      // Mock response
       const mockVideoUrl = "https://example.com/sample-video.mp4";
       setPreviewUrl(mockVideoUrl);
       

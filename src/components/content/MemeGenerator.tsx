@@ -42,18 +42,19 @@ export function MemeGenerator() {
     try {
       toast.info("Generating meme with AI...");
       
-      // In a real implementation, this would call a Supabase Edge Function
-      // that connects to Stable Diffusion or another image generation API
-      const mockResponse = { 
-        imageUrl: "https://placehold.co/600x400/png?text=TMH+AI+Generated+Meme",
-        engagement: Math.random() * 10
-      };
+      // Call our Supabase Edge Function to generate content
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: { 
+          contentType: "meme", 
+          text: values.memeText,
+          moralLevel: values.moralLevel,
+          platform: values.targetPlatforms[0]
+        }
+      });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (error) throw error;
       
-      setPreviewImage(mockResponse.imageUrl);
-      
+      setPreviewImage(data.imageUrl);
       toast.success("Meme generated successfully!");
     } catch (error) {
       console.error("Error generating meme:", error);

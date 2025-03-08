@@ -60,13 +60,13 @@ export function MemesList() {
           <div className="p-3">
             <p className="text-sm font-medium truncate">{meme.meme_text}</p>
             <div className="flex flex-wrap gap-1 mt-2">
-              {meme.platform_tags.map((tag) => (
+              {Array.isArray(meme.platform_tags) && meme.platform_tags.map((tag) => (
                 <Badge key={tag} variant="outline" className="text-xs">
                   {tag}
                 </Badge>
               ))}
               <Badge variant="secondary" className="ml-auto">
-                Score: {meme.engagement_score.toFixed(1)}
+                Score: {typeof meme.engagement_score === 'number' ? meme.engagement_score.toFixed(1) : '0.0'}
               </Badge>
             </div>
           </div>

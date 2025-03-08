@@ -7,13 +7,15 @@ interface UseAPIStatusToggleProps {
   serviceName: string;
   category: string;
   isConfigured: boolean;
+  isActive?: boolean;
   onSuccess?: () => void;
 }
 
 export function useAPIStatusToggle({ 
   serviceName, 
   category,
-  isConfigured, 
+  isConfigured,
+  isActive = true,
   onSuccess 
 }: UseAPIStatusToggleProps) {
   const [isToggling, setIsToggling] = useState(false);
@@ -27,7 +29,7 @@ export function useAPIStatusToggle({
         body: {
           serviceName,
           category,
-          isActive: false // We'll toggle this from its current state
+          isActive: !isActive // Toggle from current state
         },
       });
       

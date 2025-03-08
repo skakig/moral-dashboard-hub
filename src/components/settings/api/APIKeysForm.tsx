@@ -46,6 +46,7 @@ export function APIKeysForm({
     category,
     baseUrl,
     isConfigured,
+    isActive,
     onSuccess
   });
 

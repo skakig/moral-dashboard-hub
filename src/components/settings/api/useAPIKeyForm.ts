@@ -12,6 +12,7 @@ interface UseAPIKeyFormProps {
   category: string;
   baseUrl?: string;
   isConfigured?: boolean;
+  isActive?: boolean;
   onSuccess?: () => void;
 }
 
@@ -20,6 +21,7 @@ export function useAPIKeyForm({
   category, 
   baseUrl = '', 
   isConfigured = false,
+  isActive = true,
   onSuccess 
 }: UseAPIKeyFormProps) {
   const [showForm, setShowForm] = useState(!isConfigured);
@@ -50,6 +52,7 @@ export function useAPIKeyForm({
     serviceName,
     category,
     isConfigured,
+    isActive,
     onSuccess
   });
 

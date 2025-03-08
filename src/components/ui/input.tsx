@@ -5,6 +5,13 @@ import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
+    // Create a specific handler for password fields to allow pasting
+    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+      if (type === 'password' && props.onPaste) {
+        props.onPaste(e);
+      }
+    };
+
     return (
       <input
         type={type}
@@ -13,6 +20,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className
         )}
         ref={ref}
+        onPaste={handlePaste}
         {...props}
       />
     )

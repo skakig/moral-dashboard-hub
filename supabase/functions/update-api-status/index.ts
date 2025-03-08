@@ -29,7 +29,7 @@ serve(async (req) => {
     // Find the API key record
     const { data: existingKey, error: findError } = await supabaseAdmin
       .from("api_keys")
-      .select("id")
+      .select("id, status")
       .eq("service_name", serviceName)
       .single();
     
@@ -41,11 +41,15 @@ serve(async (req) => {
       );
     }
     
+    // Convert boolean to string status
+    const newStatus = isActive ? 'active' : 'inactive';
+    console.log(`Updating status from ${existingKey.status} to ${newStatus}`);
+    
     // Update the status
     const { error: updateError } = await supabaseAdmin
       .from("api_keys")
       .update({ 
-        status: isActive ? 'active' : 'inactive',
+        status: newStatus,
         updated_at: new Date().toISOString()
       })
       .eq("id", existingKey.id);
@@ -56,23 +60,6 @@ serve(async (req) => {
         JSON.stringify({ success: false, error: updateError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
-    }
-    
-    // Log API usage
-    try {
-      await supabaseAdmin.functions.invoke('log-api-usage', {
-        body: {
-          serviceName,
-          category,
-          success: true,
-          responseTime: 0,
-          request: { action: 'update_status', isActive },
-          response: { success: true }
-        },
-      });
-    } catch (logError) {
-      // Non-critical, just log the error but continue
-      console.error('Failed to log API usage:', logError);
     }
     
     return new Response(

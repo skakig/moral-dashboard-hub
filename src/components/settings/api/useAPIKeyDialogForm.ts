@@ -48,10 +48,13 @@ export function useAPIKeyDialogForm({ category, onSuccess }: UseAPIKeyDialogForm
     }, 150);
     
     try {
+      console.log("Submitting API key for validation:", values.serviceName);
+      
       const { data, error } = await supabase.functions.invoke('validate-api-key', {
         body: {
           serviceName: values.serviceName,
-          category,
+          // Since we don't have real category in DB, send derived one
+          category: category || getCategoryForService(values.serviceName),
           apiKey: values.apiKey,
           baseUrl: values.baseUrl,
         },
@@ -70,9 +73,11 @@ export function useAPIKeyDialogForm({ category, onSuccess }: UseAPIKeyDialogForm
         return;
       }
       
-      if (!data.success) {
-        setError(data.error || `Failed to validate ${values.serviceName} API key`);
-        toast.error(data.error || `Failed to validate ${values.serviceName} API key`);
+      if (!data || !data.success) {
+        const errorMsg = data?.error || `Failed to validate ${values.serviceName} API key`;
+        console.error('Validation failed:', errorMsg);
+        setError(errorMsg);
+        toast.error(errorMsg);
         setLoading(false);
         setTimeout(() => setValidationProgress(0), 1000);
         return;
@@ -106,6 +111,23 @@ export function useAPIKeyDialogForm({ category, onSuccess }: UseAPIKeyDialogForm
     if (needsBaseUrl) {
       form.setValue('baseUrl', `https://api.${serviceName.toLowerCase().replace(/\s+/g, '')}.com/v1`);
     }
+  };
+
+  // Helper function to determine category
+  const getCategoryForService = (serviceName: string): string => {
+    const serviceNameLower = serviceName.toLowerCase();
+    
+    if (serviceNameLower.includes('openai') || serviceNameLower.includes('anthropic') || serviceNameLower.includes('google')) {
+      return 'Text Generation';
+    } else if (serviceNameLower.includes('stability') || serviceNameLower.includes('replicate') || serviceNameLower.includes('dalle')) {
+      return 'Image Generation';
+    } else if (serviceNameLower.includes('runway')) {
+      return 'Video Generation';
+    } else if (serviceNameLower.includes('facebook') || serviceNameLower.includes('meta') || serviceNameLower.includes('twitter') || serviceNameLower.includes('tiktok')) {
+      return 'Social Media';
+    }
+    
+    return 'Other';
   };
 
   return {

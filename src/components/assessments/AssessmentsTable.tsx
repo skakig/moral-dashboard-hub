@@ -3,14 +3,14 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { Edit, Trash2, Clock, Shuffle } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 // Define the type for our assessment data
 export interface Assessment {
   id: string;
   title: string;
+  description?: string;
   category: {
     id: string;
     name: string;
@@ -21,6 +21,8 @@ export interface Assessment {
     name: string;
   };
   questions_count: number;
+  time_limit_seconds: number;
+  sequential_logic_enabled: boolean;
   created_at: string;
   status: string;
 }
@@ -49,6 +51,7 @@ export function AssessmentsTable({
             <TableHead>Category</TableHead>
             <TableHead>Moral Level</TableHead>
             <TableHead>Questions</TableHead>
+            <TableHead>Settings</TableHead>
             <TableHead>Created</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
@@ -57,26 +60,33 @@ export function AssessmentsTable({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-10">
+              <TableCell colSpan={8} className="text-center py-10">
                 Loading assessments...
               </TableCell>
             </TableRow>
           ) : error ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-10 text-red-500">
+              <TableCell colSpan={8} className="text-center py-10 text-red-500">
                 Error loading assessments. Please try again.
               </TableCell>
             </TableRow>
           ) : assessments?.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+              <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                 No assessments found. Create your first assessment.
               </TableCell>
             </TableRow>
           ) : (
             assessments?.map((assessment) => (
               <TableRow key={assessment.id}>
-                <TableCell className="font-medium">{assessment.title}</TableCell>
+                <TableCell className="font-medium">
+                  <div>
+                    <div>{assessment.title}</div>
+                    {assessment.description && (
+                      <div className="text-xs text-muted-foreground line-clamp-1">{assessment.description}</div>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{assessment.category?.name}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -89,7 +99,21 @@ export function AssessmentsTable({
                   </div>
                 </TableCell>
                 <TableCell>{assessment.questions_count}</TableCell>
-                <TableCell>{new Date(assessment.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {assessment.time_limit_seconds}s
+                    </div>
+                    <div className="flex items-center text-xs">
+                      <Shuffle className="h-3 w-3 mr-1" />
+                      {assessment.sequential_logic_enabled ? "Sequential" : "Fixed"}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {formatDistanceToNow(new Date(assessment.created_at), { addSuffix: true })}
+                </TableCell>
                 <TableCell>
                   <Badge
                     variant={

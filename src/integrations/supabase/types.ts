@@ -24,6 +24,57 @@ export type Database = {
         }
         Relationships: []
       }
+      assessment_sessions: {
+        Row: {
+          ai_adaptation_level: number | null
+          assessment_id: string
+          current_score: number | null
+          end_time: string | null
+          id: string
+          next_question_id: string | null
+          start_time: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          ai_adaptation_level?: number | null
+          assessment_id: string
+          current_score?: number | null
+          end_time?: string | null
+          id?: string
+          next_question_id?: string | null
+          start_time?: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          ai_adaptation_level?: number | null
+          assessment_id?: string
+          current_score?: number | null
+          end_time?: string | null
+          id?: string
+          next_question_id?: string | null
+          start_time?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_sessions_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_sessions_next_question_id_fkey"
+            columns: ["next_question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessments: {
         Row: {
           category_id: string
@@ -120,6 +171,196 @@ export type Database = {
         }
         Relationships: []
       }
+      question_options: {
+        Row: {
+          created_at: string
+          id: string
+          is_correct: boolean | null
+          moral_level_indicator: number | null
+          question_id: string
+          score_value: number | null
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          moral_level_indicator?: number | null
+          question_id: string
+          score_value?: number | null
+          text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          moral_level_indicator?: number | null
+          question_id?: string
+          score_value?: number | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questions: {
+        Row: {
+          assessment_id: string
+          category: Database["public"]["Enums"]["question_category"]
+          created_at: string
+          difficulty_weight: number
+          id: string
+          is_active: boolean
+          level: number
+          options: Json | null
+          question_type: Database["public"]["Enums"]["question_type"]
+          text: string
+          time_limit_seconds: number
+        }
+        Insert: {
+          assessment_id: string
+          category: Database["public"]["Enums"]["question_category"]
+          created_at?: string
+          difficulty_weight?: number
+          id?: string
+          is_active?: boolean
+          level: number
+          options?: Json | null
+          question_type: Database["public"]["Enums"]["question_type"]
+          text: string
+          time_limit_seconds?: number
+        }
+        Update: {
+          assessment_id?: string
+          category?: Database["public"]["Enums"]["question_category"]
+          created_at?: string
+          difficulty_weight?: number
+          id?: string
+          is_active?: boolean
+          level?: number
+          options?: Json | null
+          question_type?: Database["public"]["Enums"]["question_type"]
+          text?: string
+          time_limit_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      responses: {
+        Row: {
+          ai_analysis: string | null
+          answer_option: string | null
+          answer_text: string | null
+          assessment_id: string
+          correctness_score: number | null
+          created_at: string
+          id: string
+          question_id: string
+          response_time_ms: number
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          answer_option?: string | null
+          answer_text?: string | null
+          assessment_id: string
+          correctness_score?: number | null
+          created_at?: string
+          id?: string
+          question_id: string
+          response_time_ms: number
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          answer_option?: string | null
+          answer_text?: string | null
+          assessment_id?: string
+          correctness_score?: number | null
+          created_at?: string
+          id?: string
+          question_id?: string
+          response_time_ms?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_answer_option_fkey"
+            columns: ["answer_option"]
+            isOneToOne: false
+            referencedRelation: "question_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "responses_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_moral_level_progress: {
+        Row: {
+          ai_feedback: string | null
+          confidence_score: number
+          current_level: number
+          id: string
+          last_assessment_id: string | null
+          last_updated: string
+          previous_level: number | null
+          user_id: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          confidence_score: number
+          current_level: number
+          id?: string
+          last_assessment_id?: string | null
+          last_updated?: string
+          previous_level?: number | null
+          user_id: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          confidence_score?: number
+          current_level?: number
+          id?: string
+          last_assessment_id?: string | null
+          last_updated?: string
+          previous_level?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_moral_level_progress_last_assessment_id_fkey"
+            columns: ["last_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -131,7 +372,24 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      assessment_category:
+        | "Moral Dilemma"
+        | "Professional Ethics"
+        | "Social Dynamics"
+        | "Global Ethics"
+        | "Personal Values"
+      assessment_status: "draft" | "active" | "inactive"
+      question_category:
+        | "Honesty"
+        | "Empathy"
+        | "Justice"
+        | "Loyalty"
+        | "Authority"
+        | "Care"
+        | "Fairness"
+        | "Liberty"
+        | "Sanctity"
+      question_type: "Multiple Choice" | "Likert Scale" | "Scenario-Based"
     }
     CompositeTypes: {
       [_ in never]: never

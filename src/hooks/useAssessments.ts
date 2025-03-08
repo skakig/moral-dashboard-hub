@@ -20,17 +20,20 @@ export function useAssessments() {
           id, 
           title, 
           status, 
-          questions_count, 
+          description,
+          questions_count,
+          time_limit_seconds,
+          sequential_logic_enabled,
           created_at,
-          category:category_id(id, name), 
-          level:level_id(id, level, name)
+          category,
+          level
         `)
         .order('created_at', { ascending: false });
 
       // Apply level filtering if needed
       if (filterLevel !== "all") {
         const [min, max] = filterLevel.split("-").map(Number);
-        query = query.gte('level.level', min).lte('level.level', max);
+        query = query.gte('level', min).lte('level', max);
       }
 
       // Apply search term if provided
@@ -46,7 +49,18 @@ export function useAssessments() {
         return [];
       }
 
-      return data as Assessment[];
+      return data.map(assessment => ({
+        ...assessment,
+        category: {
+          id: assessment.category,
+          name: assessment.category
+        },
+        level: {
+          id: assessment.level,
+          level: assessment.level,
+          name: `Level ${assessment.level}`
+        }
+      })) as Assessment[];
     },
   });
 

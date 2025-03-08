@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 
-// Types for categories and moral levels
 export interface Category {
   id: string;
   name: string;
@@ -35,10 +36,12 @@ export interface MoralLevel {
 // Schema for form validation
 export const assessmentFormSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters" }),
-  category_id: z.string().min(2, { message: "Please select a category" }),
-  level_id: z.string().min(1, { message: "Please select a moral level" }),
+  category: z.string().min(2, { message: "Please select a category" }),
+  level: z.number().min(1, { message: "Please select a moral level" }),
   description: z.string().optional(),
   status: z.enum(["draft", "active", "inactive"]),
+  time_limit_seconds: z.number().min(10).max(3600),
+  sequential_logic_enabled: z.boolean().default(true),
 });
 
 export type AssessmentFormValues = z.infer<typeof assessmentFormSchema>;
@@ -79,7 +82,7 @@ export function AssessmentFormFields({
 
       <FormField
         control={form.control}
-        name="category_id"
+        name="category"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Category</FormLabel>
@@ -111,13 +114,13 @@ export function AssessmentFormFields({
 
       <FormField
         control={form.control}
-        name="level_id"
+        name="level"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Moral Level</FormLabel>
             <Select
-              onValueChange={field.onChange}
-              defaultValue={field.value}
+              onValueChange={(value) => field.onChange(parseInt(value))}
+              value={field.value?.toString()}
               disabled={loadingLevels}
             >
               <FormControl>
@@ -127,7 +130,7 @@ export function AssessmentFormFields({
               </FormControl>
               <SelectContent>
                 {moralLevels?.map((level) => (
-                  <SelectItem key={level.id} value={level.id.toString()}>
+                  <SelectItem key={level.id} value={level.level.toString()}>
                     Level {level.level}: {level.name}
                   </SelectItem>
                 ))}
@@ -158,6 +161,58 @@ export function AssessmentFormFields({
           </FormItem>
         )}
       />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <FormField
+          control={form.control}
+          name="time_limit_seconds"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Time Limit (seconds)</FormLabel>
+              <div className="flex flex-col space-y-4">
+                <FormControl>
+                  <Slider
+                    min={10}
+                    max={300}
+                    step={5}
+                    defaultValue={[field.value || 60]}
+                    onValueChange={(values) => field.onChange(values[0])}
+                  />
+                </FormControl>
+                <div className="flex justify-between">
+                  <span className="text-xs">{field.value || 60} seconds</span>
+                  <span className="text-xs">{Math.floor((field.value || 60) / 60)} minutes</span>
+                </div>
+              </div>
+              <FormDescription>
+                Time allowed for completing this assessment
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="sequential_logic_enabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4 rounded-md border">
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>Enable Sequential Logic</FormLabel>
+                <FormDescription>
+                  Questions adapt based on previous answers
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+      </div>
 
       <FormField
         control={form.control}

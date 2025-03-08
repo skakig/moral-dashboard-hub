@@ -39,10 +39,12 @@ export function NewAssessmentDialog({
     resolver: zodResolver(assessmentFormSchema),
     defaultValues: {
       title: "",
-      category_id: "",
-      level_id: "",
+      category: "",
+      level: 1,
       description: "",
       status: "draft",
+      time_limit_seconds: 60,
+      sequential_logic_enabled: true,
     },
   });
 
@@ -53,10 +55,12 @@ export function NewAssessmentDialog({
         .from('assessments')
         .insert({
           title: values.title,
-          category_id: values.category_id,
-          level_id: parseInt(values.level_id),
+          category: values.category,
+          level: values.level,
           description: values.description || "",
           status: values.status,
+          time_limit_seconds: values.time_limit_seconds,
+          sequential_logic_enabled: values.sequential_logic_enabled,
         })
         .select();
 
@@ -84,7 +88,7 @@ export function NewAssessmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[650px]">
         <DialogHeader>
           <DialogTitle>Create New Assessment</DialogTitle>
           <DialogDescription>

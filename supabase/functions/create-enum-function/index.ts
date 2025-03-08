@@ -23,8 +23,28 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Create a function to expose enum values
-    const { error } = await supabaseAdmin.rpc('create_enum_function');
+    // Create function to get enum values
+    const { error } = await supabaseAdmin.rpc('exec_sql', { 
+      sql: `
+      -- Create a function to get enum values
+      CREATE OR REPLACE FUNCTION get_enum_values(enum_name text)
+      RETURNS TABLE (enum_value text) 
+      LANGUAGE plpgsql
+      SECURITY DEFINER
+      AS $$
+      DECLARE
+        query text;
+      BEGIN
+        query := 'SELECT unnest(enum_range(NULL::' || enum_name || '))::text AS enum_value';
+        RETURN QUERY EXECUTE query;
+      EXCEPTION
+        WHEN others THEN
+          RAISE NOTICE 'Error getting enum values: %', SQLERRM;
+          RETURN;
+      END;
+      $$;
+      `
+    });
     
     if (error) {
       console.error('Error creating enum function:', error);

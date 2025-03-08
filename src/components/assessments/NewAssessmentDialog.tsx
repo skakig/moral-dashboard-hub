@@ -50,7 +50,7 @@ export function NewAssessmentDialog({
 
   const handleSubmit = async (values: AssessmentFormValues) => {
     try {
-      // Insert the new assessment into Supabase
+      // Insert the new assessment into Supabase with the updated column names
       const { data, error } = await supabase
         .from('assessments')
         .insert({

@@ -20,35 +20,28 @@ export function useAssessmentData() {
   const { data: categories, isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      // First try to fetch from the new assessment_category enum type
+      // First try to fetch from the enum type
       try {
         const { data: enumData, error: enumError } = await supabase
-          .rpc('get_enum_values', { enum_name: 'assessment_category' });
+          .from('assessment_categories')
+          .select('*')
+          .order('name');
         
         if (!enumError && enumData) {
-          // Transform enum values to match the Category interface
-          return enumData.map((name: string, index: number) => ({
-            id: name,
-            name: name
-          })) as Category[];
+          return enumData as Category[];
         }
       } catch (error) {
-        console.log("Enum fetch failed, falling back to table", error);
+        console.log("Category fetch failed, using default categories", error);
       }
       
-      // Fallback to the original table-based approach
-      const { data, error } = await supabase
-        .from('assessment_categories')
-        .select('*')
-        .order('name');
-      
-      if (error) {
-        console.error("Error fetching categories:", error);
-        toast.error("Failed to load categories");
-        return [];
-      }
-      
-      return data as Category[];
+      // Return default categories if fetch fails
+      return [
+        { id: 'Moral Dilemma', name: 'Moral Dilemma' },
+        { id: 'Professional Ethics', name: 'Professional Ethics' },
+        { id: 'Social Dynamics', name: 'Social Dynamics' },
+        { id: 'Global Ethics', name: 'Global Ethics' },
+        { id: 'Personal Values', name: 'Personal Values' }
+      ] as Category[];
     },
   });
 

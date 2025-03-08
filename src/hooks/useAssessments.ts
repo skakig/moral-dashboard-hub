@@ -19,14 +19,14 @@ export function useAssessments() {
         .select(`
           id, 
           title, 
+          category,
+          level,
           status, 
           description,
           questions_count,
           time_limit_seconds,
           sequential_logic_enabled,
-          created_at,
-          category,
-          level
+          created_at
         `)
         .order('created_at', { ascending: false });
 
@@ -49,6 +49,7 @@ export function useAssessments() {
         return [];
       }
 
+      // Transform the data to match the expected format in the UI
       return data.map(assessment => ({
         ...assessment,
         category: {

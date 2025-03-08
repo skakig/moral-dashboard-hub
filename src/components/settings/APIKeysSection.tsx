@@ -1,17 +1,38 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, BarChart3, Gauge } from "lucide-react";
+import { Loader2, BarChart3, Gauge, AlertCircle, RefreshCw } from "lucide-react";
 import { APIFunctionMapping } from "@/components/settings/api/APIFunctionMapping";
 import { APIUsageStats } from "@/components/settings/APIUsageStats";
 import { APIRateLimits } from "@/components/settings/APIRateLimits";
 import { APIKeysTabContent } from "@/components/settings/api/APIKeysTabContent";
 import { useAPIData } from "@/components/settings/api/useAPIData";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function APIKeysSection() {
-  const { apiKeysLoading, apiData, fetchApiKeysStatus } = useAPIData();
+  const { apiKeysLoading, loadError, apiData, reloadApiData } = useAPIData();
 
   return (
     <>
+      {loadError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error loading API keys</AlertTitle>
+          <AlertDescription className="flex flex-col gap-2">
+            <p>{loadError}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="self-start"
+              onClick={reloadApiData}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {apiKeysLoading ? (
         <div className="flex items-center justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -38,7 +59,7 @@ export function APIKeysSection() {
           <TabsContent value="keys" className="space-y-4">
             <APIKeysTabContent 
               apiKeysByCategory={apiData.apiKeysByCategory}
-              onRefresh={fetchApiKeysStatus}
+              onRefresh={reloadApiData}
             />
           </TabsContent>
           
@@ -46,21 +67,21 @@ export function APIKeysSection() {
             <APIFunctionMapping 
               functionMappings={apiData.functionMappings}
               apiKeys={apiData.apiKeysByCategory}
-              onSuccess={fetchApiKeysStatus}
+              onSuccess={reloadApiData}
             />
           </TabsContent>
           
           <TabsContent value="usage">
             <APIUsageStats 
               usageStats={apiData.usageStats}
-              onRefresh={fetchApiKeysStatus}
+              onRefresh={reloadApiData}
             />
           </TabsContent>
           
           <TabsContent value="limits">
             <APIRateLimits 
               rateLimits={apiData.rateLimits}
-              onSuccess={fetchApiKeysStatus}
+              onSuccess={reloadApiData}
             />
           </TabsContent>
         </Tabs>

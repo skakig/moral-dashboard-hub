@@ -28,22 +28,28 @@ export function useAPIKeyValidation({
   setLoading
 }: UseAPIKeyValidationProps) {
   const [error, setError] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<any>(null);
 
   const validateAPIKey = async (values: APIKeyFormValues) => {
     setLoading(true);
     setError(null);
+    setValidationResult(null);
     
     try {
       console.log("Submitting API key for validation:", values.serviceName);
       console.log("Category:", category || getCategoryForService(values.serviceName));
       
+      const requestBody = {
+        serviceName: values.serviceName,
+        category: category || getCategoryForService(values.serviceName),
+        apiKey: values.apiKey,
+        baseUrl: values.baseUrl || '',
+      };
+      
+      console.log("Request payload:", JSON.stringify(requestBody));
+      
       const { data, error } = await supabase.functions.invoke('validate-api-key', {
-        body: {
-          serviceName: values.serviceName,
-          category: category || getCategoryForService(values.serviceName),
-          apiKey: values.apiKey,
-          baseUrl: values.baseUrl || '',
-        },
+        body: requestBody,
       });
       
       if (error) {
@@ -61,6 +67,8 @@ export function useAPIKeyValidation({
         return false;
       }
       
+      console.log("Validation successful:", data);
+      setValidationResult(data);
       toast.success(`${values.serviceName} API key validated and saved successfully`);
       
       if (onSuccess) {
@@ -71,7 +79,7 @@ export function useAPIKeyValidation({
     } catch (err: any) {
       console.error('Exception during validation:', err);
       setError(err.message || 'An unexpected error occurred');
-      toast.error(`Failed to save ${values.serviceName} API key`);
+      toast.error(`Failed to save ${values.serviceName} API key due to a system error`);
       return false;
     } finally {
       setLoading(false);
@@ -81,6 +89,7 @@ export function useAPIKeyValidation({
   return {
     error,
     setError,
-    validateAPIKey
+    validateAPIKey,
+    validationResult
   };
 }

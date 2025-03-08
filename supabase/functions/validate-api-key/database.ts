@@ -18,7 +18,7 @@ export async function updateOrInsertApiKey(supabase: SupabaseClient, data: ApiKe
     // Check if the service exists first to handle the unique constraint
     const { data: existingKey, error: queryError } = await supabase
       .from("api_keys")
-      .select("id")
+      .select("id, api_key")
       .eq("service_name", serviceName)
       .maybeSingle();
     
@@ -38,9 +38,11 @@ export async function updateOrInsertApiKey(supabase: SupabaseClient, data: ApiKe
           category: category,
           base_url: baseUrl || '',
           last_validated: new Date().toISOString(),
-          status: 'active'
+          status: 'active',
+          is_active: true
         })
-        .eq("id", existingKey.id);
+        .eq("id", existingKey.id)
+        .select();
     } else {
       console.log(`No existing key for ${serviceName}, inserting new...`);
       // Insert new record
@@ -52,8 +54,10 @@ export async function updateOrInsertApiKey(supabase: SupabaseClient, data: ApiKe
           api_key: apiKey,
           base_url: baseUrl || '',
           last_validated: new Date().toISOString(),
-          status: 'active'
-        });
+          status: 'active',
+          is_active: true
+        })
+        .select();
     }
     
     if (result.error) {
@@ -62,7 +66,8 @@ export async function updateOrInsertApiKey(supabase: SupabaseClient, data: ApiKe
     }
     
     console.log(`Successfully updated/inserted API key for ${serviceName}`);
-    return { success: true };
+    console.log("Database operation result:", result.data);
+    return { success: true, data: result.data };
   } catch (error) {
     console.error("Exception in database operation:", error);
     return { error };

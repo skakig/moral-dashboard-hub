@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function useAPIData() {
   const [apiKeysLoading, setApiKeysLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [apiData, setApiData] = useState<any>({
     apiKeysByCategory: {},
     functionMappings: [],
@@ -14,13 +15,16 @@ export function useAPIData() {
 
   const fetchApiKeysStatus = async () => {
     setApiKeysLoading(true);
+    setLoadError(null);
+    
     try {
       console.log("Fetching API keys status");
       const { data, error } = await supabase.functions.invoke('get-api-keys-status');
       
       if (error) {
         console.error('Failed to fetch API keys status:', error);
-        toast.error('Unable to load API key status');
+        setLoadError(`API keys loading error: ${error.message}`);
+        toast.error('Unable to load API key status. Please try again later.');
         return;
       } 
       
@@ -28,12 +32,15 @@ export function useAPIData() {
         console.log("API keys data received:", data.data);
         setApiData(data.data);
       } else {
-        console.error('Invalid response format:', data);
-        toast.error('Invalid response format from API');
+        const errorMsg = data?.error || 'Invalid response format from API';
+        console.error('Invalid response format:', data, errorMsg);
+        setLoadError(`API keys loading error: ${errorMsg}`);
+        toast.error('Error loading API keys: ' + errorMsg);
       }
     } catch (error) {
       console.error('Failed to fetch API keys status:', error);
-      toast.error('Unable to load API key status');
+      setLoadError(`API keys loading error: ${error.message}`);
+      toast.error('Unable to load API key status due to a server error');
     } finally {
       setApiKeysLoading(false);
     }
@@ -43,9 +50,15 @@ export function useAPIData() {
     fetchApiKeysStatus();
   }, []);
 
+  const reloadApiData = () => {
+    fetchApiKeysStatus();
+  };
+
   return {
     apiKeysLoading,
+    loadError,
     apiData,
-    fetchApiKeysStatus
+    fetchApiKeysStatus,
+    reloadApiData
   };
 }

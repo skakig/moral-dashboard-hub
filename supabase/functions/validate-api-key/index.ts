@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
-import { validateApiKey } from "./validators.ts";
 import { corsHeaders } from "./cors.ts";
 import { updateOrInsertApiKey } from "./database.ts";
 
@@ -14,12 +13,44 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    console.log("Starting validate-api-key function");
+    
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Server configuration error: Missing environment variables" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
 
-    const { serviceName, category, apiKey, baseUrl } = await req.json();
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("Failed to parse request body:", parseError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid request format" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    const { serviceName, category, apiKey, baseUrl } = requestData;
+    
+    if (!serviceName || !apiKey) {
+      console.error("Missing required fields:", { serviceName, apiKey });
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing required fields: serviceName and apiKey" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
     
     // Log validation attempt
     console.log(`Validating ${serviceName} API key in category: ${category}`);
@@ -32,7 +63,7 @@ serve(async (req) => {
       // Update or insert the test API key
       const result = await updateOrInsertApiKey(supabaseAdmin, {
         serviceName,
-        category,
+        category: category || "Other",
         apiKey,
         baseUrl
       });
@@ -40,53 +71,52 @@ serve(async (req) => {
       if (result.error) {
         console.error("Database error:", result.error);
         return new Response(
-          JSON.stringify({ success: false, error: result.error.message }),
+          JSON.stringify({ success: false, error: `Database error: ${result.error.message}` }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
       
       return new Response(
-        JSON.stringify({ success: true, message: `Test ${serviceName} API key saved successfully` }),
+        JSON.stringify({ 
+          success: true, 
+          message: `Test ${serviceName} API key saved successfully`,
+          data: result.data
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    // Try validation - for now, consider it successful
-    // In a real implementation, this would actually validate with the service
-    const validation = { isValid: true, errorMessage: null };
+    // In a real implementation, we would validate the API key with the actual service
+    // For now, consider any non-TEST_ key as valid for demo purposes
     
-    // If validation was successful, update the key in the database
-    if (validation.isValid) {
-      // Update or insert the API key
-      const result = await updateOrInsertApiKey(supabaseAdmin, {
-        serviceName,
-        category,
-        apiKey,
-        baseUrl
-      });
-      
-      if (result.error) {
-        console.error("Database error:", result.error);
-        return new Response(
-          JSON.stringify({ success: false, error: result.error.message }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-        );
-      }
-      
+    // Update or insert the API key
+    const result = await updateOrInsertApiKey(supabaseAdmin, {
+      serviceName,
+      category: category || "Other",
+      apiKey,
+      baseUrl
+    });
+    
+    if (result.error) {
+      console.error("Database error:", result.error);
       return new Response(
-        JSON.stringify({ success: true, message: `${serviceName} API key validated and saved successfully` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({ success: false, error: validation.errorMessage }),
+        JSON.stringify({ success: false, error: `Database error: ${result.error.message}` }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
+    
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: `${serviceName} API key validated and saved successfully`,
+        data: result.data 
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error('Exception:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: `Server error: ${error.message}` }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

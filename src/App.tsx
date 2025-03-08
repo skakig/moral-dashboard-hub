@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter as Router,
   Route,
@@ -7,13 +8,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { Index } from "@/pages/Index";
-import { Assessments } from "@/pages/Assessments";
-import { Users } from "@/pages/Users";
-import { Settings } from "@/pages/Settings";
-import { AIInsights } from "@/pages/AIInsights";
-import { Login } from "@/pages/Login";
-import { NotFound } from "@/pages/NotFound";
+import Index from "@/pages/Index";
+import Assessments from "@/pages/Assessments";
+import Users from "@/pages/Users";
+import Settings from "@/pages/Settings";
+import AIInsights from "@/pages/AIInsights";
+import Login from "@/pages/Login";
+import NotFound from "@/pages/NotFound";
 import AIContent from "@/pages/AIContent";
 
 const queryClient = new QueryClient();

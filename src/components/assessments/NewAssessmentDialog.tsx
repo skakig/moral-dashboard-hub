@@ -50,17 +50,16 @@ export function NewAssessmentDialog({
 
   const handleSubmit = async (values: AssessmentFormValues) => {
     try {
-      // Insert the new assessment into Supabase with the updated column names
+      // Insert the new assessment into Supabase with the corrected column names
       const { data, error } = await supabase
         .from('assessments')
         .insert({
           title: values.title,
-          category: values.category,
-          level: values.level,
+          category_id: values.category,
+          level_id: values.level,
           description: values.description || "",
           status: values.status,
-          time_limit_seconds: values.time_limit_seconds,
-          sequential_logic_enabled: values.sequential_logic_enabled,
+          is_active: true
         })
         .select();
 

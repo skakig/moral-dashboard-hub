@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Users from "./pages/Users";
 import Assessments from "./pages/Assessments";
 import AIInsights from "./pages/AIInsights";
+import AIContent from "./pages/AIContent";
 import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/users" element={<Users />} />
           <Route path="/assessments" element={<Assessments />} />
           <Route path="/ai-insights" element={<AIInsights />} />
+          <Route path="/ai-content" element={<AIContent />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

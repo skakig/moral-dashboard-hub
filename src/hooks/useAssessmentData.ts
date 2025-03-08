@@ -20,7 +20,21 @@ export function useAssessmentData() {
   const { data: categories, isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      // First try to fetch from the enum type
+      // First try to fetch from the assessment_categories table
+      try {
+        const { data: tableData, error: tableError } = await supabase
+          .from('assessment_categories')
+          .select('*')
+          .order('name');
+        
+        if (!tableError && tableData && tableData.length > 0) {
+          return tableData as Category[];
+        }
+      } catch (error) {
+        console.log("Category fetch from table failed", error);
+      }
+      
+      // Try to fetch from enum type if table approach fails
       try {
         const { data: enumData, error: enumError } = await supabase
           .from('assessment_categories')
@@ -31,10 +45,10 @@ export function useAssessmentData() {
           return enumData as Category[];
         }
       } catch (error) {
-        console.log("Category fetch failed, using default categories", error);
+        console.log("Category fetch from enum failed", error);
       }
       
-      // Return default categories if fetch fails
+      // Return default categories if all fetches fail
       return [
         { id: 'Moral Dilemma', name: 'Moral Dilemma' },
         { id: 'Professional Ethics', name: 'Professional Ethics' },

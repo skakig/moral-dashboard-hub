@@ -4,12 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { UseFormReturn } from 'react-hook-form';
-import { apiKeySchema } from './hooks/useAPIKeyValidation';
-import { z } from 'zod';
+import { apiKeySchema, APIKeyFormValues } from './hooks/useAPIKeyValidation';
 import { APIKeyErrorDisplay } from './APIKeyErrorDisplay';
 import { APIKeyValidationProgress } from './APIKeyValidationProgress';
-
-type APIKeyFormValues = z.infer<typeof apiKeySchema>;
 
 interface APIKeyFormFieldsProps {
   form: UseFormReturn<APIKeyFormValues>;

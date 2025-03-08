@@ -1,67 +1,48 @@
 
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { UseFormReturn } from "react-hook-form";
-import * as z from 'zod';
+import { FormField, FormControl, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectGroup, SelectItem } from '@/components/ui/select';
+import { UseFormReturn } from 'react-hook-form';
+import { APIKeyFormValues } from './hooks/useAPIKeyValidation';
 
 interface ServiceSelectionProps {
-  form: UseFormReturn<any>;
+  form: UseFormReturn<APIKeyFormValues>;
   suggestedServices: string[];
   onServiceChange: (value: string) => void;
 }
 
 export function ServiceSelection({ form, suggestedServices, onServiceChange }: ServiceSelectionProps) {
-  const watchedServiceName = form.watch('serviceName');
-
   return (
-    <>
-      <FormField
-        control={form.control}
-        name="serviceName"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Service Name</FormLabel>
+    <FormField
+      control={form.control}
+      name="serviceName"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Service</FormLabel>
+          <FormControl>
             <Select 
+              value={field.value} 
               onValueChange={(value) => {
                 field.onChange(value);
                 onServiceChange(value);
-              }} 
-              defaultValue={field.value}
+              }}
             >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service..." />
-                </SelectTrigger>
-              </FormControl>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a service" />
+              </SelectTrigger>
               <SelectContent>
-                {suggestedServices.map((service) => (
-                  <SelectItem key={service} value={service}>
-                    {service}
-                  </SelectItem>
-                ))}
-                <SelectItem value="Custom">Custom Service</SelectItem>
+                <SelectGroup>
+                  {suggestedServices.map((service) => (
+                    <SelectItem key={service} value={service}>
+                      {service}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {watchedServiceName === 'Custom' && (
-        <FormItem>
-          <FormLabel>Custom Service Name</FormLabel>
-          <FormControl>
-            <Input 
-              placeholder="Enter custom service name"
-              onChange={(e) => {
-                form.setValue('serviceName', e.target.value);
-                onServiceChange(e.target.value);
-              }}
-            />
           </FormControl>
+          <FormMessage />
         </FormItem>
       )}
-    </>
+    />
   );
 }

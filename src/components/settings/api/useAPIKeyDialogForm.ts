@@ -1,12 +1,9 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { useValidationProgress } from './hooks/useValidationProgress';
-import { useAPIKeyValidation, apiKeySchema } from './hooks/useAPIKeyValidation';
+import { useAPIKeyValidation, apiKeySchema, APIKeyFormValues } from './hooks/useAPIKeyValidation';
 import { getCategoryForService } from './utils/serviceCategories';
-
-type FormValues = z.infer<typeof apiKeySchema>;
 
 interface UseAPIKeyDialogFormProps {
   category: string;
@@ -20,7 +17,7 @@ export function useAPIKeyDialogForm({ category, onSuccess }: UseAPIKeyDialogForm
     validationProgress 
   } = useValidationProgress();
   
-  const form = useForm<FormValues>({
+  const form = useForm<APIKeyFormValues>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
       serviceName: '',
@@ -36,7 +33,7 @@ export function useAPIKeyDialogForm({ category, onSuccess }: UseAPIKeyDialogForm
     setLoading
   });
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = async (values: APIKeyFormValues) => {
     await validateAPIKey(values);
     if (!error) {
       form.reset();

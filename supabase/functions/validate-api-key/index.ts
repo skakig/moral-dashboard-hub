@@ -7,6 +7,104 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ValidationResult {
+  isValid: boolean;
+  errorMessage?: string;
+}
+
+// Handler for different API validations
+async function validateApiKey(serviceName: string, apiKey: string, baseUrl: string): Promise<ValidationResult> {
+  try {
+    // Default result assumes failure
+    let result: ValidationResult = { isValid: false, errorMessage: `Failed to validate ${serviceName} API key` };
+    
+    // Validation logic for different services
+    if (serviceName.toLowerCase().includes("openai")) {
+      // Test OpenAI API key
+      const response = await fetch("https://api.openai.com/v1/models", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (response.status === 200) {
+        result.isValid = true;
+      } else {
+        const error = await response.json();
+        result.errorMessage = error.error?.message || "Invalid OpenAI API key";
+      }
+    } 
+    else if (serviceName.toLowerCase().includes("elevenlabs")) {
+      // Test ElevenLabs API key
+      const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+        method: "GET",
+        headers: {
+          "xi-api-key": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (response.status >= 200 && response.status < 300) {
+        result.isValid = true;
+      } else {
+        try {
+          const error = await response.json();
+          result.errorMessage = error.detail?.message || "Invalid ElevenLabs API key";
+        } catch (e) {
+          result.errorMessage = `ElevenLabs API error: ${response.status} ${response.statusText}`;
+        }
+      }
+    }
+    else if (serviceName.toLowerCase().includes("stable") && serviceName.toLowerCase().includes("diffusion")) {
+      // For demo purposes, we'll just check if it matches a certain pattern
+      result.isValid = apiKey.length > 30;
+      if (!result.isValid) {
+        result.errorMessage = "Stable Diffusion API key appears to be invalid";
+      }
+    }
+    else if (serviceName.toLowerCase().includes("runway")) {
+      // RunwayML validation logic
+      const response = await fetch(`${baseUrl}/user`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (response.status === 200) {
+        result.isValid = true;
+      } else {
+        result.errorMessage = "Invalid RunwayML API key";
+      }
+    }
+    else if (serviceName.toLowerCase().includes("pika")) {
+      // Simple validation for Pika Labs
+      result.isValid = apiKey.length > 20 && apiKey.startsWith("pika_");
+      if (!result.isValid) {
+        result.errorMessage = "Pika API key appears to be invalid";
+      }
+    }
+    else {
+      // Generic validation for other services - just check format
+      result.isValid = apiKey.length > 10;
+      if (!result.isValid) {
+        result.errorMessage = `${serviceName} API key appears to be invalid`;
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error(`Error validating ${serviceName} API key:`, error);
+    return { 
+      isValid: false, 
+      errorMessage: error.message || `Failed to validate ${serviceName} API key` 
+    };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -21,70 +119,22 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { serviceName, apiKey } = await req.json();
+    const { serviceName, category, apiKey, baseUrl } = await req.json();
+    
+    // Log validation attempt
+    console.log(`Validating ${serviceName} API key in category: ${category}`);
     
     // Validate API key based on service
-    let isValid = false;
-    let errorMessage = "";
-    
-    if (serviceName === "OpenAI") {
-      try {
-        // Test OpenAI API key
-        const response = await fetch("https://api.openai.com/v1/models", {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-        });
-        
-        if (response.status === 200) {
-          isValid = true;
-        } else {
-          const error = await response.json();
-          errorMessage = error.error?.message || "Invalid OpenAI API key";
-        }
-      } catch (error) {
-        errorMessage = error.message || "Failed to validate OpenAI API key";
-      }
-    } 
-    else if (serviceName === "ElevenLabs") {
-      try {
-        // Test ElevenLabs API key
-        const response = await fetch("https://api.elevenlabs.io/v1/voices", {
-          method: "GET",
-          headers: {
-            "xi-api-key": apiKey,
-            "Content-Type": "application/json",
-          },
-        });
-        
-        if (response.status === 200) {
-          isValid = true;
-        } else {
-          const error = await response.json();
-          errorMessage = error.detail?.message || "Invalid ElevenLabs API key";
-        }
-      } catch (error) {
-        errorMessage = error.message || "Failed to validate ElevenLabs API key";
-      }
-    }
-    else if (serviceName === "StableDiffusion") {
-      // For the demo, we'll just check if it matches a certain pattern
-      // In production, you'd validate with the actual API
-      isValid = apiKey.length > 30;
-      if (!isValid) {
-        errorMessage = "Stable Diffusion API key appears to be invalid";
-      }
-    }
+    const validation = await validateApiKey(serviceName, apiKey, baseUrl || "");
     
     // If validation was successful, update the key in the database
-    if (isValid) {
+    if (validation.isValid) {
       // Check if the service exists first to handle the unique constraint
       const { data: existingKey } = await supabaseAdmin
         .from("api_keys")
         .select("id")
         .eq("service_name", serviceName)
+        .eq("category", category)
         .single();
       
       let result;
@@ -94,23 +144,27 @@ serve(async (req) => {
           .from("api_keys")
           .update({ 
             api_key: apiKey,
+            base_url: baseUrl || '',
             last_validated: new Date().toISOString(),
-            is_active: true
+            status: 'active'
           })
-          .eq("service_name", serviceName);
+          .eq("id", existingKey.id);
       } else {
         // Insert new record
         result = await supabaseAdmin
           .from("api_keys")
           .insert({ 
-            service_name: serviceName, 
+            service_name: serviceName,
+            category: category,
             api_key: apiKey,
+            base_url: baseUrl || '',
             last_validated: new Date().toISOString(),
-            is_active: true
+            status: 'active'
           });
       }
       
       if (result.error) {
+        console.error("Database error:", result.error);
         return new Response(
           JSON.stringify({ success: false, error: result.error.message }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
@@ -123,7 +177,7 @@ serve(async (req) => {
       );
     } else {
       return new Response(
-        JSON.stringify({ success: false, error: errorMessage }),
+        JSON.stringify({ success: false, error: validation.errorMessage }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }

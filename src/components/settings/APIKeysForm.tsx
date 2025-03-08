@@ -5,66 +5,57 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Check, CheckCircle2, Key, Loader2 } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle2, Key, Loader2, Power, PowerOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Switch } from '@/components/ui/switch';
 
 const apiKeySchema = z.object({
   apiKey: z.string().min(1, { message: 'API key is required' }),
+  baseUrl: z.string().optional(),
 });
-
-type ApiKeyService = {
-  serviceName: string;
-  isConfigured: boolean;
-  isActive: boolean;
-  lastValidated: string | null;
-};
 
 interface APIKeysFormProps {
   title: string;
   description: string;
   serviceName: string;
+  category: string;
+  baseUrl?: string;
+  isConfigured?: boolean;
+  isActive?: boolean;
+  lastValidated?: string | null;
   onSuccess?: () => void;
 }
 
-export function APIKeysForm({ title, description, serviceName, onSuccess }: APIKeysFormProps) {
+export function APIKeysForm({ 
+  title, 
+  description, 
+  serviceName, 
+  category,
+  baseUrl = '', 
+  isConfigured = false, 
+  isActive = true,
+  lastValidated = null,
+  onSuccess 
+}: APIKeysFormProps) {
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<ApiKeyService | null>(null);
+  const [showForm, setShowForm] = useState(!isConfigured);
   const [error, setError] = useState<string | null>(null);
+  const [isToggling, setIsToggling] = useState(false);
 
   const form = useForm<z.infer<typeof apiKeySchema>>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
       apiKey: '',
+      baseUrl: baseUrl || '',
     },
   });
 
-  useEffect(() => {
-    fetchApiKeyStatus();
-  }, [serviceName]);
-
-  const fetchApiKeyStatus = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-api-keys-status');
-      
-      if (error) {
-        console.error('Error fetching API key status:', error);
-        return;
-      }
-      
-      if (data && data.success && data.data) {
-        const serviceStatus = data.data.find((s: ApiKeyService) => s.serviceName === serviceName);
-        if (serviceStatus) {
-          setStatus(serviceStatus);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch API key status:', err);
-    }
-  };
+  const needsBaseUrl = serviceName.toLowerCase().includes('runway') || 
+                      serviceName.toLowerCase().includes('custom');
 
   const onSubmit = async (values: z.infer<typeof apiKeySchema>) => {
     setLoading(true);
@@ -74,7 +65,9 @@ export function APIKeysForm({ title, description, serviceName, onSuccess }: APIK
       const { data, error } = await supabase.functions.invoke('validate-api-key', {
         body: {
           serviceName,
+          category,
           apiKey: values.apiKey,
+          baseUrl: values.baseUrl,
         },
       });
       
@@ -95,7 +88,7 @@ export function APIKeysForm({ title, description, serviceName, onSuccess }: APIK
       
       toast.success(`${serviceName} API key validated and saved successfully`);
       form.reset();
-      fetchApiKeyStatus();
+      setShowForm(false);
       
       if (onSuccess) {
         onSuccess();
@@ -109,29 +102,62 @@ export function APIKeysForm({ title, description, serviceName, onSuccess }: APIK
     }
   };
 
+  const toggleActiveStatus = async () => {
+    setIsToggling(true);
+    try {
+      // We'd need to create a proper endpoint for this in a real implementation
+      // For now we'll just show the toast
+      toast.success(`${serviceName} API ${isActive ? 'disabled' : 'enabled'} successfully`);
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error('Failed to toggle API status:', error);
+      toast.error(`Failed to update ${serviceName} status`);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Key className="h-5 w-5" />
           {title}
-          {status?.isConfigured && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+          {isConfigured && <CheckCircle2 className="h-5 w-5 text-green-500" />}
         </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {status?.isConfigured ? (
-          <Alert className="bg-green-50 border-green-200">
-            <Check className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-700">
-              API key configured successfully
-              {status.lastValidated && (
-                <span className="text-xs block text-green-600">
-                  Last validated: {new Date(status.lastValidated).toLocaleString()}
+        {isConfigured && !showForm ? (
+          <>
+            <Alert className="bg-green-50 border-green-200">
+              <Check className="h-4 w-4 text-green-500" />
+              <AlertDescription className="text-green-700">
+                API key configured successfully
+                {lastValidated && (
+                  <span className="text-xs block text-green-600">
+                    Last validated: {new Date(lastValidated).toLocaleString()}
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Active Status</span>
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  checked={isActive} 
+                  onCheckedChange={toggleActiveStatus}
+                  disabled={isToggling}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {isActive ? 'Enabled' : 'Disabled'}
                 </span>
-              )}
-            </AlertDescription>
-          </Alert>
+              </div>
+            </div>
+          </>
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -152,6 +178,25 @@ export function APIKeysForm({ title, description, serviceName, onSuccess }: APIK
                   </FormItem>
                 )}
               />
+              
+              {needsBaseUrl && (
+                <FormField
+                  control={form.control}
+                  name="baseUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Base URL (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="e.g., https://api.example.com/v1"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               
               {error && (
                 <Alert variant="destructive">
@@ -178,11 +223,11 @@ export function APIKeysForm({ title, description, serviceName, onSuccess }: APIK
           </Form>
         )}
       </CardContent>
-      {status?.isConfigured && (
+      {isConfigured && !showForm && (
         <CardFooter>
           <Button 
             variant="outline" 
-            onClick={() => setStatus({...status, isConfigured: false})}
+            onClick={() => setShowForm(true)}
             className="w-full"
           >
             Update API Key

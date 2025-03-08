@@ -23,12 +23,30 @@ interface DbOperationResult {
 }
 
 /**
+ * Represents an API key record
+ */
+interface ApiKeyRecord {
+  id: string;
+  service_name: string;
+  category: string;
+  api_key: string;
+  base_url?: string;
+  is_primary?: boolean;
+  status?: string;
+  last_validated?: string;
+  is_active?: boolean;
+}
+
+/**
  * Checks if an API key already exists for a specific service
  * @param supabase Supabase client
  * @param serviceName Service name to check
  * @returns The existing key data or null, and any error
  */
-async function getExistingApiKey(supabase: SupabaseClient, serviceName: string): Promise<{data: any, error: any}> {
+export async function getExistingApiKey(
+  supabase: SupabaseClient, 
+  serviceName: string
+): Promise<{data: any, error: any}> {
   console.log(`Checking for existing API key for ${serviceName}`);
   
   try {
@@ -50,7 +68,10 @@ async function getExistingApiKey(supabase: SupabaseClient, serviceName: string):
  * @param category Category to reset
  * @returns Operation result
  */
-async function resetPrimaryKeysInCategory(supabase: SupabaseClient, category: string): Promise<{error: any}> {
+export async function resetPrimaryKeysInCategory(
+  supabase: SupabaseClient, 
+  category: string
+): Promise<{error: any}> {
   console.log(`Resetting primary status for other keys in category: ${category}`);
   
   try {
@@ -73,7 +94,7 @@ async function resetPrimaryKeysInCategory(supabase: SupabaseClient, category: st
  * @param data Updated key data
  * @returns Operation result
  */
-async function updateApiKey(
+export async function updateApiKey(
   supabase: SupabaseClient, 
   id: string, 
   data: {
@@ -112,7 +133,7 @@ async function updateApiKey(
  * @param data New key data
  * @returns Operation result
  */
-async function insertApiKey(
+export async function insertApiKey(
   supabase: SupabaseClient, 
   data: {
     serviceName: string,
@@ -151,7 +172,10 @@ async function insertApiKey(
  * @param serviceName Service name to fetch
  * @returns The fetched key or null, and any error
  */
-async function fetchUpdatedApiKey(supabase: SupabaseClient, serviceName: string): Promise<{data: any, error: any}> {
+export async function fetchUpdatedApiKey(
+  supabase: SupabaseClient, 
+  serviceName: string
+): Promise<{data: any, error: any}> {
   console.log(`Fetching updated API key for ${serviceName}`);
   
   try {
@@ -173,7 +197,10 @@ async function fetchUpdatedApiKey(supabase: SupabaseClient, serviceName: string)
  * @param data API key data to save
  * @returns Operation result with success status and data or error
  */
-export async function updateOrInsertApiKey(supabase: SupabaseClient, data: ApiKeyData): Promise<DbOperationResult> {
+export async function updateOrInsertApiKey(
+  supabase: SupabaseClient, 
+  data: ApiKeyData
+): Promise<DbOperationResult> {
   const { serviceName, category, apiKey, baseUrl, isPrimary = false } = data;
 
   try {

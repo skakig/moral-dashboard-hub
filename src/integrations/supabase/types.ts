@@ -77,10 +77,12 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_primary: boolean | null
           last_validated: string | null
           service_name: string
           status: string | null
           updated_at: string | null
+          validation_errors: string[] | null
         }
         Insert: {
           api_key: string
@@ -89,10 +91,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_primary?: boolean | null
           last_validated?: string | null
           service_name: string
           status?: string | null
           updated_at?: string | null
+          validation_errors?: string[] | null
         }
         Update: {
           api_key?: string
@@ -101,10 +105,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_primary?: boolean | null
           last_validated?: string | null
           service_name?: string
           status?: string | null
           updated_at?: string | null
+          validation_errors?: string[] | null
         }
         Relationships: []
       }

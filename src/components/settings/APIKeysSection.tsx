@@ -1,6 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, BarChart3, Gauge, AlertCircle, RefreshCw, InfoIcon, Key, GitBranch } from "lucide-react";
+import { BarChart3, Gauge, AlertCircle, RefreshCw, InfoIcon, Key, GitBranch } from "lucide-react";
 import { APIFunctionMapping } from "@/components/settings/api-keys/APIFunctionMapping";
 import { APIUsageStats } from "@/components/settings/APIUsageStats";
 import { APIRateLimits } from "@/components/settings/APIRateLimits";
@@ -15,7 +15,12 @@ export function APIKeysSection() {
 
   // Automatically refresh data when component mounts to ensure fresh data
   useEffect(() => {
-    reloadApiData();
+    // Add a small delay to ensure database migrations have completed
+    const timer = setTimeout(() => {
+      reloadApiData();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const isEmptyData = !apiData || 
@@ -59,7 +64,7 @@ export function APIKeysSection() {
 
       {apiKeysLoading ? (
         <div className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <Tabs defaultValue="keys" className="w-full">
@@ -92,29 +97,29 @@ export function APIKeysSection() {
           
           <TabsContent value="keys" className="space-y-4">
             <APIKeysOverview 
-              apiKeysByCategory={apiData.apiKeysByCategory || {}}
+              apiKeysByCategory={apiData?.apiKeysByCategory || {}}
               onRefresh={reloadApiData}
             />
           </TabsContent>
           
           <TabsContent value="mappings">
             <APIFunctionMapping 
-              functionMappings={apiData.functionMappings || []}
-              apiKeys={apiData.apiKeysByCategory || {}}
+              functionMappings={apiData?.functionMappings || []}
+              apiKeys={apiData?.apiKeysByCategory || {}}
               onSuccess={reloadApiData}
             />
           </TabsContent>
           
           <TabsContent value="usage">
             <APIUsageStats 
-              usageStats={apiData.usageStats || { byService: {}, byCategory: {} }}
+              usageStats={apiData?.usageStats || { byService: {}, byCategory: {} }}
               onRefresh={reloadApiData}
             />
           </TabsContent>
           
           <TabsContent value="limits">
             <APIRateLimits 
-              rateLimits={apiData.rateLimits || []}
+              rateLimits={apiData?.rateLimits || []}
               onSuccess={reloadApiData}
             />
           </TabsContent>

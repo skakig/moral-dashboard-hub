@@ -23,9 +23,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // SQL to create a function that gets enum values
+    // Create helpful database functions
     const { error } = await supabaseAdmin.rpc('exec_sql', { 
       sql: `
+      -- Function to get enum values
       CREATE OR REPLACE FUNCTION get_enum_values(enum_name text)
       RETURNS TABLE (enum_value text) 
       LANGUAGE plpgsql
@@ -43,7 +44,7 @@ serve(async (req) => {
       END;
       $$;
       
-      -- Create exec_sql function if it doesn't exist
+      -- Function to execute SQL
       CREATE OR REPLACE FUNCTION exec_sql(sql text)
       RETURNS void
       LANGUAGE plpgsql
@@ -51,6 +52,28 @@ serve(async (req) => {
       AS $$
       BEGIN
         EXECUTE sql;
+      END;
+      $$;
+      
+      -- Function to check if a column exists in a table
+      CREATE OR REPLACE FUNCTION check_column_exists(
+        table_name text,
+        column_name text
+      )
+      RETURNS boolean
+      LANGUAGE plpgsql
+      SECURITY DEFINER
+      AS $$
+      DECLARE
+        column_exists boolean;
+      BEGIN
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_name = $1 AND column_name = $2
+        ) INTO column_exists;
+        
+        RETURN column_exists;
       END;
       $$;
       `
@@ -65,7 +88,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "SQL functions created successfully" }),
+      JSON.stringify({ success: true, message: "SQL helper functions created successfully" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

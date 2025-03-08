@@ -35,26 +35,31 @@ serve(async (req) => {
     
     console.log(`Setting key ${id} as primary for category ${category}`);
     
-    // First, check if we have is_primary column in the api_keys table
+    // Check if column exists - use our new database function
     try {
-      const { data: columnData, error: columnError } = await supabaseAdmin.rpc('check_column_exists', {
+      const { data: columnExists, error: columnError } = await supabaseAdmin.rpc('check_column_exists', {
         table_name: 'api_keys',
         column_name: 'is_primary'
       });
       
       if (columnError) {
-        console.warn("Could not check for is_primary column, assuming it exists:", columnError);
+        console.warn("Could not check for is_primary column:", columnError);
         // Continue anyway
-      } else if (!columnData) {
+      } else if (!columnExists) {
         console.error("is_primary column doesn't exist in api_keys table");
         return new Response(
-          JSON.stringify({ success: false, error: "Database schema error: is_primary column missing" }),
+          JSON.stringify({ 
+            success: false, 
+            error: "Database schema error: is_primary column missing. Please run database migrations." 
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
         );
+      } else {
+        console.log("is_primary column exists, proceeding with update");
       }
     } catch (checkError) {
-      console.warn("Exception checking column existence, continuing:", checkError);
-      // Continue anyway
+      console.warn("Exception checking column existence:", checkError);
+      // Continue anyway, we'll handle errors in the actual operations
     }
     
     // Get the service name of the key we're making primary

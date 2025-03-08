@@ -33,34 +33,37 @@ export function GeneralSettings() {
       try {
         setLoading(true);
         
-        // Use raw querying since the table might not be in the TypeScript definitions
-        const { data, error } = await supabase
-          .from('site_settings')
-          .select('*')
-          .limit(1)
-          .single();
+        // Explicitly use raw SQL to fetch settings since the TypeScript types might not be updated
+        const { data, error } = await supabase.rpc('exec_sql', { 
+          sql: `SELECT * FROM site_settings LIMIT 1`
+        });
 
         if (error) {
           console.error("Error fetching settings:", error);
-          toast.error("Failed to load settings. Please try again.");
+          toast.error("Failed to load settings: " + error.message);
           return;
         }
 
-        if (data) {
+        if (data && data.length > 0) {
+          const siteData = data[0];
+          
           // Explicitly map the fields to ensure type safety
           setSettings({
-            id: data.id,
-            site_name: data.site_name,
-            admin_email: data.admin_email,
-            timezone: data.timezone,
-            maintenance_mode: data.maintenance_mode
+            id: siteData.id,
+            site_name: siteData.site_name,
+            admin_email: siteData.admin_email,
+            timezone: siteData.timezone,
+            maintenance_mode: siteData.maintenance_mode
           });
           
-          console.log("Settings loaded:", data);
+          console.log("Settings loaded:", siteData);
+        } else {
+          console.warn("No settings found in database");
+          toast.warning("Using default settings. Please save to create settings record.");
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Exception fetching settings:", error);
-        toast.error("An unexpected error occurred while loading settings.");
+        toast.error("An unexpected error occurred: " + error.message);
       } finally {
         setLoading(false);
       }
@@ -83,16 +86,19 @@ export function GeneralSettings() {
 
       console.log("Saving settings:", settings);
       
-      // Use raw query to update settings
-      const { error } = await supabase
-        .from('site_settings')
-        .update({
-          site_name: settings.site_name,
-          admin_email: settings.admin_email,
-          timezone: settings.timezone,
-          maintenance_mode: settings.maintenance_mode
-        })
-        .eq("id", settings.id);
+      // Use raw SQL to update settings
+      const { error } = await supabase.rpc('exec_sql', { 
+        sql: `
+        UPDATE site_settings
+        SET 
+          site_name = '${settings.site_name.replace(/'/g, "''")}',
+          admin_email = '${settings.admin_email.replace(/'/g, "''")}',
+          timezone = '${settings.timezone}',
+          maintenance_mode = ${settings.maintenance_mode},
+          updated_at = now()
+        WHERE id = '${settings.id}'
+        `
+      });
 
       if (error) {
         console.error("Error saving settings:", error);

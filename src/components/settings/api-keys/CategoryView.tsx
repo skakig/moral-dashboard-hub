@@ -122,53 +122,54 @@ export function CategoryView({ category, apiKeys, onAddKey, onSuccess }: Categor
           <CardDescription className="mt-2 pl-7">
             Configure API keys for {category.toLowerCase()} services
           </CardDescription>
+          
+          <CollapsibleContent>
+            <CardContent>
+              {apiKeys.length === 0 ? (
+                <div className="flex items-center justify-center py-8 border border-dashed rounded-lg bg-muted/30">
+                  <div className="flex flex-col items-center text-center max-w-xs">
+                    <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
+                    <h3 className="text-lg font-medium mb-1">No API Keys</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      You haven't added any {category.toLowerCase()} API keys yet
+                    </p>
+                    <Button 
+                      onClick={() => onAddKey(category)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add {category} Key
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {sortedKeys.map((keyData: any) => (
+                    <APIKeyCard
+                      key={keyData.id}
+                      id={keyData.id}
+                      title={keyData.serviceName}
+                      description={`${category} service`}
+                      serviceName={keyData.serviceName}
+                      category={category}
+                      baseUrl={keyData.baseUrl}
+                      isConfigured={keyData.isConfigured}
+                      isActive={keyData.isActive}
+                      isPrimary={keyData.isPrimary}
+                      lastValidated={keyData.lastValidated}
+                      createdAt={keyData.createdAt}
+                      validationErrors={keyData.validationErrors}
+                      onSuccess={onSuccess}
+                      onSetPrimary={handleSetPrimary}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </CollapsibleContent>
         </Collapsible>
       </CardHeader>
-      <CollapsibleContent>
-        <CardContent>
-          {apiKeys.length === 0 ? (
-            <div className="flex items-center justify-center py-8 border border-dashed rounded-lg bg-muted/30">
-              <div className="flex flex-col items-center text-center max-w-xs">
-                <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
-                <h3 className="text-lg font-medium mb-1">No API Keys</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  You haven't added any {category.toLowerCase()} API keys yet
-                </p>
-                <Button 
-                  onClick={() => onAddKey(category)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add {category} Key
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {sortedKeys.map((keyData: any) => (
-                <APIKeyCard
-                  key={keyData.id}
-                  id={keyData.id}
-                  title={keyData.serviceName}
-                  description={`${category} service`}
-                  serviceName={keyData.serviceName}
-                  category={category}
-                  baseUrl={keyData.baseUrl}
-                  isConfigured={keyData.isConfigured}
-                  isActive={keyData.isActive}
-                  isPrimary={keyData.isPrimary}
-                  lastValidated={keyData.lastValidated}
-                  createdAt={keyData.createdAt}
-                  validationErrors={keyData.validationErrors}
-                  onSuccess={onSuccess}
-                  onSetPrimary={handleSetPrimary}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </CollapsibleContent>
     </Card>
   );
 }

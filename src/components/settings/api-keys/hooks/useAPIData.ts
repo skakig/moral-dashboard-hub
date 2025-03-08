@@ -1,59 +1,48 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
+// Define proper types for API data
 interface APIKey {
   id: string;
   serviceName: string;
-  category: string;
-  baseUrl: string;
   isConfigured: boolean;
   isActive: boolean;
   isPrimary: boolean;
-  lastValidated: string | null;
-  createdAt: string | null;
-  validationErrors: string[];
+  baseUrl?: string;
+  category: string;
+  lastValidated?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface FunctionMapping {
-  id: string;
   function_name: string;
-  preferred_service: string | null;
-  fallback_service: string | null;
+  category: string;
   description?: string;
-  updated_at?: string;
-}
-
-interface UsageStats {
-  byService: Record<string, {
-    total: number;
-    success: number;
-    failed: number;
-    avgResponseTime: number;
-  }>;
-  byCategory: Record<string, {
-    total: number;
-    success: number;
-    failed: number;
-    services: Record<string, any>;
-  }>;
-  recentCalls: any[];
+  preferred_service?: string;
 }
 
 interface RateLimit {
   id: string;
   service_name: string;
-  requests_used: number;
-  request_limit: number;
-  reset_date: string;
+  limit_type: string;
+  max_requests: number;
+  time_window: number;
+  current_usage: number;
+  reset_at: string;
+}
+
+interface UsageStats {
+  byService: Record<string, number>;
+  byCategory: Record<string, number>;
 }
 
 interface APIData {
   apiKeysByCategory: Record<string, APIKey[]>;
   functionMappings: FunctionMapping[];
-  usageStats: UsageStats;
   rateLimits: RateLimit[];
+  usageStats: UsageStats;
 }
 
 export function useAPIData() {
@@ -62,84 +51,68 @@ export function useAPIData() {
   const [apiData, setApiData] = useState<APIData>({
     apiKeysByCategory: {},
     functionMappings: [],
-    usageStats: { byService: {}, byCategory: {}, recentCalls: [] },
-    rateLimits: []
+    rateLimits: [],
+    usageStats: { byService: {}, byCategory: {} }
   });
 
-  const fetchApiKeysStatus = useCallback(async () => {
+  const fetchApiData = async () => {
     setApiKeysLoading(true);
     setLoadError(null);
     
     try {
-      console.log("Fetching API keys status");
       const { data, error } = await supabase.functions.invoke('get-api-keys-status');
       
       if (error) {
-        console.error('Failed to fetch API keys status:', error);
-        setLoadError(`API keys loading error: ${error.message}`);
-        toast.error('Unable to load API key status. Please try again later.');
+        console.error('Error fetching API keys:', error);
+        setLoadError(`Failed to load API keys: ${error.message}`);
         return;
-      } 
-      
-      if (data && data.success) {
-        console.log("API keys data received:", data.data);
-        
-        // Check if API keys data is valid
-        if (!data.data || typeof data.data !== 'object') {
-          console.error('Invalid response format:', data);
-          setLoadError('API keys loading error: Invalid response format');
-          toast.error('Received invalid data format from server');
-          return;
-        }
-        
-        // Apply defaults for empty or missing data
-        const formattedData = {
-          apiKeysByCategory: data.data.apiKeysByCategory || {},
-          functionMappings: data.data.functionMappings || [],
-          usageStats: data.data.usageStats || { byService: {}, byCategory: {}, recentCalls: [] },
-          rateLimits: data.data.rateLimits || []
-        };
-        
-        setApiData(formattedData);
-        
-        // Provide user feedback on loaded data
-        const totalKeys = Object.values(formattedData.apiKeysByCategory)
-          .reduce((acc: number, keys: any[]) => acc + keys.length, 0);
-          
-        if (totalKeys === 0 && !loadError) {
-          toast.info('No API keys found. Add your first API key to get started.');
-        } else if (totalKeys > 0 && !loadError) {
-          toast.success(`Successfully loaded ${totalKeys} API key(s)`);
-        }
-      } else {
-        const errorMsg = data?.error || 'Invalid response format from API';
-        console.error('Invalid response format:', data, errorMsg);
-        setLoadError(`API keys loading error: ${errorMsg}`);
-        toast.error('Error loading API keys: ' + errorMsg);
       }
-    } catch (error) {
-      console.error('Failed to fetch API keys status:', error);
-      setLoadError(`API keys loading error: ${error.message}`);
-      toast.error('Unable to load API key status due to a server error');
+      
+      if (!data) {
+        setLoadError('No API data returned from server');
+        return;
+      }
+      
+      // Group API keys by category
+      const apiKeysByCategory: Record<string, APIKey[]> = {};
+      
+      if (data.apiKeys && Array.isArray(data.apiKeys)) {
+        data.apiKeys.forEach((key: APIKey) => {
+          if (!apiKeysByCategory[key.category]) {
+            apiKeysByCategory[key.category] = [];
+          }
+          apiKeysByCategory[key.category].push(key);
+        });
+      }
+      
+      setApiData({
+        apiKeysByCategory,
+        functionMappings: data.functionMappings || [],
+        rateLimits: data.rateLimits || [],
+        usageStats: data.usageStats || { byService: {}, byCategory: {} }
+      });
+    } catch (err: any) {
+      console.error('Exception fetching API data:', err);
+      setLoadError(`Error loading API keys: ${err.message}`);
     } finally {
       setApiKeysLoading(false);
     }
-  }, [loadError]);
+  };
 
   useEffect(() => {
-    fetchApiKeysStatus();
-  }, [fetchApiKeysStatus]);
-
-  const reloadApiData = () => {
-    toast.info('Refreshing API configuration...');
-    fetchApiKeysStatus();
-  };
+    fetchApiData();
+  }, []);
+  
+  // Check if any category has more than 0 keys
+  const hasKeys = Object.values(apiData.apiKeysByCategory).some(
+    (keys) => keys && keys.length > 0
+  );
 
   return {
     apiKeysLoading,
     loadError,
     apiData,
-    fetchApiKeysStatus,
-    reloadApiData
+    hasKeys,
+    reloadApiData: fetchApiData
   };
 }

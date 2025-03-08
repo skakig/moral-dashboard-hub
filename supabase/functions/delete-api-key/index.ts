@@ -16,15 +16,14 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Starting delete-api-key function");
+    
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { id, serviceName, category, isActive } = await req.json();
-    
-    // Log the request
-    console.log(`Updating ${serviceName} status in category ${category} to ${isActive ? 'active' : 'inactive'}`);
+    const { id } = await req.json();
     
     if (!id) {
       console.error("Missing required field: id");
@@ -34,38 +33,30 @@ serve(async (req) => {
       );
     }
     
-    // Find the API key record
-    const { data: existingKey, error: findError } = await supabaseAdmin
+    // Get the API key info before deletion for logging
+    const { data: keyData, error: fetchError } = await supabaseAdmin
       .from("api_keys")
-      .select("id, status")
+      .select("service_name, category")
       .eq("id", id)
       .single();
-    
-    if (findError) {
-      console.error("Error finding API key:", findError);
-      return new Response(
-        JSON.stringify({ success: false, error: `API key for ${serviceName} not found` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
-      );
+      
+    if (fetchError) {
+      console.error("Error fetching API key info:", fetchError);
+      // Continue with deletion even if we can't fetch the info
+    } else {
+      console.log(`Deleting API key for ${keyData.service_name} in category ${keyData.category}`);
     }
     
-    // Convert boolean to string status
-    const newStatus = isActive ? 'active' : 'inactive';
-    console.log(`Updating status from ${existingKey.status} to ${newStatus}`);
-    
-    // Update the status
-    const { error: updateError } = await supabaseAdmin
+    // Delete the API key
+    const { error: deleteError } = await supabaseAdmin
       .from("api_keys")
-      .update({ 
-        status: newStatus,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", existingKey.id);
+      .delete()
+      .eq("id", id);
     
-    if (updateError) {
-      console.error("Error updating API key status:", updateError);
+    if (deleteError) {
+      console.error("Error deleting API key:", deleteError);
       return new Response(
-        JSON.stringify({ success: false, error: updateError.message }),
+        JSON.stringify({ success: false, error: deleteError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -73,7 +64,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `${serviceName} API status updated to ${isActive ? 'active' : 'inactive'} successfully` 
+        message: `API key deleted successfully`, 
+        service: keyData?.service_name
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

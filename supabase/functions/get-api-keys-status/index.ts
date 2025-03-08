@@ -52,11 +52,77 @@ serve(async (req) => {
       console.log(`Retrieved ${functionMappings?.length || 0} function mappings`);
     }
 
-    // 3. Fetch API usage stats (simplified for now)
+    // 3. Fetch API usage stats
+    const { data: usageData, error: usageError } = await supabaseAdmin
+      .from("api_usage_logs")
+      .select("service_name, success, response_time_ms, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+      
+    if (usageError) {
+      console.log("Error fetching usage stats:", usageError);
+      // Continue without usage stats
+    }
+    
+    // Process usage stats
     const usageStats = {
       byService: {},
-      byCategory: {}
+      byCategory: {},
+      recentCalls: usageData || []
     };
+    
+    if (usageData && usageData.length > 0) {
+      // Group by service
+      usageData.forEach(log => {
+        const service = log.service_name;
+        if (!usageStats.byService[service]) {
+          usageStats.byService[service] = {
+            total: 0,
+            success: 0,
+            failed: 0,
+            avgResponseTime: 0
+          };
+        }
+        
+        usageStats.byService[service].total++;
+        if (log.success) {
+          usageStats.byService[service].success++;
+        } else {
+          usageStats.byService[service].failed++;
+        }
+        
+        // Update average response time
+        const currentTotal = usageStats.byService[service].avgResponseTime * (usageStats.byService[service].total - 1);
+        const newAvg = (currentTotal + (log.response_time_ms || 0)) / usageStats.byService[service].total;
+        usageStats.byService[service].avgResponseTime = newAvg;
+      });
+      
+      // Find the associated category for each service
+      if (apiKeys && apiKeys.length > 0) {
+        const serviceToCategory = {};
+        apiKeys.forEach(key => {
+          serviceToCategory[key.service_name] = key.category;
+        });
+        
+        // Group by category
+        Object.keys(usageStats.byService).forEach(service => {
+          const category = serviceToCategory[service] || 'Uncategorized';
+          if (!usageStats.byCategory[category]) {
+            usageStats.byCategory[category] = {
+              total: 0,
+              success: 0,
+              failed: 0,
+              services: {}
+            };
+          }
+          
+          usageStats.byCategory[category].total += usageStats.byService[service].total;
+          usageStats.byCategory[category].success += usageStats.byService[service].success;
+          usageStats.byCategory[category].failed += usageStats.byService[service].failed;
+          usageStats.byCategory[category].services[service] = usageStats.byService[service];
+        });
+      }
+    }
 
     // 4. Fetch API rate limits
     const { data: rateLimits, error: limitsError } = await supabaseAdmin
@@ -79,9 +145,32 @@ serve(async (req) => {
         if (!apiKeysByCategory[category]) {
           apiKeysByCategory[category] = [];
         }
-        apiKeysByCategory[category].push(key);
+        
+        // Format the API key for frontend consumption
+        apiKeysByCategory[category].push({
+          id: key.id,
+          serviceName: key.service_name,
+          baseUrl: key.base_url,
+          isConfigured: true,
+          isActive: key.status === 'active',
+          isPrimary: key.is_primary || false,
+          lastValidated: key.last_validated,
+          createdAt: key.created_at,
+          category: key.category,
+          validationErrors: key.validation_errors || []
+        });
       });
     }
+
+    // 6. Format function mappings for frontend
+    const formattedMappings = functionMappings?.map(mapping => ({
+      id: mapping.id,
+      function_name: mapping.function_name,
+      preferred_service: mapping.preferred_service,
+      fallback_service: mapping.fallback_service,
+      description: mapping.description,
+      updated_at: mapping.updated_at
+    })) || [];
 
     // Return the complete API status data
     return new Response(
@@ -89,7 +178,7 @@ serve(async (req) => {
         success: true,
         data: {
           apiKeysByCategory,
-          functionMappings: functionMappings || [],
+          functionMappings: formattedMappings,
           usageStats,
           rateLimits: rateLimits || []
         }

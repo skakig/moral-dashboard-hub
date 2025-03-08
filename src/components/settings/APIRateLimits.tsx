@@ -6,10 +6,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { RefreshCw, Plus } from 'lucide-react';
 import { RateLimitsTable } from './rate-limits/RateLimitsTable';
 import { AddRateLimitForm } from './rate-limits/AddRateLimitForm';
-import { RateLimit } from './rate-limits/schema';
+import { RateLimit as SchemaRateLimit } from './rate-limits/schema';
+
+// The API might return a different shape compared to our schema
+interface APIRateLimit {
+  id: string;
+  service_name: string;
+  requests_used: number;
+  request_limit: number;
+  reset_date: string;
+  [key: string]: any;
+}
 
 interface APIRateLimitsProps {
-  rateLimits: RateLimit[];
+  rateLimits: APIRateLimit[];
   onSuccess?: () => void;
 }
 
@@ -22,6 +32,15 @@ export function APIRateLimits({ rateLimits, onSuccess }: APIRateLimitsProps) {
       onSuccess();
     }
   };
+
+  // Convert API rate limits to schema rate limits
+  const mappedRateLimits: SchemaRateLimit[] = rateLimits.map(limit => ({
+    id: limit.id,
+    service_name: limit.service_name,
+    requests_used: limit.requests_used,
+    request_limit: limit.request_limit,
+    reset_date: limit.reset_date
+  }));
 
   return (
     <div className="space-y-4">
@@ -48,7 +67,7 @@ export function APIRateLimits({ rateLimits, onSuccess }: APIRateLimitsProps) {
         </CardHeader>
         <CardContent>
           <RateLimitsTable 
-            rateLimits={rateLimits} 
+            rateLimits={mappedRateLimits} 
             onSuccess={onSuccess || (() => {})}
           />
         </CardContent>

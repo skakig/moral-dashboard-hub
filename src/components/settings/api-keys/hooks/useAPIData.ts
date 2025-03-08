@@ -23,14 +23,13 @@ interface FunctionMapping {
   preferred_service?: string;
 }
 
+// Update RateLimit interface to match the expected schema
 interface RateLimit {
   id: string;
   service_name: string;
-  limit_type: string;
-  max_requests: number;
-  time_window: number;
-  current_usage: number;
-  reset_at: string;
+  requests_used: number;
+  request_limit: number;
+  reset_date: string;
 }
 
 interface UsageStats {

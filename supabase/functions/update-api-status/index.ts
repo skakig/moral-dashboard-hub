@@ -31,7 +31,6 @@ serve(async (req) => {
       .from("api_keys")
       .select("id")
       .eq("service_name", serviceName)
-      .eq("category", category)
       .single();
     
     if (findError) {

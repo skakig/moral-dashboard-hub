@@ -24,10 +24,9 @@ serve(async (req) => {
     console.log("Fetching API keys data");
     
     // Get all API keys with their service name and status
-    // Note: Adjusting the query to match the actual database schema
     const { data: apiKeys, error: apiKeysError } = await supabaseAdmin
       .from("api_keys")
-      .select("id, service_name, api_key, base_url, status, created_at, last_validated");
+      .select("id, service_name, category, api_key, base_url, status, created_at, last_validated");
 
     if (apiKeysError) {
       console.error("Database error (api_keys):", apiKeysError);
@@ -64,34 +63,36 @@ serve(async (req) => {
       .from("api_rate_limits")
       .select("*");
 
-    // Categorize API keys based on service name
-    // Since we don't have category field, we'll derive it from service name
+    // Categorize API keys based on service name or provided category
     const apiKeysByCategory = {};
-    const categoryMap = {
-      "openai": "Text Generation",
-      "google": "Text Generation",
-      "anthropic": "Text Generation",
-      "stability": "Image Generation",
-      "replicate": "Image Generation",
-      "runway": "Video Generation",
-      "tiktok": "Social Media",
-      "meta": "Social Media",
-      "twitter": "Social Media",
-      "instagram": "Social Media",
-      "linkedin": "Social Media"
-    };
-
+    
     // Transform the data to include only what's needed for the frontend
     const apiKeysStatus = apiKeys?.map(key => {
-      // Derive category from service name
-      let category = "Other";
-      const serviceLower = key.service_name.toLowerCase();
+      // Use the key.category field if available, otherwise derive from service name
+      let category = key.category || "Other";
       
-      Object.entries(categoryMap).forEach(([keyword, cat]) => {
-        if (serviceLower.includes(keyword)) {
-          category = cat;
+      // If category is still empty, try to derive it from service name
+      if (category === "Other") {
+        const serviceLower = key.service_name.toLowerCase();
+        
+        // Map common services to categories
+        if (serviceLower.includes("openai") || serviceLower.includes("anthropic")) {
+          category = "Text Generation";
+        } else if (serviceLower.includes("stability") || serviceLower.includes("replicate")) {
+          category = "Image Generation";
+        } else if (serviceLower.includes("runway") || serviceLower.includes("pika")) {
+          category = "Video Generation";
+        } else if (
+          serviceLower.includes("tiktok") || 
+          serviceLower.includes("meta") || 
+          serviceLower.includes("twitter") || 
+          serviceLower.includes("facebook") ||
+          serviceLower.includes("instagram") ||
+          serviceLower.includes("linkedin")
+        ) {
+          category = "Social Media";
         }
-      });
+      }
 
       return {
         id: key.id,
@@ -138,15 +139,9 @@ serve(async (req) => {
         if (log.success) serviceStats.successfulCalls++;
         if (log.response_time_ms) serviceStats.responseTimes.push(log.response_time_ms);
         
-        // Track by category (using derived category)
-        const serviceLower = log.service_name.toLowerCase();
-        let category = "Other";
-        
-        Object.entries(categoryMap).forEach(([keyword, cat]) => {
-          if (serviceLower.includes(keyword)) {
-            category = cat;
-          }
-        });
+        // Track by category (using existing API key categories)
+        const relatedKey = apiKeysStatus.find(key => key.serviceName === log.service_name);
+        const category = relatedKey ? relatedKey.category : "Other";
         
         if (!usageStats.byCategory[category]) {
           usageStats.byCategory[category] = {

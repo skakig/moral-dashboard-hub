@@ -37,13 +37,18 @@ export function APIKeyFormDialog({ category, onSuccess }: APIKeyFormDialogProps)
     useDemoKey(getTestKey, needsBaseUrl, serviceName);
   };
 
+  const handleServiceChange = (value: string) => {
+    setServiceName(value);
+    form.setValue('serviceName', value);
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <ServiceSelection 
           form={form} 
           suggestedServices={suggestedServices} 
-          onServiceChange={setServiceName} 
+          onServiceChange={handleServiceChange} 
         />
 
         <FormField

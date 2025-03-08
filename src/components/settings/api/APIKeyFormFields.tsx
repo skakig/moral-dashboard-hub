@@ -4,14 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { UseFormReturn } from 'react-hook-form';
+import { apiKeySchema } from './hooks/useAPIKeyValidation';
 import { z } from 'zod';
 import { APIKeyErrorDisplay } from './APIKeyErrorDisplay';
 import { APIKeyValidationProgress } from './APIKeyValidationProgress';
-
-const apiKeySchema = z.object({
-  apiKey: z.string().min(1, { message: 'API key is required' }),
-  baseUrl: z.string().optional(),
-});
 
 type APIKeyFormValues = z.infer<typeof apiKeySchema>;
 

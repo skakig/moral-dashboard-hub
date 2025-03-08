@@ -28,6 +28,7 @@ export function useAPIKeyForm({
   const form = useForm<APIKeyFormValues>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
+      serviceName: serviceName,
       apiKey: '',
       baseUrl: baseUrl || '',
     },

@@ -30,7 +30,7 @@ export function useAPIKeyDialogForm({ category, onSuccess }: UseAPIKeyDialogForm
   });
 
   const { error, validateAPIKey } = useAPIKeyValidation({
-    serviceName: form.getValues().serviceName,
+    serviceName: form.watch('serviceName'),
     category,
     onSuccess,
     setLoading
@@ -49,6 +49,7 @@ export function useAPIKeyDialogForm({ category, onSuccess }: UseAPIKeyDialogForm
       return;
     }
     
+    form.setValue('serviceName', serviceName);
     form.setValue('apiKey', getTestKey());
     // Set a sample base URL if needed
     if (needsBaseUrl) {

@@ -36,6 +36,39 @@ export type Database = {
         }
         Relationships: []
       }
+      api_function_mapping: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          function_name: string
+          id: string
+          is_active: boolean | null
+          parameters: Json | null
+          service_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          function_name: string
+          id?: string
+          is_active?: boolean | null
+          parameters?: Json | null
+          service_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          function_name?: string
+          id?: string
+          is_active?: boolean | null
+          parameters?: Json | null
+          service_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       api_keys: {
         Row: {
           api_key: string
@@ -72,6 +105,90 @@ export type Database = {
           service_name?: string
           status?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      api_rate_limits: {
+        Row: {
+          created_at: string | null
+          current_daily_usage: number | null
+          current_hourly_usage: number | null
+          current_monthly_usage: number | null
+          daily_limit: number | null
+          hourly_limit: number | null
+          id: string
+          last_reset_daily: string | null
+          last_reset_hourly: string | null
+          last_reset_monthly: string | null
+          monthly_limit: number | null
+          service_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_daily_usage?: number | null
+          current_hourly_usage?: number | null
+          current_monthly_usage?: number | null
+          daily_limit?: number | null
+          hourly_limit?: number | null
+          id?: string
+          last_reset_daily?: string | null
+          last_reset_hourly?: string | null
+          last_reset_monthly?: string | null
+          monthly_limit?: number | null
+          service_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_daily_usage?: number | null
+          current_hourly_usage?: number | null
+          current_monthly_usage?: number | null
+          daily_limit?: number | null
+          hourly_limit?: number | null
+          id?: string
+          last_reset_daily?: string | null
+          last_reset_hourly?: string | null
+          last_reset_monthly?: string | null
+          monthly_limit?: number | null
+          service_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      api_usage_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          function_name: string | null
+          id: string
+          request_data: Json | null
+          response_data: Json | null
+          response_time_ms: number | null
+          service_name: string
+          success: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          function_name?: string | null
+          id?: string
+          request_data?: Json | null
+          response_data?: Json | null
+          response_time_ms?: number | null
+          service_name: string
+          success?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          function_name?: string | null
+          id?: string
+          request_data?: Json | null
+          response_data?: Json | null
+          response_time_ms?: number | null
+          service_name?: string
+          success?: boolean | null
         }
         Relationships: []
       }

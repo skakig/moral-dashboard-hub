@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,7 +13,7 @@ export function useAPIData() {
     rateLimits: []
   });
 
-  const fetchApiKeysStatus = async () => {
+  const fetchApiKeysStatus = useCallback(async () => {
     setApiKeysLoading(true);
     setLoadError(null);
     
@@ -30,7 +30,34 @@ export function useAPIData() {
       
       if (data && data.success) {
         console.log("API keys data received:", data.data);
-        setApiData(data.data);
+        
+        // Check if API keys data is valid
+        if (!data.data || typeof data.data !== 'object') {
+          console.error('Invalid response format:', data);
+          setLoadError('API keys loading error: Invalid response format');
+          toast.error('Received invalid data format from server');
+          return;
+        }
+        
+        // Apply defaults for empty or missing data
+        const formattedData = {
+          apiKeysByCategory: data.data.apiKeysByCategory || {},
+          functionMappings: data.data.functionMappings || [],
+          usageStats: data.data.usageStats || { byService: {}, byCategory: {} },
+          rateLimits: data.data.rateLimits || []
+        };
+        
+        setApiData(formattedData);
+        
+        // Provide user feedback on loaded data
+        const totalKeys = Object.values(formattedData.apiKeysByCategory)
+          .reduce((acc: number, keys: any[]) => acc + keys.length, 0);
+          
+        if (totalKeys === 0) {
+          toast.info('No API keys found. Add your first API key to get started.');
+        } else {
+          toast.success(`Successfully loaded ${totalKeys} API key(s)`);
+        }
       } else {
         const errorMsg = data?.error || 'Invalid response format from API';
         console.error('Invalid response format:', data, errorMsg);
@@ -44,13 +71,14 @@ export function useAPIData() {
     } finally {
       setApiKeysLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchApiKeysStatus();
-  }, []);
+  }, [fetchApiKeysStatus]);
 
   const reloadApiData = () => {
+    toast.info('Refreshing API key data...');
     fetchApiKeysStatus();
   };
 

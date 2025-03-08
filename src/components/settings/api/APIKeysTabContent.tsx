@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RefreshCw, PlusCircle } from "lucide-react";
+import { RefreshCw, PlusCircle, Info } from "lucide-react";
 import { APIKeyFormDialog } from "@/components/settings/api/APIKeyFormDialog";
 import { APICategoryCard } from "@/components/settings/api/APICategoryCard";
 import { APISecurityCard } from "@/components/settings/api/APISecurityCard";
@@ -43,8 +43,13 @@ export function APIKeysTabContent({ apiKeysByCategory, onRefresh }: APIKeysTabCo
 
       {!hasAnyApiKeys && (
         <Alert className="mb-4 bg-muted">
+          <Info className="h-4 w-4" />
           <AlertDescription>
-            No API keys configured yet. Add your first API key to get started.
+            <p>No API keys configured yet. Add your first API key to get started.</p>
+            <p className="text-sm mt-1">
+              <strong>Tip:</strong> For testing, you can use a key with the format "TEST_your-key" 
+              which will validate without making actual API calls.
+            </p>
           </AlertDescription>
         </Alert>
       )}

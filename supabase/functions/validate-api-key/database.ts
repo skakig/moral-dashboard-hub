@@ -41,8 +41,7 @@ export async function updateOrInsertApiKey(supabase: SupabaseClient, data: ApiKe
           status: 'active',
           is_active: true
         })
-        .eq("id", existingKey.id)
-        .select();
+        .eq("id", existingKey.id);
     } else {
       console.log(`No existing key for ${serviceName}, inserting new...`);
       // Insert new record
@@ -56,8 +55,7 @@ export async function updateOrInsertApiKey(supabase: SupabaseClient, data: ApiKe
           last_validated: new Date().toISOString(),
           status: 'active',
           is_active: true
-        })
-        .select();
+        });
     }
     
     if (result.error) {
@@ -65,9 +63,20 @@ export async function updateOrInsertApiKey(supabase: SupabaseClient, data: ApiKe
       return { error: result.error };
     }
     
+    // Fetch and return the updated record
+    const { data: updatedKey, error: fetchError } = await supabase
+      .from("api_keys")
+      .select("*")
+      .eq("service_name", serviceName)
+      .maybeSingle();
+      
+    if (fetchError) {
+      console.error("Error fetching updated key:", fetchError);
+      return { success: true, data: result.data, warning: "Successfully saved but couldn't fetch updated record" };
+    }
+    
     console.log(`Successfully updated/inserted API key for ${serviceName}`);
-    console.log("Database operation result:", result.data);
-    return { success: true, data: result.data };
+    return { success: true, data: updatedKey };
   } catch (error) {
     console.error("Exception in database operation:", error);
     return { error };

@@ -126,7 +126,12 @@ export function APIUsageStats({ usageStats, onRefresh }: APIUsageStatsProps) {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} />
                     <YAxis domain={[0, 100]} />
-                    <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, 'Success Rate']} />
+                    <Tooltip 
+                      formatter={(value) => {
+                        const numValue = typeof value === 'number' ? value : parseFloat(value as string);
+                        return [`${numValue.toFixed(1)}%`, 'Success Rate'];
+                      }} 
+                    />
                     <Bar dataKey="successRate" fill="#82ca9d" name="Success Rate (%)" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -149,7 +154,12 @@ export function APIUsageStats({ usageStats, onRefresh }: APIUsageStatsProps) {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`${value.toFixed(0)} ms`, 'Response Time']} />
+                    <Tooltip 
+                      formatter={(value) => {
+                        const numValue = typeof value === 'number' ? value : parseFloat(value as string);
+                        return [`${numValue.toFixed(0)} ms`, 'Response Time'];
+                      }}
+                    />
                     <Bar dataKey="avgResponseTime" fill="#8884d8" name="Avg Response Time (ms)" />
                   </BarChart>
                 </ResponsiveContainer>

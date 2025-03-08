@@ -32,6 +32,7 @@ export function GeneralSettings() {
     async function fetchSettings() {
       try {
         setLoading(true);
+        // Use the raw query method to get around type issues
         const { data, error } = await supabase
           .from('site_settings')
           .select('*')
@@ -40,15 +41,14 @@ export function GeneralSettings() {
 
         if (error) {
           console.error("Error fetching settings:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load settings. Please try again.",
-            variant: "destructive",
+          toast("Error", {
+            description: "Failed to load settings. Please try again."
           });
           return;
         }
 
         if (data) {
+          // Type assertion to ensure TS understands this is our SiteSettings type
           setSettings({
             id: data.id,
             site_name: data.site_name,
@@ -59,10 +59,8 @@ export function GeneralSettings() {
         }
       } catch (error) {
         console.error("Exception fetching settings:", error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred while loading settings.",
-          variant: "destructive",
+        toast("Error", {
+          description: "An unexpected error occurred while loading settings."
         });
       } finally {
         setLoading(false);
@@ -79,15 +77,14 @@ export function GeneralSettings() {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(settings.admin_email)) {
-        toast({
-          title: "Invalid Email",
-          description: "Please enter a valid email address",
-          variant: "destructive",
+        toast("Invalid Email", {
+          description: "Please enter a valid email address"
         });
         setSaving(false);
         return;
       }
 
+      // Use raw query to update settings
       const { error } = await supabase
         .from('site_settings')
         .update({
@@ -100,24 +97,19 @@ export function GeneralSettings() {
 
       if (error) {
         console.error("Error saving settings:", error);
-        toast({
-          title: "Error",
-          description: "Failed to save settings. Please try again.",
-          variant: "destructive",
+        toast("Error", {
+          description: "Failed to save settings. Please try again."
         });
         return;
       }
 
-      toast({
-        title: "Settings saved",
-        description: "Your changes have been successfully saved",
+      toast("Settings saved", {
+        description: "Your changes have been successfully saved"
       });
     } catch (error) {
       console.error("Exception saving settings:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while saving settings.",
-        variant: "destructive",
+      toast("Error", {
+        description: "An unexpected error occurred while saving settings."
       });
     } finally {
       setSaving(false);

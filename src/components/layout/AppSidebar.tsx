@@ -11,7 +11,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
-  SidebarHeaderTitle,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -51,10 +50,10 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <SidebarTrigger />
-        <SidebarHeaderTitle className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-primary to-accent animate-pulse-slow" />
           <span className="font-bold">TMH Admin</span>
-        </SidebarHeaderTitle>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

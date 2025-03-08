@@ -7,6 +7,7 @@ import { getCategoryForService } from '../utils/serviceCategories';
 
 export const apiKeySchema = z.object({
   serviceName: z.string().min(1, { message: 'Service name is required' }),
+  customServiceName: z.string().optional(),
   apiKey: z.string().min(1, { message: 'API key is required' }),
   baseUrl: z.string().optional(),
 });

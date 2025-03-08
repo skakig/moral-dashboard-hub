@@ -1,14 +1,6 @@
 
-import { useState } from 'react';
-
-// Define suggested services by category
-export const SUGGESTED_SERVICES = {
-  "Text Generation": ["OpenAI", "Anthropic", "Mistral AI"],
-  "Voice Generation": ["ElevenLabs", "OpenAI TTS"],
-  "Image Generation": ["Stable Diffusion", "DALL-E"],
-  "Video Generation": ["RunwayML", "Pika Labs"],
-  "Social Media": ["Meta API", "TikTok API", "YouTube API", "Twitter/X API"]
-};
+import { useState, useEffect } from 'react';
+import { API_CATEGORIES, needsBaseUrlForService, getTestKeyForService } from './constants';
 
 interface UseServiceSelectionProps {
   category: string;
@@ -16,25 +8,30 @@ interface UseServiceSelectionProps {
 
 export function useServiceSelection({ category }: UseServiceSelectionProps) {
   const [serviceName, setServiceName] = useState<string>('');
+  const [suggestedServices, setSuggestedServices] = useState<string[]>([]);
   
-  const needsBaseUrl = serviceName?.toLowerCase().includes('runway') || 
-                      serviceName?.toLowerCase().includes('custom') ||
-                      serviceName?.toLowerCase().includes('meta') ||
-                      serviceName?.toLowerCase().includes('tiktok');
+  // Determine if the selected service needs a base URL
+  const needsBaseUrl = needsBaseUrlForService(serviceName);
 
-  const getTestKey = () => {
-    // This provides a test key format for demo purposes
-    if (!serviceName) return '';
-    return `TEST_${serviceName.toUpperCase().replace(/\s+/g, '_')}_KEY_123`;
-  };
+  // Get test key for demo purposes
+  const getTestKey = () => getTestKeyForService(serviceName);
 
-  const suggestedServices = SUGGESTED_SERVICES[category as keyof typeof SUGGESTED_SERVICES] || [];
+  // Update suggested services when category changes
+  useEffect(() => {
+    if (category && API_CATEGORIES[category as keyof typeof API_CATEGORIES]) {
+      setSuggestedServices(API_CATEGORIES[category as keyof typeof API_CATEGORIES]);
+    } else {
+      // Default to showing all services flattened if category is not recognized
+      const allServices = Object.values(API_CATEGORIES).flat();
+      setSuggestedServices(allServices);
+    }
+  }, [category]);
 
   return {
     serviceName,
     setServiceName,
+    suggestedServices,
     needsBaseUrl,
-    getTestKey,
-    suggestedServices
+    getTestKey
   };
 }

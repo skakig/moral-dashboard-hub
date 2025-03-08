@@ -1,4 +1,6 @@
 
+import { API_CATEGORIES, needsBaseUrlForService, getTestKeyForService } from '../constants';
+
 /**
  * Helper functions to categorize API services
  */
@@ -7,35 +9,42 @@
  * Determines the category for a service based on its name
  */
 export const getCategoryForService = (serviceName: string): string => {
+  if (!serviceName) return 'Other';
+  
   const serviceNameLower = serviceName.toLowerCase();
   
-  if (serviceNameLower.includes('openai') || serviceNameLower.includes('anthropic') || serviceNameLower.includes('google')) {
+  // Check in our predefined categories
+  for (const [category, services] of Object.entries(API_CATEGORIES)) {
+    if (services.some(service => serviceNameLower.includes(service.toLowerCase()))) {
+      return category;
+    }
+  }
+  
+  // Handle custom services
+  if (serviceNameLower.includes('custom')) {
+    return 'Custom';
+  }
+  
+  // Legacy categorization for backward compatibility
+  if (serviceNameLower.includes('openai') || 
+      serviceNameLower.includes('anthropic') || 
+      serviceNameLower.includes('google')) {
     return 'Text Generation';
-  } else if (serviceNameLower.includes('stability') || serviceNameLower.includes('replicate') || serviceNameLower.includes('dalle')) {
+  } else if (serviceNameLower.includes('stability') || 
+            serviceNameLower.includes('replicate') || 
+            serviceNameLower.includes('dalle')) {
     return 'Image Generation';
   } else if (serviceNameLower.includes('runway')) {
     return 'Video Generation';
-  } else if (serviceNameLower.includes('facebook') || serviceNameLower.includes('meta') || serviceNameLower.includes('twitter') || serviceNameLower.includes('tiktok')) {
+  } else if (serviceNameLower.includes('facebook') || 
+            serviceNameLower.includes('meta') || 
+            serviceNameLower.includes('twitter') || 
+            serviceNameLower.includes('tiktok')) {
     return 'Social Media';
   }
   
   return 'Other';
 };
 
-/**
- * Determines if a service requires a base URL
- */
-export const needsBaseUrlForService = (serviceName: string): boolean => {
-  const serviceNameLower = serviceName.toLowerCase();
-  return serviceNameLower.includes('runway') || 
-         serviceNameLower.includes('custom') ||
-         serviceNameLower.includes('meta') ||
-         serviceNameLower.includes('tiktok');
-};
-
-/**
- * Generates a test key format for a service
- */
-export const getTestKeyForService = (serviceName: string): string => {
-  return `TEST_${serviceName.toUpperCase().replace(/\s+/g, '_')}_KEY_123`;
-};
+// Re-export from constants for backward compatibility
+export { needsBaseUrlForService, getTestKeyForService };

@@ -21,6 +21,7 @@ export function useAPIKeyDialogForm({ category, onSuccess }: UseAPIKeyDialogForm
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
       serviceName: '',
+      customServiceName: '',
       apiKey: '',
       baseUrl: '',
     },

@@ -1,15 +1,16 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldAlert, Loader2, RefreshCw, Plus, Gauge, BarChart3 } from "lucide-react";
 import { APIKeysForm } from "@/components/settings/api/APIKeysForm";
-import { APIFunctionMapping } from "@/components/settings/APIFunctionMapping";
+import { APIFunctionMapping } from "@/components/settings/api/APIFunctionMapping";
 import { APIUsageStats } from "@/components/settings/APIUsageStats";
 import { APIRateLimits } from "@/components/settings/APIRateLimits";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { APIKeyFormDialog } from "@/components/settings/api/APIKeyFormDialog";
 
 const API_CATEGORIES = {

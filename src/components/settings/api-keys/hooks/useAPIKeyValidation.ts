@@ -33,15 +33,8 @@ export function useAPIKeyValidation({
     setError(null);
     if (setLoading) setLoading(true);
     
-    console.info("Submitting API key for validation:", serviceName);
+    console.info("Submitting API key for validation:", serviceName || values.serviceName);
     console.info("Category:", category);
-    console.info("Request payload:", {
-      serviceName: values.serviceName || serviceName,
-      category,
-      apiKey: values.apiKey,
-      baseUrl: values.baseUrl || "",
-      isPrimary: values.isPrimary
-    });
     
     try {
       const { data, error } = await supabase.functions.invoke('validate-api-key', {
@@ -56,12 +49,12 @@ export function useAPIKeyValidation({
       
       if (error) {
         console.error('Error validating API key:', error);
-        setError(`Failed to validate ${serviceName} API key: ${error.message}`);
+        setError(`Failed to validate ${values.serviceName || serviceName} API key: ${error.message}`);
         return false;
       }
       
       if (!data || !data.success) {
-        const errorMsg = data?.error || `Failed to validate ${serviceName} API key`;
+        const errorMsg = data?.error || `Failed to validate ${values.serviceName || serviceName} API key`;
         console.error('Validation failed:', errorMsg);
         setError(errorMsg);
         return false;
@@ -69,7 +62,7 @@ export function useAPIKeyValidation({
       
       console.info("Validation successful:", data);
       
-      toast.success(`${serviceName} API key validated and saved successfully`);
+      toast.success(`${values.serviceName || serviceName} API key validated and saved successfully`);
       
       if (onSuccess) {
         onSuccess();
@@ -78,7 +71,7 @@ export function useAPIKeyValidation({
       return true;
     } catch (err: any) {
       console.error('Exception during validation:', err);
-      setError(`Failed to validate ${serviceName} API key: ${err.message}`);
+      setError(`Failed to validate ${values.serviceName || serviceName} API key: ${err.message}`);
       return false;
     } finally {
       if (setLoading) setLoading(false);

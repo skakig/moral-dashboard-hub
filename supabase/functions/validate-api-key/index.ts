@@ -42,7 +42,7 @@ serve(async (req) => {
       );
     }
 
-    const { serviceName, category, apiKey, baseUrl } = requestData;
+    const { serviceName, category, apiKey, baseUrl, isPrimary } = requestData;
     
     if (!serviceName || !apiKey) {
       console.error("Missing required fields:", { serviceName, apiKey });
@@ -55,6 +55,7 @@ serve(async (req) => {
     // Log validation attempt
     console.log(`Validating ${serviceName} API key in category: ${category}`);
     console.log(`Base URL: ${baseUrl || 'Not provided'}`);
+    console.log(`Primary key: ${isPrimary ? 'Yes' : 'No'}`);
     
     // For demo or testing purposes, if apiKey starts with "TEST_" consider it valid
     if (apiKey.startsWith("TEST_")) {
@@ -65,7 +66,8 @@ serve(async (req) => {
         serviceName,
         category: category || "Other",
         apiKey,
-        baseUrl
+        baseUrl,
+        isPrimary
       });
       
       if (result.error) {
@@ -94,7 +96,8 @@ serve(async (req) => {
       serviceName,
       category: category || "Other",
       apiKey,
-      baseUrl
+      baseUrl,
+      isPrimary
     });
     
     if (result.error) {

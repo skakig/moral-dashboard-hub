@@ -8,9 +8,15 @@ import { APIKeysOverview } from "@/components/settings/api-keys/APIKeysOverview"
 import { useAPIData } from "@/components/settings/api-keys/hooks/useAPIData";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useEffect } from "react";
 
 export function APIKeysSection() {
   const { apiKeysLoading, loadError, apiData, reloadApiData } = useAPIData();
+
+  // Automatically refresh data when component mounts to ensure fresh data
+  useEffect(() => {
+    reloadApiData();
+  }, []);
 
   const isEmptyData = !apiData || 
     (Object.keys(apiData.apiKeysByCategory).length === 0 && 

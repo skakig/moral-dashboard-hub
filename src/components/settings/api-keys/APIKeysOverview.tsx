@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, RefreshCw, Info } from 'lucide-react';
+import { RefreshCw, Info } from 'lucide-react';
 import { APIKeyFormDialog } from './APIKeyFormDialog';
 import { CategoryView } from './CategoryView';
 import { APIKeyFilters } from './APIKeyFilters';
@@ -117,16 +117,10 @@ export function APIKeysOverview({ apiKeysByCategory, onRefresh }: APIKeysOvervie
     <>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">API Key Management</h3>
-        <div className="flex space-x-2">
-          <Button onClick={() => openAddKeyDialog("Text Generation")} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Key
-          </Button>
-          <Button onClick={onRefresh} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
+        <Button onClick={onRefresh} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
       
       {hasAnyApiKeys ? (
@@ -173,7 +167,7 @@ export function APIKeysOverview({ apiKeysByCategory, onRefresh }: APIKeysOvervie
           </DialogHeader>
           <APIKeyFormDialog 
             category={selectedCategory}
-            onSuccess={handleSuccessfulAddKey} // Use our enhanced handler
+            onSuccess={handleSuccessfulAddKey}
             onCancel={() => setIsAddKeyDialogOpen(false)}
           />
         </DialogContent>

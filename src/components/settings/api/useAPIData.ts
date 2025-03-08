@@ -22,6 +22,9 @@ export function useAPIData() {
         toast.error('Unable to load API key status');
       } else if (data && data.success) {
         setApiData(data.data);
+      } else {
+        console.error('Invalid response format:', data);
+        toast.error('Invalid response format from API');
       }
     } catch (error) {
       console.error('Failed to fetch API keys status:', error);

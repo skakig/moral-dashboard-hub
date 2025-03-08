@@ -60,7 +60,7 @@ serve(async (req) => {
       .select("*");
 
     // Transform the data to include only what's needed for the frontend
-    const apiKeysStatus = apiKeys.map(key => ({
+    const apiKeysStatus = apiKeys?.map(key => ({
       id: key.id,
       serviceName: key.service_name,
       category: key.category,
@@ -68,7 +68,7 @@ serve(async (req) => {
       isConfigured: key.api_key !== null && key.api_key !== '',
       isActive: key.status === 'active',
       lastValidated: key.last_validated
-    }));
+    })) || [];
 
     // Group by category for easier frontend rendering
     const apiKeysByCategory = {};

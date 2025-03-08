@@ -69,14 +69,16 @@ export function MemeGenerator() {
     try {
       toast.info("Saving meme to database...");
       
+      const memeData = {
+        meme_text: form.getValues("memeText"),
+        image_url: previewImage,
+        platform_tags: form.getValues("targetPlatforms"),
+        engagement_score: Math.random() * 10,
+      };
+      
       const { data, error } = await supabase
         .from('memes')
-        .insert({
-          meme_text: form.getValues("memeText"),
-          image_url: previewImage,
-          platform_tags: form.getValues("targetPlatforms"),
-          engagement_score: Math.random() * 10,
-        } as any)
+        .insert(memeData as any)
         .select();
       
       if (error) throw error;

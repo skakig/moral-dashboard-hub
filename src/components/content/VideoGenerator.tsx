@@ -74,14 +74,16 @@ export function VideoGenerator() {
     try {
       toast.info("Saving video to database...");
       
+      const videoData = {
+        script_text: form.getValues("scriptText"),
+        video_url: previewUrl,
+        voice_style: form.getValues("voiceStyle"),
+        platform_targeting: [form.getValues("platform")],
+      };
+      
       const { data, error } = await supabase
         .from('ai_videos')
-        .insert({
-          script_text: form.getValues("scriptText"),
-          video_url: previewUrl,
-          voice_style: form.getValues("voiceStyle"),
-          platform_targeting: [form.getValues("platform")],
-        } as any)
+        .insert(videoData as any)
         .select();
       
       if (error) throw error;

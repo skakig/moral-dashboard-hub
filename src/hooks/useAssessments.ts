@@ -84,8 +84,8 @@ export function useAssessments() {
       is_active: item.is_active,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      time_limit_seconds: 60, // Default value as fallback
-      sequential_logic_enabled: false, // Default value as fallback
+      time_limit_seconds: item.time_limit_seconds || 60, // Default value as fallback
+      sequential_logic_enabled: item.sequential_logic_enabled || false, // Default value as fallback
     }));
   };
 

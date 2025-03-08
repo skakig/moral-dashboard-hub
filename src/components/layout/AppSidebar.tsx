@@ -1,5 +1,5 @@
 
-import { CalendarDays, BarChart3, FileText, HelpCircle, Home, LogOut, Moon, Settings, Sun, Users } from "lucide-react";
+import { CalendarDays, BarChart3, FileText, HelpCircle, Home, LogOut, Moon, Settings, Sun, Users, ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../ThemeProvider";
 
@@ -22,6 +22,7 @@ const mainMenuItems = [
   { title: "Dashboard", icon: Home, path: "/" },
   { title: "Users", icon: Users, path: "/users" },
   { title: "Assessments", icon: FileText, path: "/assessments" },
+  { title: "AI Content", icon: ImageIcon, path: "/ai-content" },
   { title: "AI Insights", icon: BarChart3, path: "/ai-insights" },
   { title: "Settings", icon: Settings, path: "/settings" },
 ];

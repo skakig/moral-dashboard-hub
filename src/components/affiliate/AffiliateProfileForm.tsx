@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AffiliateProfile } from "@/types/affiliate";
+import { useUpdateAffiliateProfile } from "@/hooks/useAffiliateSystem";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -33,30 +34,42 @@ const formSchema = z.object({
 
 export interface AffiliateProfileFormProps {
   initialData?: Partial<AffiliateProfile>;
-  userId: string;
+  profile?: AffiliateProfile | null;
+  userId: string | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
 export function AffiliateProfileForm({ 
   initialData, 
+  profile,
   userId, 
   onSuccess,
   onCancel 
 }: AffiliateProfileFormProps) {
+  const updateProfile = useUpdateAffiliateProfile();
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: initialData?.name || "",
-      email: initialData?.email || "",
-      preferredPayoutMethod: (initialData?.preferred_payout_method as "stripe" | "paypal" | "crypto" | "bank") || "stripe",
-      payoutDetails: initialData?.payout_details ? JSON.stringify(initialData.payout_details) : "",
-      socialProfiles: initialData?.social_profiles ? JSON.stringify(initialData.social_profiles) : "",
+      name: profile?.name || initialData?.name || "",
+      email: profile?.email || initialData?.email || "",
+      preferredPayoutMethod: (profile?.preferred_payout_method as "stripe" | "paypal" | "crypto" | "bank") || 
+                            (initialData?.preferred_payout_method as "stripe" | "paypal" | "crypto" | "bank") || 
+                            "stripe",
+      payoutDetails: profile?.payout_details ? JSON.stringify(profile.payout_details) : 
+                    initialData?.payout_details ? JSON.stringify(initialData.payout_details) : "",
+      socialProfiles: profile?.social_profiles ? JSON.stringify(profile.social_profiles) : 
+                     initialData?.social_profiles ? JSON.stringify(initialData.social_profiles) : "",
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      if (!userId) {
+        throw new Error("User ID is required");
+      }
+      
       // Format data for API
       const formattedData = {
         name: values.name,
@@ -65,12 +78,14 @@ export function AffiliateProfileForm({
         preferred_payout_method: values.preferredPayoutMethod,
         payout_details: values.payoutDetails ? JSON.parse(values.payoutDetails) : {},
         social_profiles: values.socialProfiles ? JSON.parse(values.socialProfiles) : {},
+        referral_code: profile?.referral_code || `REF-${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
       };
       
-      console.log("Submitting affiliate profile:", formattedData);
+      await updateProfile.mutateAsync({
+        id: profile?.id,
+        data: formattedData,
+      });
       
-      // Here we would submit to the API
-      // For now just call onSuccess
       onSuccess();
     } catch (error) {
       console.error("Error submitting affiliate profile:", error);
@@ -175,8 +190,8 @@ export function AffiliateProfileForm({
           <Button variant="outline" type="button" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">
-            {initialData?.id ? "Update Profile" : "Create Profile"}
+          <Button type="submit" disabled={updateProfile.isPending}>
+            {updateProfile.isPending ? "Saving..." : (profile?.id ? "Update Profile" : "Create Profile")}
           </Button>
         </div>
       </form>

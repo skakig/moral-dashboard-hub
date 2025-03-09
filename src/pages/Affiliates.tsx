@@ -29,7 +29,7 @@ export default function AffiliatesPage() {
         </TabsList>
         
         <TabsContent value="dashboard" className="mt-0">
-          <AffiliateDashboard userId={user?.id || ""} />
+          {user?.id && <AffiliateDashboard userId={user.id} />}
         </TabsContent>
         
         {isAdmin && (

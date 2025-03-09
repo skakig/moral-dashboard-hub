@@ -32,12 +32,12 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const PayoutRequestForm = ({ 
+export function PayoutRequestForm({ 
   affiliateId, 
   maxAmount, 
   onSuccess, 
   onCancel 
-}: PayoutRequestFormProps) => {
+}: PayoutRequestFormProps) {
   const createPayoutRequest = useCreatePayoutRequest();
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -52,28 +52,14 @@ export const PayoutRequestForm = ({
   const selectedMethod = form.watch('payout_method');
   
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const payoutRequest = {
+    await createPayoutRequest.mutateAsync({
       affiliate_id: affiliateId,
       amount: values.amount,
       payout_method: values.payout_method,
-      payout_details: {},
+      payout_details: values.payout_details || {},
       notes: values.notes,
-    };
+    });
     
-    // Add the right payout details based on the method
-    if (values.payout_method === 'paypal' && values.payout_details?.email) {
-      payoutRequest.payout_details = { email: values.payout_details.email };
-    } else if (values.payout_method === 'crypto' && values.payout_details?.wallet_address) {
-      payoutRequest.payout_details = { wallet_address: values.payout_details.wallet_address };
-    } else if (values.payout_method === 'bank') {
-      payoutRequest.payout_details = {
-        account: values.payout_details?.account,
-        routing_number: values.payout_details?.routing_number,
-        swift_code: values.payout_details?.swift_code,
-      };
-    }
-    
-    await createPayoutRequest.mutateAsync(payoutRequest);
     onSuccess();
   };
   
@@ -245,4 +231,4 @@ export const PayoutRequestForm = ({
       </Form>
     </Card>
   );
-};
+}

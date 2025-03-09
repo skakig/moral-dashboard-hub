@@ -10,7 +10,7 @@ interface AffiliateLeaderboardDisplayProps {
   affiliateId?: string;
 }
 
-export const AffiliateLeaderboardDisplay = ({ affiliateId }: AffiliateLeaderboardDisplayProps) => {
+export function AffiliateLeaderboardDisplay({ affiliateId }: AffiliateLeaderboardDisplayProps) {
   const { data: leaderboard = [], isLoading } = useAffiliateLeaderboard(10);
   
   if (isLoading) {
@@ -82,4 +82,4 @@ export const AffiliateLeaderboardDisplay = ({ affiliateId }: AffiliateLeaderboar
       </TableBody>
     </Table>
   );
-};
+}

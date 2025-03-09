@@ -11,7 +11,7 @@ interface AchievementsListProps {
   affiliateId?: string;
 }
 
-export const AchievementsList = ({ affiliateId }: AchievementsListProps) => {
+export function AchievementsList({ affiliateId }: AchievementsListProps) {
   const { data: achievements = [], isLoading: isAchievementsLoading } = useAchievements();
   const { data: earnedAchievements = [], isLoading: isEarnedLoading } = useEarnedAchievements(affiliateId);
   
@@ -60,7 +60,7 @@ export const AchievementsList = ({ affiliateId }: AchievementsListProps) => {
       })}
     </div>
   );
-};
+}
 
 interface AchievementCardProps {
   achievement: any;
@@ -95,7 +95,7 @@ const AchievementCard = ({
             <div className="flex items-center justify-between">
               <h3 className="font-medium">{achievement.name}</h3>
               {isEarned && (
-                <Badge className="bg-yellow-500 hover:bg-yellow-600">
+                <Badge variant="default">
                   <Check className="h-3 w-3 mr-1" /> Earned
                 </Badge>
               )}

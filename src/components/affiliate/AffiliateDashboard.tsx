@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAffiliateProfile, useReferrals, useCommissions, usePayoutRequests, usePromoCodes } from '@/hooks/useAffiliateSystem';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,26 +22,17 @@ import { AffiliateProfileForm } from './AffiliateProfileForm';
 import { AffiliateLeaderboardDisplay } from './AffiliateLeaderboardDisplay';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export const AffiliateDashboard = () => {
-  const [userId, setUserId] = useState<string | null>(null);
+interface AffiliateDashboardProps {
+  userId: string;
+}
+
+export function AffiliateDashboard({ userId }: AffiliateDashboardProps) {
   const [showPayoutForm, setShowPayoutForm] = useState(false);
   const [showPromoCodeForm, setShowPromoCodeForm] = useState(false);
   const [showProfileForm, setShowProfileForm] = useState(false);
   
-  // Get the current user
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    
-    fetchUser();
-  }, []);
-  
   // Fetch affiliate data
-  const { data: profile, isLoading: isProfileLoading, error: profileError } = useAffiliateProfile(userId || undefined);
+  const { data: profile, isLoading: isProfileLoading, error: profileError } = useAffiliateProfile(userId);
   const { data: referrals = [], isLoading: isReferralsLoading } = useReferrals(profile?.id);
   const { data: commissions = [], isLoading: isCommissionsLoading } = useCommissions(profile?.id);
   const { data: payoutRequests = [], isLoading: isPayoutRequestsLoading } = usePayoutRequests(profile?.id);
@@ -213,7 +205,7 @@ export const AffiliateDashboard = () => {
                   <Skeleton className="h-12 w-full" />
                 </div>
               ) : (
-                <ReferralsList referrals={referrals} />
+                <ReferralsList affiliateId={profile?.id} />
               )}
             </CardContent>
           </Card>
@@ -372,4 +364,4 @@ export const AffiliateDashboard = () => {
       )}
     </div>
   );
-};
+}

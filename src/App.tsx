@@ -14,6 +14,7 @@ import Users from "@/pages/Users";
 import Settings from "@/pages/Settings";
 import AIInsights from "@/pages/AIInsights";
 import Login from "@/pages/Login";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 import AIContent from "@/pages/AIContent";
 import Articles from "@/pages/Articles";
@@ -34,6 +35,7 @@ function App() {
             <Route path="/ai-content" element={<AIContent />} />
             <Route path="/articles" element={<Articles />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Meme, MemeFormData, DbMeme, toMeme, toDbMeme } from '@/types/meme';
+import { Meme, MemeFormData, DbMeme, toMeme } from '@/types/meme';
 
 // Simple interface representing exactly what we expect from the database
 interface DbMemeRecord {

@@ -57,7 +57,7 @@ export function useMemeDatabase() {
         throw error;
       }
       
-      // Convert response back to frontend format using explicit type
+      // Convert response back to frontend format using explicit type assertion
       const dbResponse = data as MemeDbResponse;
       const newMeme = toMeme(dbResponse);
       
@@ -106,10 +106,8 @@ export function useMemeDatabase() {
         return;
       }
       
-      // Use explicit type assertion to fix the deep type instantiation issue
-      const typedData = data as MemeDbResponse[];
-      
-      // Use the toMeme function to map database response to frontend format
+      // Fix the type instantiation issue with explicit type casting
+      const typedData = data as unknown as MemeDbResponse[];
       const formattedMemes = typedData.map(dbMeme => toMeme(dbMeme));
       
       setSavedMemes(formattedMemes);

@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { AppSidebar } from "./AppSidebar";
+import AppSidebar from "./AppSidebar"; // Changed from { AppSidebar }
 import { useAuth } from "@/hooks/useAuthContext";
 import { useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";

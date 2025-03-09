@@ -52,9 +52,11 @@ export const toMeme = (dbMeme: DbMemeRecord): Meme => {
   
   try {
     // Parse the JSON string containing text data with error handling
-    const memeText = JSON.parse(dbMeme.meme_text);
-    topText = memeText.topText || "";
-    bottomText = memeText.bottomText || "";
+    if (typeof dbMeme.meme_text === 'string') {
+      const memeText = JSON.parse(dbMeme.meme_text);
+      topText = memeText?.topText || "";
+      bottomText = memeText?.bottomText || "";
+    }
   } catch (e) {
     console.error("Error parsing meme text:", e);
   }

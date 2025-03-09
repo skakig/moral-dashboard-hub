@@ -83,16 +83,19 @@ export function useMemeOperations() {
         return null;
       }
       
-      // Convert to database format
-      const dbMeme: Omit<DbMeme, 'id' | 'created_at' | 'updated_at'> = {
+      // Prepare Meme object to convert to DB format
+      const memeToSave: Omit<Meme, 'id' | 'created_at' | 'updated_at'> = {
         prompt: memeData.prompt,
-        image_url: memeData.imageUrl,
-        top_text: memeData.topText,
-        bottom_text: memeData.bottomText,
+        imageUrl: memeData.imageUrl,
+        topText: memeData.topText,
+        bottomText: memeData.bottomText,
         platform: memeData.platform,
         hashtags: memeData.hashtags || [],
         user_id: userId
       };
+      
+      // Convert to database format
+      const dbMeme = toDbMeme(memeToSave);
       
       // Insert into database
       const { data, error } = await supabase

@@ -12,7 +12,7 @@ interface ArticleFormLayoutProps {
   form: UseFormReturn<any>;
   title: string;
   description: string;
-  children: React.ReactNode;
+  children: React.ReactNode; // This is important!
   error?: string | null;
   progress?: number;
   isFirstStep?: boolean;
@@ -26,7 +26,7 @@ interface ArticleFormLayoutProps {
   onNext?: () => void;
   onCancel?: () => void;
   onGenerate?: () => void;
-  nextStepTitle?: string;
+  nextStepTitle?: string | null;
 }
 
 export function ArticleFormLayout({
@@ -80,7 +80,7 @@ export function ArticleFormLayout({
             onNext={onNext}
             onCancel={onCancel}
             onGenerate={onGenerate}
-            nextStepTitle={nextStepTitle}
+            nextStepTitle={nextStepTitle || undefined}
           />
         </Card>
       </form>

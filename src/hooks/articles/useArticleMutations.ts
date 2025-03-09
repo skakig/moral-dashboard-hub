@@ -22,7 +22,7 @@ export function useArticleMutations() {
     }
     
     // Format the data for database
-    const formattedData: Record<string, any> = {
+    return {
       content: articleData.content || '', // Ensure content is never undefined/null
       title: articleData.title || 'Untitled', // Ensure title is never undefined/null
       moral_level: parsedMoralLevel,
@@ -33,21 +33,11 @@ export function useArticleMutations() {
       voice_generated: articleData.voice_generated || articleData.voiceGenerated || false,
       voice_file_name: articleData.voice_file_name || articleData.voiceFileName || '',
       voice_base64: articleData.voice_base64 || articleData.voiceBase64 || '',
-      // Add fields that are missing in the normalized data
       category: articleData.category || 'general',
-      status: articleData.status || 'draft'
+      status: articleData.status || 'draft',
+      excerpt: articleData.excerpt || '',
+      publish_date: articleData.publish_date || null
     };
-
-    // Add optional fields only if they exist
-    if (articleData.excerpt) {
-      formattedData.excerpt = articleData.excerpt;
-    }
-    
-    if (articleData.publish_date) {
-      formattedData.publish_date = articleData.publish_date;
-    }
-
-    return formattedData;
   };
   
   // Create a new article
@@ -58,16 +48,6 @@ export function useArticleMutations() {
       
       // Format the data for database
       const formattedData = normalizeArticleData(articleData);
-      
-      // Add default category for new articles if not already set
-      if (!formattedData.category) {
-        formattedData.category = 'general';
-      }
-      
-      // Add default status for new articles if not already set
-      if (!formattedData.status) {
-        formattedData.status = 'draft';
-      }
       
       console.log("Creating article with data:", formattedData);
       

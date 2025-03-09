@@ -141,21 +141,10 @@ export function VoiceStep({
         )}
       </div>
 
-      {/* Navigation Buttons */}
-      {(onNext || onBack) && (
-        <div className="flex justify-between mt-8">
-          {onBack && (
-            <Button variant="outline" onClick={onBack}>
-              Previous
-            </Button>
-          )}
-          {onNext && (
-            <Button onClick={onNext}>
-              Next: Featured Image
-            </Button>
-          )}
-        </div>
-      )}
+      {/* 
+        NOTE: We're removing the navigation buttons here since they will
+        be handled by the StepControls component in ArticleFormLayout
+      */}
     </div>
   );
 }

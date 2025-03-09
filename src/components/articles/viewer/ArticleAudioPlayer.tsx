@@ -11,10 +11,15 @@ interface ArticleAudioPlayerProps {
 export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp3' }: ArticleAudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (voiceUrl) {
+    if (!voiceUrl) return;
+    
+    console.log("ArticleAudioPlayer: Loading audio from URL:", voiceUrl);
+    
+    try {
       const audioElement = new Audio(voiceUrl);
       audioRef.current = audioElement;
       
@@ -24,40 +29,85 @@ export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp
         }
       };
       
+      const handleError = (e: Event) => {
+        console.error("Audio error:", e);
+        setError("Failed to load audio file");
+      };
+      
+      const handlePlay = () => setIsPlaying(true);
+      const handlePause = () => setIsPlaying(false);
+      const handleEnded = () => setIsPlaying(false);
+      
       audioElement.addEventListener('timeupdate', updateProgress);
-      audioElement.addEventListener('ended', () => setIsPlaying(false));
+      audioElement.addEventListener('error', handleError);
+      audioElement.addEventListener('play', handlePlay);
+      audioElement.addEventListener('pause', handlePause);
+      audioElement.addEventListener('ended', handleEnded);
       
       // Clean up when component unmounts
       return () => {
         audioElement.pause();
         audioElement.removeEventListener('timeupdate', updateProgress);
-        audioElement.removeEventListener('ended', () => setIsPlaying(false));
+        audioElement.removeEventListener('error', handleError);
+        audioElement.removeEventListener('play', handlePlay);
+        audioElement.removeEventListener('pause', handlePause);
+        audioElement.removeEventListener('ended', handleEnded);
         audioElement.src = '';
       };
+    } catch (err) {
+      console.error("Error initializing audio player:", err);
+      setError("Failed to initialize audio player");
     }
   }, [voiceUrl]);
 
   const togglePlayPause = () => {
     if (!audioRef.current) return;
     
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        // Create a play promise to catch any errors
+        const playPromise = audioRef.current.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            console.error("Error playing audio:", err);
+            setError("Failed to play audio");
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error in toggle play/pause:", err);
+      setError("Failed to control audio");
     }
-    
-    setIsPlaying(!isPlaying);
   };
 
   const handleDownload = () => {
     if (!voiceUrl) return;
     
-    const a = document.createElement('a');
-    a.href = voiceUrl;
-    a.download = voiceFileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    try {
+      // For base64 data URLs
+      if (voiceUrl.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = voiceUrl;
+        link.download = voiceFileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // For regular URLs
+        const a = document.createElement('a');
+        a.href = voiceUrl;
+        a.download = voiceFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err) {
+      console.error("Error downloading audio:", err);
+      setError("Failed to download audio file");
+    }
   };
 
   if (!voiceUrl) {
@@ -66,6 +116,12 @@ export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp
 
   return (
     <div className="flex flex-col gap-2 p-4 bg-secondary/20 rounded-md">
+      {error && (
+        <div className="text-red-500 text-sm mb-2">
+          {error}
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button 

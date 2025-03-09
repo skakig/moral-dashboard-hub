@@ -16,6 +16,7 @@ export function APIKeysSection() {
   const { apiKeysLoading, loadError, apiData, reloadApiData } = useAPIData();
   const [initializingDb, setInitializingDb] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
+  const [initializationAttempted, setInitializationAttempted] = useState(false);
 
   // Check database schema and initialize needed tables
   const checkAndInitializeDatabase = async () => {
@@ -71,10 +72,12 @@ export function APIKeysSection() {
         }
         
         toast.success("Database initialized successfully");
+        setInitializationAttempted(true);
         // After initialization, reload the data
         setTimeout(() => reloadApiData(), 1000);
       } else {
         console.log("No missing tables or columns detected");
+        setInitializationAttempted(true);
       }
       
     } catch (error: any) {
@@ -86,11 +89,15 @@ export function APIKeysSection() {
     }
   };
 
+  // Automatically check database schema and try to initialize if needed
+  useEffect(() => {
+    if (!initializationAttempted) {
+      checkAndInitializeDatabase();
+    }
+  }, [initializationAttempted]);
+
   // Automatically refresh data when component mounts to ensure fresh data
   useEffect(() => {
-    // Check and initialize database first
-    checkAndInitializeDatabase();
-    
     // Add a small delay to ensure database migrations have completed
     const timer = setTimeout(() => {
       reloadApiData();

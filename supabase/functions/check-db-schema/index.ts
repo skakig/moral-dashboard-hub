@@ -41,25 +41,36 @@ serve(async (req) => {
     let missingTableNames = [];
     
     for (const table of tables) {
-      const { data, error } = await supabaseAdmin
-        .from('_sql_execution')
-        .insert({
-          query: `SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public'
-            AND table_name = '${table}'
-          );`
-        })
-        .select();
+      // Use a direct SQL query via Postgres functions
+      const { data, error } = await supabaseAdmin.rpc('check_table_exists', { 
+        table_name: table
+      });
       
       if (error) {
         console.error(`Error checking if table ${table} exists:`, error);
-        missingTables++;
-        missingTableNames.push(table);
+        
+        // Fall back to a different method if RPC fails
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabaseAdmin
+            .from(table)
+            .select('id')
+            .limit(1);
+            
+          if (fallbackError && fallbackError.code === '42P01') { // Table doesn't exist
+            console.log(`Table ${table} does not exist (fallback check)`);
+            missingTables++;
+            missingTableNames.push(table);
+          }
+        } catch (innerError) {
+          console.error(`Fallback check also failed for ${table}:`, innerError);
+          missingTables++;
+          missingTableNames.push(table);
+        }
+        
         continue;
       }
       
-      if (data && data[0]?.results?.[0]?.exists === false) {
+      if (!data || data === false) {
         console.log(`Table ${table} does not exist`);
         missingTables++;
         missingTableNames.push(table);
@@ -99,17 +110,11 @@ serve(async (req) => {
       missingColumnDetails[table] = [];
       
       for (const column of columns) {
-        const { data, error } = await supabaseAdmin
-          .from('_sql_execution')
-          .insert({
-            query: `SELECT EXISTS (
-              SELECT FROM information_schema.columns 
-              WHERE table_schema = 'public'
-              AND table_name = '${table}'
-              AND column_name = '${column}'
-            );`
-          })
-          .select();
+        // Use RPC for column check
+        const { data, error } = await supabaseAdmin.rpc('check_column_exists', {
+          table_name: table,
+          column_name: column
+        });
         
         if (error) {
           console.error(`Error checking column ${table}.${column}:`, error);
@@ -119,7 +124,7 @@ serve(async (req) => {
           continue;
         }
         
-        if (data && data[0]?.results?.[0]?.exists === false) {
+        if (!data || data === false) {
           console.log(`Column ${table}.${column} does not exist`);
           results[table][column] = false;
           missingColumns++;

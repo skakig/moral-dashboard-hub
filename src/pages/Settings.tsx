@@ -24,13 +24,14 @@ export default function Settings() {
         setConnectionError(null);
         
         // Simple query to test connection
-        const { data, error } = await supabase.from('_sql_execution').insert({
-          query: "SELECT 1 as connection_test;"
-        }).select();
+        const { data, error } = await supabase.functions.invoke('check-db-schema');
         
         if (error) {
           console.error("Supabase connection error:", error);
           setConnectionError(`Database connection error: ${error.message}`);
+        } else if (!data || !data.success) {
+          console.error("Database check failed:", data?.error || "Unknown error");
+          setConnectionError(`Database connection error: ${data?.error || "Unknown error"}`);
         } else {
           console.log("Supabase connection successful:", data);
         }

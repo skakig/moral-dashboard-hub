@@ -34,7 +34,94 @@ serve(async (req) => {
     
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // SQL to create or update tables
+    // First, try to create the utility functions if they don't exist
+    try {
+      await supabaseAdmin.rpc('check_table_exists', { table_name: 'api_keys' });
+      console.log("Utility functions already exist, skipping creation");
+    } catch (functionError) {
+      console.log("Utility functions don't exist, creating them...");
+      
+      // Create the check_table_exists function
+      const createTableCheckFunctionSql = `
+      CREATE OR REPLACE FUNCTION public.check_table_exists(table_name text)
+      RETURNS boolean
+      LANGUAGE plpgsql
+      AS $$
+      DECLARE
+        table_exists boolean;
+      BEGIN
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public'
+          AND table_name = check_table_exists.table_name
+        ) INTO table_exists;
+        
+        RETURN table_exists;
+      END;
+      $$;
+      `;
+      
+      // Create the check_column_exists function
+      const createColumnCheckFunctionSql = `
+      CREATE OR REPLACE FUNCTION public.check_column_exists(table_name text, column_name text)
+      RETURNS boolean
+      LANGUAGE plpgsql
+      AS $$
+      DECLARE
+        column_exists boolean;
+      BEGIN
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public'
+          AND table_name = check_column_exists.table_name
+          AND column_name = check_column_exists.column_name
+        ) INTO column_exists;
+        
+        RETURN column_exists;
+      END;
+      $$;
+      `;
+      
+      // Execute functions creation
+      try {
+        const { error: tableCheckError } = await supabaseAdmin.rpc('_exec_sql', { 
+          sql: createTableCheckFunctionSql 
+        });
+        
+        if (tableCheckError) {
+          console.warn("Error creating check_table_exists function:", tableCheckError);
+          // Try with a different approach
+          const { error: directError } = await supabaseAdmin.rpc('exec', { 
+            query: createTableCheckFunctionSql 
+          });
+          
+          if (directError) {
+            console.error("Failed to create utility functions:", directError);
+          }
+        }
+        
+        const { error: columnCheckError } = await supabaseAdmin.rpc('_exec_sql', { 
+          sql: createColumnCheckFunctionSql 
+        });
+        
+        if (columnCheckError) {
+          console.warn("Error creating check_column_exists function:", columnCheckError);
+          // Try with a different approach
+          const { error: directError } = await supabaseAdmin.rpc('exec', { 
+            query: createColumnCheckFunctionSql 
+          });
+          
+          if (directError) {
+            console.error("Failed to create utility functions:", directError);
+          }
+        }
+      } catch (rpcError) {
+        console.error("Error creating utility functions via RPC:", rpcError);
+        // We'll continue anyway and try direct SQL execution
+      }
+    }
+
+    // SQL to create or update tables using direct SQL execution
     const createTablesSql = `
     -- Create the api_keys table if it doesn't exist
     CREATE TABLE IF NOT EXISTS public.api_keys (
@@ -105,46 +192,73 @@ serve(async (req) => {
     WHERE NOT EXISTS (SELECT 1 FROM public.site_settings);
     `;
 
-    // First try to execute the tables creation SQL
+    // Try multiple approaches to execute the SQL
+    let tablesCreated = false;
+    
+    // Approach 1: Using _exec_sql RPC function
     try {
-      const { error: directError } = await supabaseAdmin.from('_sql_execution').insert({
-        query: createTablesSql
-      }).select();
-      
-      if (directError) {
-        throw new Error(`Failed to initialize database with direct SQL: ${directError.message}`);
+      const { error } = await supabaseAdmin.rpc('_exec_sql', { sql: createTablesSql });
+      if (!error) {
+        console.log("Successfully created/updated tables using _exec_sql RPC");
+        tablesCreated = true;
+      } else {
+        console.warn("Error using _exec_sql RPC:", error);
       }
-      
-      console.log("Successfully created/updated tables with direct SQL");
-    } catch (sqlError) {
-      console.error("Failed with direct SQL:", sqlError);
-      
-      // Try to execute in smaller parts in case of timeout or size issues
+    } catch (error) {
+      console.warn("Exception using _exec_sql RPC:", error);
+    }
+    
+    // Approach 2: Using exec RPC function
+    if (!tablesCreated) {
       try {
-        // Split queries and run them separately
-        const sqlQueries = createTablesSql.split(';').filter(q => q.trim());
+        const { error } = await supabaseAdmin.rpc('exec', { query: createTablesSql });
+        if (!error) {
+          console.log("Successfully created/updated tables using exec RPC");
+          tablesCreated = true;
+        } else {
+          console.warn("Error using exec RPC:", error);
+        }
+      } catch (error) {
+        console.warn("Exception using exec RPC:", error);
+      }
+    }
+    
+    // Approach 3: Try executing statements individually
+    if (!tablesCreated) {
+      try {
+        console.log("Attempting to execute statements individually");
+        const statements = createTablesSql.split(';').filter(s => s.trim().length > 0);
         
-        for (const query of sqlQueries) {
-          if (!query.trim()) continue;
-          
-          const { error } = await supabaseAdmin.from('_sql_execution').insert({
-            query: query + ';'
-          }).select();
-          
-          if (error) {
-            console.warn(`Warning - issue with query: ${query.substring(0, 100)}...`, error);
-            // Continue with other queries
+        for (const statement of statements) {
+          try {
+            // Try using _exec_sql
+            const { error } = await supabaseAdmin.rpc('_exec_sql', { 
+              sql: statement + ';' 
+            });
+            
+            if (error) {
+              // Try using exec
+              const { error: execError } = await supabaseAdmin.rpc('exec', { 
+                query: statement + ';' 
+              });
+              
+              if (execError) {
+                console.warn(`Warning - issue with statement: ${statement.substring(0, 100)}...`, execError);
+              }
+            }
+          } catch (error) {
+            console.warn(`Exception executing statement: ${statement.substring(0, 100)}...`, error);
           }
         }
         
-        console.log("Completed partial SQL execution");
-      } catch (partialError) {
-        console.error("Failed with partial SQL execution:", partialError);
-        throw partialError;
+        console.log("Completed individual statement execution");
+        tablesCreated = true;
+      } catch (error) {
+        console.error("Failed with individual statement execution:", error);
       }
     }
 
-    // Create the triggers and functions
+    // Create update trigger functions for timestamp updates
     const createTriggersSql = `
     -- Create update trigger for api_keys
     CREATE OR REPLACE FUNCTION public.update_api_key_updated_at()
@@ -183,75 +297,74 @@ serve(async (req) => {
     EXECUTE FUNCTION public.update_site_settings_updated_at();
     `;
 
-    // Try to create triggers
+    // Try to create triggers with the same approaches
     try {
-      const { error: directError } = await supabaseAdmin.from('_sql_execution').insert({
-        query: createTriggersSql
-      }).select();
-      
-      if (directError) {
-        console.warn(`Warning - failed to create triggers: ${directError.message}`);
-        // Continue anyway, triggers are less critical
-      } else {
+      const { error } = await supabaseAdmin.rpc('_exec_sql', { sql: createTriggersSql });
+      if (!error) {
         console.log("Successfully created triggers and functions");
+      } else {
+        // Try executing statements individually
+        const statements = createTriggersSql.split(';').filter(s => s.trim().length > 0);
+        
+        for (const statement of statements) {
+          try {
+            await supabaseAdmin.rpc('_exec_sql', { sql: statement + ';' });
+          } catch (error) {
+            try {
+              await supabaseAdmin.rpc('exec', { query: statement + ';' });
+            } catch (innerError) {
+              console.warn(`Warning - issue with trigger statement: ${statement.substring(0, 100)}...`);
+            }
+          }
+        }
       }
-    } catch (triggerError) {
-      console.error("Failed to create triggers:", triggerError);
+    } catch (error) {
+      console.warn("Error creating triggers:", error);
       // Continue anyway, triggers are less critical
     }
 
-    // Create the check_column_exists function
-    const createFunctionSql = `
-    -- Create a function to check if a column exists in a table
-    CREATE OR REPLACE FUNCTION public.check_column_exists(table_name text, column_name text)
-    RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-    DECLARE
-      column_exists boolean;
-    BEGIN
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_schema = 'public'
-        AND table_name = check_column_exists.table_name
-        AND column_name = check_column_exists.column_name
-      ) INTO column_exists;
-      
-      RETURN column_exists;
-    END;
-    $$;
-    `;
+    // Verify tables were created successfully
+    let tablesExist = true;
+    const tables = ['api_keys', 'site_settings', 'api_rate_limits', 'api_function_mapping', 'api_usage_logs'];
     
-    // Try to create the function
-    try {
-      const { error: functionError } = await supabaseAdmin.from('_sql_execution').insert({
-        query: createFunctionSql
-      }).select();
-      
-      if (functionError) {
-        console.warn(`Warning - failed to create check_column_exists function: ${functionError.message}`);
-        // Continue anyway
-      } else {
-        console.log("Successfully created check_column_exists function");
+    for (const table of tables) {
+      try {
+        const { data, error } = await supabaseAdmin.rpc('check_table_exists', { 
+          table_name: table 
+        });
+        
+        if (error || !data) {
+          console.error(`Table ${table} verification failed:`, error);
+          tablesExist = false;
+        }
+      } catch (error) {
+        // Try a direct query as fallback
+        try {
+          const { data, error } = await supabaseAdmin
+            .from(table)
+            .select('id')
+            .limit(1);
+            
+          if (error && error.code === '42P01') { // Table doesn't exist
+            console.error(`Table ${table} does not exist after creation attempt`);
+            tablesExist = false;
+          }
+        } catch (innerError) {
+          console.error(`Failed to verify table ${table}:`, innerError);
+          tablesExist = false;
+        }
       }
-    } catch (functionError) {
-      console.error("Failed to create function:", functionError);
-      // Continue anyway
     }
 
-    // Verify tables were created successfully
-    const { data: tablesData, error: tablesError } = await supabaseAdmin
-      .from('_sql_execution')
-      .insert({
-        query: `SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';`
-      })
-      .select();
-
-    if (tablesError) {
-      console.error("Error verifying tables:", tablesError);
-    } else {
-      const tableNames = tablesData?.[0]?.results?.map((row: any) => row.tablename) || [];
-      console.log("Available tables:", tableNames.join(', '));
+    if (!tablesExist) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: "Some tables could not be verified after creation attempt",
+          error: "Database initialization may be incomplete"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
     }
 
     return new Response(

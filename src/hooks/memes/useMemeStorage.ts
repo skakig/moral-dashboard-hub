@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Meme, MemeFormData } from '@/types/meme';
 import { toast } from 'sonner';
-import { MemeDbResponse } from './types';
 
 export function useMemeStorage() {
   const [savedMemes, setSavedMemes] = useState<Meme[]>([]);
@@ -26,7 +25,7 @@ export function useMemeStorage() {
       }
       
       // Prepare meme data for database
-      const memeWithUser: MemeFormData = {
+      const memeWithUser = {
         ...memeData,
         user_id: userId
       };
@@ -57,27 +56,28 @@ export function useMemeStorage() {
         throw error;
       }
       
-      // Use explicit type casting to avoid deep type instantiation
-      const dbResponse = data as unknown as MemeDbResponse;
+      if (!data) {
+        throw new Error('No data returned from insert operation');
+      }
       
-      // Create a new meme object manually
-      const newMeme: Meme = {
-        id: dbResponse.id,
-        prompt: dbResponse.prompt || "",
-        imageUrl: dbResponse.image_url || "",
+      // Manually construct a Meme object from the database response
+      let newMeme: Meme = {
+        id: data.id,
+        prompt: data.prompt || "",
+        imageUrl: data.image_url || "",
         topText: "",
         bottomText: "",
-        platform: dbResponse.platform_tags?.[0],
-        hashtags: dbResponse.platform_tags?.slice(1),
-        created_at: dbResponse.created_at,
-        user_id: dbResponse.user_id,
-        engagement_score: dbResponse.engagement_score || 0
+        platform: Array.isArray(data.platform_tags) ? data.platform_tags[0] : undefined,
+        hashtags: Array.isArray(data.platform_tags) ? data.platform_tags.slice(1) : [],
+        created_at: data.created_at,
+        user_id: data.user_id,
+        engagement_score: data.engagement_score || 0
       };
       
       // Parse the meme text JSON if present
       try {
-        if (typeof dbResponse.meme_text === 'string') {
-          const parsed = JSON.parse(dbResponse.meme_text);
+        if (typeof data.meme_text === 'string') {
+          const parsed = JSON.parse(data.meme_text);
           newMeme.topText = parsed?.topText || "";
           newMeme.bottomText = parsed?.bottomText || "";
         }
@@ -130,35 +130,33 @@ export function useMemeStorage() {
         return;
       }
       
-      // Use explicit type casting to avoid deep type instantiation
+      // Process data and transform to Meme array
       const memes: Meme[] = [];
       
-      // Manually convert each DB record to Meme format
+      // Explicitly process each item
       for (const item of data) {
-        const record = item as unknown as MemeDbResponse;
-        
         const meme: Meme = {
-          id: record.id,
-          prompt: record.prompt || "",
-          imageUrl: record.image_url || "",
+          id: item.id,
+          prompt: item.prompt || "",
+          imageUrl: item.image_url || "",
           topText: "",
           bottomText: "",
-          platform: record.platform_tags?.[0],
-          hashtags: record.platform_tags?.slice(1),
-          created_at: record.created_at,
-          user_id: record.user_id,
-          engagement_score: record.engagement_score || 0
+          platform: Array.isArray(item.platform_tags) ? item.platform_tags[0] : undefined,
+          hashtags: Array.isArray(item.platform_tags) ? item.platform_tags.slice(1) : [],
+          created_at: item.created_at,
+          user_id: item.user_id,
+          engagement_score: item.engagement_score || 0
         };
         
         // Parse the meme text JSON if present
         try {
-          if (typeof record.meme_text === 'string') {
-            const parsed = JSON.parse(record.meme_text);
+          if (typeof item.meme_text === 'string') {
+            const parsed = JSON.parse(item.meme_text);
             meme.topText = parsed?.topText || "";
             meme.bottomText = parsed?.bottomText || "";
           }
         } catch (e) {
-          console.error("Error parsing meme text for meme ID:", record.id, e);
+          console.error("Error parsing meme text for meme ID:", item.id, e);
         }
         
         memes.push(meme);

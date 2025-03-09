@@ -44,6 +44,7 @@ export function ArticleForm({
   const [selectedTheme, setSelectedTheme] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<number>(5);
   const [contentType, setContentType] = useState("article");
+  const [contentLength, setContentLength] = useState("medium");
   const { themes, isLoading: themesLoading } = useContentThemes();
 
   const defaultValues = {
@@ -83,7 +84,8 @@ export function ArticleForm({
         theme: theme.name,
         keywords: theme.keywords || [],
         contentType,
-        moralLevel: selectedLevel
+        moralLevel: selectedLevel,
+        contentLength
       });
 
       if (result) {
@@ -101,6 +103,38 @@ export function ArticleForm({
     } finally {
       setAiGenerating(false);
     }
+  };
+
+  // Helper function to show content type specific options
+  const showContentLengthOptions = () => {
+    if (contentType === "social_media" || contentType.includes("youtube")) {
+      return (
+        <div className="space-y-2">
+          <label htmlFor="platform">Platform</label>
+          <Select 
+            onValueChange={(value) => setContentType(`${contentType}_${value}`)}
+            value={contentType.includes("_") ? contentType.split("_")[1] : ""}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="instagram">Instagram</SelectItem>
+              <SelectItem value="twitter">Twitter/X</SelectItem>
+              <SelectItem value="facebook">Facebook</SelectItem>
+              <SelectItem value="linkedin">LinkedIn</SelectItem>
+              {contentType === "youtube" && (
+                <>
+                  <SelectItem value="shorts">YouTube Shorts</SelectItem>
+                  <SelectItem value="long">YouTube Long-Form</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -325,11 +359,11 @@ export function ArticleForm({
       </Form>
 
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Generate Content with AI</DialogTitle>
             <DialogDescription>
-              Select a theme and level to generate content
+              Select a theme, type, and length to generate content
             </DialogDescription>
           </DialogHeader>
           
@@ -364,8 +398,29 @@ export function ArticleForm({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="article">Article</SelectItem>
-                  <SelectItem value="blog post">Blog Post</SelectItem>
+                  <SelectItem value="blog_post">Blog Post</SelectItem>
                   <SelectItem value="guide">Guide</SelectItem>
+                  <SelectItem value="social_media">Social Media Script</SelectItem>
+                  <SelectItem value="youtube">YouTube Script</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {showContentLengthOptions()}
+
+            <div className="space-y-2">
+              <label htmlFor="content-length">Content Length</label>
+              <Select 
+                onValueChange={setContentLength} 
+                value={contentLength}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select content length" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="short">Short (300-500 words)</SelectItem>
+                  <SelectItem value="medium">Medium (1000-1500 words)</SelectItem>
+                  <SelectItem value="long">Long (2000-3000 words)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

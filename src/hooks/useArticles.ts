@@ -119,6 +119,7 @@ export function useArticles() {
     keywords: string[];
     contentType: string;
     moralLevel: number;
+    contentLength?: string;
   }) => {
     try {
       const response = await supabase.functions.invoke('generate-article', {
@@ -126,6 +127,7 @@ export function useArticles() {
       });
 
       if (response.error) {
+        console.error("Error response from generate-article function:", response.error);
         toast.error("Failed to generate article");
         return null;
       }

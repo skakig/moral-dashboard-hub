@@ -1,0 +1,480 @@
+
+import React, { useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ChevronLeft, ChevronRight, Wand2, Mic, Play, Pause, Download, Save, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+// Components for each step
+import { ThemeField } from "./components/ThemeField";
+import { BasicInfoFields } from "./components/BasicInfoFields";
+import { ContentTypeFields } from "./components/ContentTypeFields";
+import { ContentConfigFields } from "./components/ContentConfigFields";
+import { ContentField } from "./components/ContentField";
+import { MetaDescriptionField } from "./components/MetaDescriptionField";
+import { FeaturedImageField } from "./components/FeaturedImageField";
+
+// Hooks
+import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
+import { useAIGeneration } from "./hooks/useAIGeneration";
+
+// The form schema
+const articleFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  excerpt: z.string().optional(),
+  content: z.string().optional(),
+  featuredImage: z.string().optional(),
+  contentType: z.string().optional(),
+  platform: z.string().optional(),
+  contentLength: z.string().optional(),
+  tone: z.string().optional(),
+  metaDescription: z.string().optional(),
+  seoKeywords: z.string().optional(),
+  voiceUrl: z.string().optional(),
+  voiceGenerated: z.boolean().optional().default(false),
+  moralLevel: z.string().or(z.number()).optional().default(5),
+  theme: z.string().optional(),
+  voiceFileName: z.string().optional(),
+  voiceBase64: z.string().optional(),
+});
+
+export type ArticleFormValues = z.infer<typeof articleFormSchema>;
+
+interface StepByStepArticleFormProps {
+  initialData?: Partial<ArticleFormValues>;
+  onSubmit?: (values: ArticleFormValues) => void;
+  submitLabel?: string;
+  onCancel?: () => void;
+  isLoading?: boolean;
+}
+
+type Step = {
+  id: string;
+  title: string;
+  description: string;
+  component: React.ReactNode;
+  isRequired?: boolean;
+};
+
+export function StepByStepArticleForm({
+  initialData = {},
+  onSubmit: onFormSubmit,
+  submitLabel = "Create",
+  onCancel,
+  isLoading = false,
+}: StepByStepArticleFormProps) {
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  
+  const form = useForm<ArticleFormValues>({
+    resolver: zodResolver(articleFormSchema),
+    defaultValues: {
+      title: "",
+      excerpt: "",
+      content: "",
+      featuredImage: "",
+      contentType: "",
+      platform: "",
+      contentLength: "medium",
+      tone: "informative",
+      metaDescription: "",
+      seoKeywords: "",
+      voiceUrl: "",
+      voiceGenerated: false,
+      moralLevel: 5,
+      theme: "",
+      ...initialData,
+    },
+  });
+
+  const { 
+    generateVoiceContent, 
+    isGenerating: isGeneratingVoice, 
+    audioUrl, 
+    isPlaying,
+    togglePlayPause,
+    downloadAudio,
+    setIsPlaying
+  } = useVoiceGeneration(form);
+  
+  const { loading: isGeneratingContent, generateContent } = useAIGeneration();
+
+  const handleGenerateContent = async () => {
+    try {
+      setError(null);
+      
+      // Get the current form values to use as input parameters
+      const theme = form.getValues("theme") || ""; 
+      const contentType = form.getValues("contentType") || "article";
+      const moralLevel = form.getValues("moralLevel") || 5;
+      const platform = form.getValues("platform") || "";
+      const contentLength = form.getValues("contentLength") || "medium";
+      const tone = form.getValues("tone") || "informative";
+      const keywords = form.getValues("seoKeywords") ? 
+        form.getValues("seoKeywords").split(',').map((k: string) => k.trim()) : 
+        [];
+
+      if (!theme) {
+        toast.error("Please enter a theme or description of what you want to generate");
+        return;
+      }
+
+      if (!platform) {
+        toast.error("Please select a platform");
+        return;
+      }
+
+      if (!contentType) {
+        toast.error("Please select a content type");
+        return;
+      }
+
+      // Call the AI generation
+      const content = await generateContent({
+        theme,
+        keywords,
+        contentType,
+        moralLevel: parseInt(String(moralLevel), 10),
+        platform,
+        contentLength,
+        tone
+      });
+
+      if (content) {
+        // Update the form values
+        form.setValue("content", content.content, { shouldDirty: true });
+        
+        // Only update title if it's empty or if the current title is the theme
+        if (!form.getValues("title") || form.getValues("title") === theme) {
+          form.setValue("title", content.title, { shouldDirty: true });
+        }
+        
+        // Update meta description
+        if (content.metaDescription) {
+          form.setValue("metaDescription", content.metaDescription, { shouldDirty: true });
+        }
+        
+        // Update keywords if they were generated and not already set
+        if (content.keywords && content.keywords.length > 0) {
+          form.setValue("seoKeywords", content.keywords.join(', '), { shouldDirty: true });
+        }
+
+        // Move to the content step
+        const contentStepIndex = steps.findIndex(step => step.id === 'content');
+        if (contentStepIndex !== -1) {
+          setCurrentStepIndex(contentStepIndex);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error generating content:", error);
+      setError(error.message || "Failed to generate content");
+      toast.error(`Failed to generate content: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  };
+
+  // Define steps
+  const steps: Step[] = [
+    {
+      id: 'theme',
+      title: 'Theme/Topic',
+      description: 'What would you like to write about?',
+      component: (
+        <div className="space-y-4">
+          <ThemeField form={form} onGenerate={handleGenerateContent} />
+        </div>
+      ),
+      isRequired: true,
+    },
+    {
+      id: 'platform-type',
+      title: 'Platform & Content Type',
+      description: 'Where will your content be published and what type will it be?',
+      component: (
+        <div className="space-y-4">
+          <ContentTypeFields 
+            form={form} 
+            platform={form.watch("platform")} 
+            setContentType={(value) => form.setValue("contentType", value)} 
+            setPlatform={(value) => form.setValue("platform", value)} 
+          />
+        </div>
+      ),
+      isRequired: true,
+    },
+    {
+      id: 'config',
+      title: 'Content Configuration',
+      description: 'Configure the tone, length, and moral level of your content',
+      component: (
+        <div className="space-y-4">
+          <ContentConfigFields 
+            form={form} 
+            setContentLength={(value) => form.setValue("contentLength", value)} 
+          />
+        </div>
+      ),
+      isRequired: false,
+    },
+    {
+      id: 'content',
+      title: 'Content',
+      description: 'Write or generate your content',
+      component: (
+        <div className="space-y-4">
+          <ContentField 
+            form={form} 
+            isGenerating={isGeneratingContent} 
+            onGenerate={handleGenerateContent} 
+          />
+        </div>
+      ),
+      isRequired: true,
+    },
+    {
+      id: 'voice',
+      title: 'Voice Content',
+      description: 'Generate voice content from your text',
+      component: (
+        <div className="space-y-4">
+          {form.watch("content") ? (
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={generateVoiceContent}
+                  disabled={isGeneratingVoice}
+                  className="flex items-center gap-2"
+                >
+                  {isGeneratingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                  {form.watch("voiceGenerated") ? "Regenerate Voice" : "Generate Voice Content"}
+                </Button>
+                
+                {form.watch("voiceGenerated") && (
+                  <>
+                    <span className="text-sm text-green-600">Voice content generated!</span>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={togglePlayPause}
+                      className="flex items-center gap-2"
+                    >
+                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      {isPlaying ? "Pause" : "Play"}
+                    </Button>
+                    
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={downloadAudio}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </Button>
+                  </>
+                )}
+              </div>
+              
+              {form.watch("voiceGenerated") && audioUrl && (
+                <div className="mt-2 p-2 border rounded bg-muted/50">
+                  <audio 
+                    controls 
+                    src={audioUrl} 
+                    className="w-full" 
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-muted-foreground">
+              Please add content before generating voice.
+            </div>
+          )}
+        </div>
+      ),
+      isRequired: false,
+    },
+    {
+      id: 'metadata',
+      title: 'SEO & Featured Image',
+      description: 'Add metadata and featured image for better visibility',
+      component: (
+        <div className="space-y-4">
+          <MetaDescriptionField form={form} />
+          <FeaturedImageField form={form} />
+        </div>
+      ),
+      isRequired: false,
+    },
+    {
+      id: 'basic-info',
+      title: 'Basic Information',
+      description: 'Add title and excerpt for your content',
+      component: (
+        <div className="space-y-4">
+          <BasicInfoFields form={form} />
+        </div>
+      ),
+      isRequired: true,
+    },
+  ];
+
+  const currentStep = steps[currentStepIndex];
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === steps.length - 1;
+
+  const goToNextStep = () => {
+    if (currentStep.isRequired) {
+      // Check if the fields for this step are valid
+      let isValid = true;
+      
+      if (currentStep.id === 'theme' && !form.getValues("theme")) {
+        form.setError("theme", { type: "required", message: "Theme is required" });
+        isValid = false;
+      }
+      
+      if (currentStep.id === 'platform-type' && (!form.getValues("platform") || !form.getValues("contentType"))) {
+        if (!form.getValues("platform")) {
+          toast.error("Please select a platform");
+        }
+        if (!form.getValues("contentType")) {
+          toast.error("Please select a content type");
+        }
+        isValid = false;
+      }
+      
+      if (currentStep.id === 'content' && !form.getValues("content")) {
+        form.setError("content", { type: "required", message: "Content is required" });
+        isValid = false;
+      }
+      
+      if (currentStep.id === 'basic-info' && !form.getValues("title")) {
+        form.setError("title", { type: "required", message: "Title is required" });
+        isValid = false;
+      }
+      
+      if (!isValid) return;
+    }
+    
+    setCurrentStepIndex(prev => (prev < steps.length - 1 ? prev + 1 : prev));
+  };
+
+  const goToPreviousStep = () => {
+    setCurrentStepIndex(prev => (prev > 0 ? prev - 1 : prev));
+  };
+
+  const handleSubmit = async (data: ArticleFormValues) => {
+    try {
+      if (onFormSubmit) {
+        await onFormSubmit(data);
+      }
+    } catch (error) {
+      console.error("Error submitting article form:", error);
+      toast.error("Failed to save article");
+    }
+  };
+
+  // Check if we can auto-generate content (when theme, platform, and contentType are filled)
+  const canAutoGenerate = form.watch("theme") && form.watch("platform") && form.watch("contentType");
+
+  return (
+    <div className="space-y-8">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>{currentStep.title}</CardTitle>
+              <p className="text-sm text-muted-foreground">{currentStep.description}</p>
+              <div className="w-full bg-gray-200 h-2 rounded-full mt-4">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all"
+                  style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
+                ></div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
+                  {error}
+                </div>
+              )}
+              {currentStep.component}
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={goToPreviousStep}
+                  disabled={isFirstStep}
+                  className="mr-2"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Previous
+                </Button>
+                {!isLastStep && (
+                  <Button type="button" onClick={goToNextStep}>
+                    Next
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <div>
+                {currentStep.id === 'theme' && canAutoGenerate && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleGenerateContent}
+                    disabled={isGeneratingContent}
+                    className="ml-2"
+                  >
+                    {isGeneratingContent ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Generate & Continue
+                      </>
+                    )}
+                  </Button>
+                )}
+                {isLastStep && (
+                  <Button type="submit" disabled={isLoading} className="ml-2">
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        {submitLabel}
+                      </>
+                    )}
+                  </Button>
+                )}
+                {onCancel && (
+                  <Button type="button" variant="outline" onClick={onCancel} className="ml-2">
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </CardFooter>
+          </Card>
+        </form>
+      </Form>
+    </div>
+  );
+}

@@ -7,7 +7,9 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { ArticleFormFields } from "./ArticleFormFields";
+import { StepByStepArticleForm } from "./StepByStepArticleForm";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Article form schema
 const articleFormSchema = z.object({
@@ -44,6 +46,8 @@ export function ArticleForm({
   onCancel,
   isLoading = false,
 }: ArticleFormProps) {
+  const [formView, setFormView] = useState<"classic" | "wizard">("wizard");
+
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
     defaultValues: {
@@ -78,22 +82,41 @@ export function ArticleForm({
 
   return (
     <div className="space-y-8">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <ArticleFormFields form={form} />
+      <Tabs defaultValue="wizard" onValueChange={(value) => setFormView(value as "classic" | "wizard")}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="wizard">Step-by-Step</TabsTrigger>
+          <TabsTrigger value="classic">All Fields</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="wizard">
+          <StepByStepArticleForm
+            initialData={initialData}
+            onSubmit={onFormSubmit}
+            submitLabel={submitLabel}
+            onCancel={onCancel}
+            isLoading={isLoading}
+          />
+        </TabsContent>
+        
+        <TabsContent value="classic">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <ArticleFormFields form={form} />
 
-          <div className="flex items-center justify-between">
-            {onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-            )}
-            <Button type="submit" disabled={isLoading}>
-              {submitLabel}
-            </Button>
-          </div>
-        </form>
-      </Form>
+              <div className="flex items-center justify-between">
+                {onCancel && (
+                  <Button type="button" variant="outline" onClick={onCancel}>
+                    Cancel
+                  </Button>
+                )}
+                <Button type="submit" disabled={isLoading}>
+                  {submitLabel}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -19,48 +19,60 @@ export function ThemeField({ form, onGenerate }: ThemeFieldProps) {
     const platform = form.watch("platform");
     const contentType = form.watch("contentType");
     const moralLevel = form.watch("moralLevel") || 5;
+    const tone = form.watch("tone") || "informative";
     
     if (platform && contentType) {
+      // Create mapping keys for different platform and content type combinations
+      const platformKey = platform.replace(/\s+/g, '');
+      const contentTypeKey = contentType.replace(/\s+/g, '');
+      const keyMapper = `${platformKey}_${contentTypeKey}`;
+      
       const placeholders = {
         // YouTube placeholders
-        "YouTube_youtube_script": `e.g., Create a YouTube script about moral development in everyday decisions at level ${moralLevel}`,
-        "YouTube_youtube_shorts": `e.g., Create a short, engaging YouTube Shorts script about a quick moral dilemma at level ${moralLevel}`,
-        "YouTube_youtube_description": `e.g., Write a compelling YouTube description for a video about The Moral Hierarchy level ${moralLevel}`,
+        "YouTube_youtube_script": `e.g., Create a ${tone} YouTube script about moral development in everyday decisions at level ${moralLevel}`,
+        "YouTube_youtube_shorts": `e.g., Create a short, engaging ${tone} YouTube Shorts script about a quick moral dilemma at level ${moralLevel}`,
+        "YouTube_youtube_description": `e.g., Write a compelling ${tone} YouTube description for a video about The Moral Hierarchy level ${moralLevel}`,
         
         // Instagram placeholders
-        "Instagram_carousel": `e.g., Create a 7-slide Instagram carousel about ethical decision making at level ${moralLevel}`,
-        "Instagram_reels_script": `e.g., Create a script for an Instagram Reel explaining the key aspects of moral level ${moralLevel}`,
-        "Instagram_social_media": `e.g., Create an Instagram post about how to recognize moral level ${moralLevel} in daily life`,
+        "Instagram_carousel": `e.g., Create a ${tone} 7-slide Instagram carousel about ethical decision making at level ${moralLevel}`,
+        "Instagram_reels_script": `e.g., Create a ${tone} script for an Instagram Reel explaining the key aspects of moral level ${moralLevel}`,
+        "Instagram_social_media": `e.g., Create a ${tone} Instagram post about how to recognize moral level ${moralLevel} in daily life`,
         
         // Twitter/X placeholders
-        "Twitter_tweet_thread": `e.g., Write a Twitter thread (5-7 tweets) explaining moral level ${moralLevel} with examples`,
-        "Twitter_social_media": `e.g., Create a Twitter post with hashtags about moral growth at level ${moralLevel}`,
+        "Twitter_tweet_thread": `e.g., Write a ${tone} Twitter thread (5-7 tweets) explaining moral level ${moralLevel} with examples`,
+        "Twitter_social_media": `e.g., Create a ${tone} Twitter post with hashtags about moral growth at level ${moralLevel}`,
         
         // LinkedIn placeholders
-        "LinkedIn_article": `e.g., Write a professional LinkedIn article about applying level ${moralLevel} morality in business leadership`,
-        "LinkedIn_social_media": `e.g., Create a LinkedIn post about ethical decision-making in the workplace at level ${moralLevel}`,
+        "LinkedIn_article": `e.g., Write a professional ${tone} LinkedIn article about applying level ${moralLevel} morality in business leadership`,
+        "LinkedIn_social_media": `e.g., Create a ${tone} LinkedIn post about ethical decision-making in the workplace at level ${moralLevel}`,
         
         // TikTok placeholders
-        "TikTok_social_media": `e.g., Create a TikTok script explaining moral level ${moralLevel} in an entertaining way`,
-        "TikTok_script": `e.g., Write a 30-second TikTok script about a moral dilemma at level ${moralLevel}`,
+        "TikTok_social_media": `e.g., Create a ${tone} TikTok script explaining moral level ${moralLevel} in an entertaining way`,
+        "TikTok_script": `e.g., Write a ${tone} 30-second TikTok script about a moral dilemma at level ${moralLevel}`,
         
         // Website placeholders
-        "Website_article": `e.g., Write a comprehensive article about moral development at level ${moralLevel}`,
-        "Website_blog_post": `e.g., Create a blog post discussing the transition between moral levels ${moralLevel-1 > 0 ? moralLevel-1 : 1} and ${moralLevel}`,
+        "Website_article": `e.g., Write a comprehensive ${tone} article about moral development at level ${moralLevel}`,
+        "Website_blog_post": `e.g., Create a ${tone} blog post discussing the transition between moral levels ${moralLevel-1 > 0 ? moralLevel-1 : 1} and ${moralLevel}`,
         
         // Facebook placeholders
-        "Facebook_social_media": `e.g., Write a Facebook post about recognizing moral level ${moralLevel} thinking in everyday situations`
+        "Facebook_social_media": `e.g., Write a ${tone} Facebook post about recognizing moral level ${moralLevel} thinking in everyday situations`
       };
       
-      const key = `${platform}_${contentType}`;
-      if (placeholders[key]) {
-        setPlaceholder(placeholders[key]);
+      // Try first for the exact match
+      if (placeholders[keyMapper]) {
+        setPlaceholder(placeholders[keyMapper]);
       } else {
-        // Default fallback based on platform
-        setPlaceholder(`e.g., Create ${contentType} content for ${platform} about The Moral Hierarchy level ${moralLevel}`);
+        // Try for a more generic platform match
+        const platformMatches = Object.keys(placeholders).filter(key => key.startsWith(`${platformKey}_`));
+        if (platformMatches.length > 0) {
+          setPlaceholder(placeholders[platformMatches[0]]);
+        } else {
+          // Default fallback based on platform
+          setPlaceholder(`e.g., Create ${tone} ${contentType.replace(/_/g, ' ')} content for ${platform} about The Moral Hierarchy level ${moralLevel}`);
+        }
       }
     }
-  }, [form.watch("platform"), form.watch("contentType"), form.watch("moralLevel")]);
+  }, [form.watch("platform"), form.watch("contentType"), form.watch("moralLevel"), form.watch("tone")]);
   
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // If Enter is pressed without Shift key (for new line), generate content

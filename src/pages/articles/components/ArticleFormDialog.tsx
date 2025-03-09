@@ -59,7 +59,7 @@ export function ArticleFormDialog({
                 voiceGenerated: currentArticle.voice_generated || false,
                 voiceFileName: currentArticle.voice_file_name || '',
                 voiceBase64: currentArticle.voice_base64 || '',
-                voiceSegments: typeof currentArticle.voice_segments === 'string' ? currentArticle.voice_segments : '',
+                voiceSegments: currentArticle.voice_segments || '',
                 moralLevel: currentArticle.moral_level || 5,
                 theme: currentArticle.title, // Use title as initial theme for editing
                 contentType: "article",

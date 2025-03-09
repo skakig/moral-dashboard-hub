@@ -119,6 +119,21 @@ serve(async (req) => {
       }
       
       console.error("OpenAI API error:", errorMessage);
+      
+      // Check for content policy violations
+      if (errorMessage.includes("content policy") || errorMessage.includes("safety")) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Your image request was rejected by the AI safety system. Please modify your prompt to comply with content policies.",
+            details: errorMessage
+          }),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400
+          }
+        );
+      }
+      
       throw new Error(`OpenAI API error: ${errorMessage}`);
     }
 

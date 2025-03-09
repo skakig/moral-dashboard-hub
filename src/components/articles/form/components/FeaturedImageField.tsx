@@ -3,10 +3,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Wand2, Loader2, Copy, RefreshCw, Upload } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Wand2, Loader2, Copy, RefreshCw, Upload, AlertTriangle } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { useImageGeneration } from "../hooks/useImageGeneration";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FeaturedImageFieldProps {
   form: UseFormReturn<any>;
@@ -16,6 +18,7 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
   const { generateImage, loading } = useImageGeneration();
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; label: string }>({ 
     width: 1200, 
@@ -62,6 +65,7 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
 
   const handleGenerateImage = async () => {
     setGenerating(true);
+    setError(null);
     
     try {
       // Use theme or title as prompt
@@ -85,10 +89,13 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
         form.setValue("featuredImage", result, { shouldDirty: true });
         form.trigger("featuredImage");
         toast.success("Image generated successfully");
+      } else {
+        throw new Error("Image generation failed - no result returned");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating image:", error);
-      toast.error("Failed to generate image - please check your Supabase Edge Function");
+      setError(error.message || "Failed to generate image");
+      toast.error("Failed to generate image: " + (error.message || "Unknown error"));
     } finally {
       setGenerating(false);
     }
@@ -181,6 +188,41 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
                 Copy URL
               </Button>
             </div>
+
+            {error && (
+              <Alert variant="destructive" className="mb-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {error}
+                  <div className="mt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleGenerateImage}
+                      className="mr-2"
+                    >
+                      Retry Generation
+                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => window.open('https://supabase.com/dashboard/project/czljqsxnuylmmfrscski/functions/generate-image/logs', '_blank')}
+                          >
+                            View Logs
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>View edge function logs to troubleshoot</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <Button 

@@ -1,10 +1,13 @@
 
-import React, { useState } from "react";
-import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import React, { useState, useEffect } from "react";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { Mic, Loader2, Download, Play, Pause } from "lucide-react";
+import { Mic, Loader2, Download, Play, Pause, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
 
 // Voice options with IDs from ElevenLabs
 export const voiceOptions = [
@@ -45,6 +48,33 @@ export function VoiceContentSection({
   downloadAudio
 }: VoiceContentSectionProps) {
   const [expanded, setExpanded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Reset error when voice is successfully generated
+  useEffect(() => {
+    if (voiceGenerated && audioUrl) {
+      setError(null);
+    }
+  }, [voiceGenerated, audioUrl]);
+
+  // Function to handle voice generation with retry logic
+  const handleGenerateWithRetry = async () => {
+    try {
+      setError(null);
+      await handleGenerateVoice();
+    } catch (err: any) {
+      const errorMessage = err.message || "Voice generation failed";
+      setError(errorMessage);
+      
+      // Only show toast for first error to avoid spam
+      if (retryCount === 0) {
+        toast.error(`Voice generation error: ${errorMessage}`);
+      }
+      
+      setRetryCount(prev => prev + 1);
+    }
+  };
 
   return (
     <FormField
@@ -63,6 +93,42 @@ export function VoiceContentSection({
               {expanded ? 'Collapse' : 'Expand'}
             </Button>
           </FormLabel>
+          
+          {error && (
+            <Alert variant="destructive" className="mb-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                {error}
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleGenerateWithRetry}
+                    className="mr-2"
+                  >
+                    Retry Generation
+                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => window.open('https://supabase.com/dashboard/project/czljqsxnuylmmfrscski/functions/generate-voice/logs', '_blank')}
+                        >
+                          View Logs
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>View edge function logs to troubleshoot</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {expanded && (
             <div className="flex flex-col space-y-4 border p-4 rounded-md bg-card">
               <div className="flex items-center space-x-3">
@@ -90,7 +156,7 @@ export function VoiceContentSection({
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={handleGenerateVoice}
+                  onClick={handleGenerateWithRetry}
                   disabled={isGeneratingVoice || !form.getValues("content")}
                   className="flex items-center gap-2"
                 >
@@ -98,7 +164,7 @@ export function VoiceContentSection({
                   {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
                 </Button>
                 
-                {voiceGenerated && (
+                {voiceGenerated && !error && (
                   <>
                     <span className="text-sm text-green-600">Voice content generated!</span>
                     <Button 
@@ -106,6 +172,7 @@ export function VoiceContentSection({
                       variant="outline" 
                       onClick={togglePlayPause}
                       className="flex items-center gap-2"
+                      disabled={!audioUrl}
                     >
                       {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                       {isPlaying ? "Pause" : "Play"}
@@ -116,6 +183,7 @@ export function VoiceContentSection({
                       variant="outline" 
                       onClick={downloadAudio}
                       className="flex items-center gap-2"
+                      disabled={!audioUrl}
                     >
                       <Download className="w-4 h-4" />
                       Download
@@ -124,7 +192,7 @@ export function VoiceContentSection({
                 )}
               </div>
               
-              {voiceGenerated && audioUrl && (
+              {voiceGenerated && audioUrl && !error && (
                 <div className="mt-2 p-2 border rounded bg-muted/50">
                   <audio 
                     controls 
@@ -139,7 +207,7 @@ export function VoiceContentSection({
             </div>
           )}
           
-          {!expanded && voiceGenerated && (
+          {!expanded && voiceGenerated && !error && (
             <div className="flex items-center space-x-2 text-sm">
               <span className="text-green-600">✓ Voice content generated</span>
               <Button 
@@ -148,12 +216,31 @@ export function VoiceContentSection({
                 size="sm"
                 onClick={togglePlayPause}
                 className="flex items-center gap-1 h-6 px-2"
+                disabled={!audioUrl}
               >
                 {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                 {isPlaying ? "Pause" : "Play"}
               </Button>
             </div>
           )}
+          
+          {!expanded && error && (
+            <div className="flex items-center space-x-2 text-sm text-red-500">
+              <AlertTriangle className="h-3 w-3" />
+              <span>Voice generation failed</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setExpanded(true)}
+                className="h-6 px-2 text-xs"
+              >
+                View Details
+              </Button>
+            </div>
+          )}
+          
+          <FormMessage />
         </FormItem>
       )}
     />

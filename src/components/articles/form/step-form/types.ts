@@ -19,6 +19,10 @@ export const articleFormSchema = z.object({
   theme: z.string().optional(),
   voiceFileName: z.string().optional(),
   voiceBase64: z.string().optional(),
+  voiceSegments: z.string().optional(), // For storing multiple audio segments
+  // Internal fields for auto-generation
+  _autoGenerate: z.boolean().optional(),
+  _autoGenerateOptions: z.any().optional(),
 });
 
 export type ArticleFormValues = z.infer<typeof articleFormSchema>;

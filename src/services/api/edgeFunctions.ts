@@ -63,14 +63,21 @@ export class EdgeFunctionService {
   /**
    * Generate voice (audio) from text
    */
-  static async generateVoice(text: string) {
+  static async generateVoice(params: { 
+    text: string; 
+    voiceId?: string;
+    segmentIndex?: number;
+    totalSegments?: number;
+  }) {
     try {
+      const { text, voiceId, segmentIndex, totalSegments } = params;
+      
       if (!text) {
         throw new Error('No text provided for voice generation');
       }
       
-      // Limit text to reasonable length
-      const truncatedText = text.length > 4000 ? text.substring(0, 4000) : text;
+      // Limit text to reasonable length - edge function will handle this too
+      const truncatedText = text.length > 4500 ? text.substring(0, 4500) + "..." : text;
       
       // Get the preferred service for voice generation
       const mapping = await getPreferredServiceForFunction('generate-voice');
@@ -82,7 +89,10 @@ export class EdgeFunctionService {
       const { data, error } = await supabase.functions.invoke('generate-voice', {
         body: { 
           text: truncatedText,
-          service
+          voiceId,
+          service,
+          segmentIndex,
+          totalSegments
         }
       });
       

@@ -1,26 +1,64 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Volume2, Pause, Play, Download } from 'lucide-react';
+import { Volume2, Pause, Play, Download, AlertCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ArticleAudioPlayerProps {
   voiceUrl?: string;
   voiceFileName?: string;
+  voiceSegments?: string; // JSON string containing multiple segments
 }
 
-export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp3' }: ArticleAudioPlayerProps) {
+export function ArticleAudioPlayer({ 
+  voiceUrl, 
+  voiceFileName = 'voice-content.mp3',
+  voiceSegments
+}: ArticleAudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [hasMultipleSegments, setHasMultipleSegments] = useState(false);
+  const [segments, setSegments] = useState<{audioUrl: string, fileName: string}[]>([]);
+  const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const segmentsRef = useRef<{audioUrl: string, fileName: string}[]>([]);
 
   useEffect(() => {
-    if (!voiceUrl) return;
+    // Check if we have segments data
+    if (voiceSegments) {
+      try {
+        const parsedSegments = JSON.parse(voiceSegments);
+        if (Array.isArray(parsedSegments) && parsedSegments.length > 0) {
+          segmentsRef.current = parsedSegments;
+          setSegments(parsedSegments);
+          setHasMultipleSegments(parsedSegments.length > 1);
+          console.log(`ArticleAudioPlayer: Loaded ${parsedSegments.length} audio segments`);
+        }
+      } catch (err) {
+        console.error("Error parsing voice segments:", err);
+      }
+    }
     
-    console.log("ArticleAudioPlayer: Loading audio from URL:", voiceUrl);
+    // If no segments or parsing failed, default to single voiceUrl
+    if (!voiceUrl && (!segments || segments.length === 0)) {
+      setError("No audio content available");
+      return;
+    }
+    
+    // Use either the first segment or the provided voiceUrl
+    const audioUrl = segments.length > 0 ? segments[0].audioUrl : voiceUrl;
+    
+    console.log("ArticleAudioPlayer: Loading audio from URL:", audioUrl);
     
     try {
-      const audioElement = new Audio(voiceUrl);
+      if (!audioUrl) {
+        throw new Error("No audio URL available");
+      }
+      
+      const audioElement = new Audio(audioUrl);
       audioRef.current = audioElement;
       
       const updateProgress = () => {
@@ -32,11 +70,28 @@ export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp
       const handleError = (e: Event) => {
         console.error("Audio error:", e);
         setError("Failed to load audio file");
+        setIsPlaying(false);
       };
       
       const handlePlay = () => setIsPlaying(true);
       const handlePause = () => setIsPlaying(false);
-      const handleEnded = () => setIsPlaying(false);
+      
+      const handleEnded = () => {
+        // If we have multiple segments, try to play the next one
+        if (hasMultipleSegments && currentSegmentIndex < segments.length - 1) {
+          setCurrentSegmentIndex(prev => prev + 1);
+          const nextSegment = segments[currentSegmentIndex + 1];
+          audioElement.src = nextSegment.audioUrl;
+          audioElement.play().catch(err => {
+            console.error("Error playing next segment:", err);
+            setError("Failed to play next segment");
+            setIsPlaying(false);
+          });
+        } else {
+          setIsPlaying(false);
+          setProgress(0);
+        }
+      };
       
       audioElement.addEventListener('timeupdate', updateProgress);
       audioElement.addEventListener('error', handleError);
@@ -58,7 +113,7 @@ export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp
       console.error("Error initializing audio player:", err);
       setError("Failed to initialize audio player");
     }
-  }, [voiceUrl]);
+  }, [voiceUrl, voiceSegments, hasMultipleSegments, segments, currentSegmentIndex]);
 
   const togglePlayPause = () => {
     if (!audioRef.current) return;
@@ -84,22 +139,41 @@ export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp
   };
 
   const handleDownload = () => {
-    if (!voiceUrl) return;
-    
+    if (hasMultipleSegments) {
+      // For multiple segments, we could offer a zip file in a real implementation
+      // For now, just download the current segment with a notice
+      if (segments.length > 1) {
+        setError(`This audio has ${segments.length} parts. Downloading part ${currentSegmentIndex + 1}.`);
+      }
+      
+      if (segments[currentSegmentIndex]?.audioUrl) {
+        downloadFile(
+          segments[currentSegmentIndex].audioUrl, 
+          segments[currentSegmentIndex].fileName || `voice-part-${currentSegmentIndex + 1}.mp3`
+        );
+      }
+    } else if (voiceUrl) {
+      downloadFile(voiceUrl, voiceFileName);
+    } else {
+      setError("No audio file available to download");
+    }
+  };
+  
+  const downloadFile = (url: string, filename: string) => {
     try {
       // For base64 data URLs
-      if (voiceUrl.startsWith('data:')) {
+      if (url.startsWith('data:')) {
         const link = document.createElement('a');
-        link.href = voiceUrl;
-        link.download = voiceFileName;
+        link.href = url;
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       } else {
         // For regular URLs
         const a = document.createElement('a');
-        a.href = voiceUrl;
-        a.download = voiceFileName;
+        a.href = url;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -110,16 +184,17 @@ export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp
     }
   };
 
-  if (!voiceUrl) {
+  if (!voiceUrl && (!segments || segments.length === 0)) {
     return null;
   }
 
   return (
     <div className="flex flex-col gap-2 p-4 bg-secondary/20 rounded-md">
       {error && (
-        <div className="text-red-500 text-sm mb-2">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       
       <div className="flex items-center justify-between">
@@ -134,6 +209,7 @@ export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp
           </Button>
           <span className="text-sm">
             {isPlaying ? 'Playing audio...' : 'Listen to this article'}
+            {hasMultipleSegments && ` (Part ${currentSegmentIndex + 1}/${segments.length})`}
           </span>
         </div>
         
@@ -148,12 +224,11 @@ export function ArticleAudioPlayer({ voiceUrl, voiceFileName = 'voice-content.mp
         </Button>
       </div>
       
-      {progress > 0 && (
-        <div className="w-full bg-secondary/30 rounded-full h-1.5">
-          <div
-            className="bg-primary h-1.5 rounded-full transition-all duration-300 ease-in-out"
-            style={{ width: `${progress}%` }}
-          />
+      <Progress value={progress} className="h-1.5" />
+      
+      {hasMultipleSegments && (
+        <div className="text-xs text-muted-foreground mt-1">
+          This audio is split into {segments.length} parts due to length.
         </div>
       )}
     </div>

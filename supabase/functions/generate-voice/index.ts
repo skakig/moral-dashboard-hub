@@ -28,14 +28,20 @@ serve(async (req) => {
       throw new Error("Invalid request format");
     });
     
-    const { text, voiceId } = requestData;
+    const { text, voiceId, segmentIndex, totalSegments } = requestData;
 
     if (!text) {
       throw new Error("Text is required");
     }
 
+    // Log segment information if provided
+    if (segmentIndex !== undefined && totalSegments !== undefined) {
+      console.log(`Processing segment ${segmentIndex + 1} of ${totalSegments}`);
+    }
+    
     // Trim the text if it's too long - prevents API timeouts
-    const trimmedText = text.length > 4000 ? text.substring(0, 4000) + "..." : text;
+    const MAX_TEXT_LENGTH = 4000;
+    const trimmedText = text.length > MAX_TEXT_LENGTH ? text.substring(0, MAX_TEXT_LENGTH) + "..." : text;
     
     console.log(`Generating voice for text (length: ${trimmedText.length}) with voice ID: ${voiceId || "default"}`);
 
@@ -75,14 +81,18 @@ serve(async (req) => {
         const audioArrayBuffer = await elevenLabsResponse.arrayBuffer();
         const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
 
-        const fileName = `voice_${Date.now()}.mp3`;
+        const fileName = segmentIndex !== undefined 
+          ? `voice_${Date.now()}_part${segmentIndex + 1}of${totalSegments}.mp3` 
+          : `voice_${Date.now()}.mp3`;
 
         return new Response(
           JSON.stringify({
             audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
             fileName: fileName,
             base64Audio: base64Audio,
-            service: "elevenlabs"
+            service: "elevenlabs",
+            segmentIndex: segmentIndex,
+            totalSegments: totalSegments
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -126,14 +136,18 @@ serve(async (req) => {
       const audioArrayBuffer = await openAIResponse.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
 
-      const fileName = `voice_${Date.now()}.mp3`;
+      const fileName = segmentIndex !== undefined 
+        ? `voice_${Date.now()}_part${segmentIndex + 1}of${totalSegments}.mp3` 
+        : `voice_${Date.now()}.mp3`;
 
       return new Response(
         JSON.stringify({
           audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
           fileName: fileName,
           base64Audio: base64Audio,
-          service: "openai"
+          service: "openai",
+          segmentIndex: segmentIndex,
+          totalSegments: totalSegments
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +31,15 @@ export function ThemeStep({
   setAutoGenerateOptions,
 }: ThemeStepProps) {
   const [localTheme, setLocalTheme] = useState(form.getValues("theme") || "");
+  
+  // Effect to automatically trigger generation when moving to next step if autoGenerate is on
+  useEffect(() => {
+    // Store autoGenerate settings in form data to pass through the process
+    if (setAutoGenerate && setAutoGenerateOptions) {
+      form.setValue("_autoGenerate", autoGenerate, { shouldDirty: true });
+      form.setValue("_autoGenerateOptions", autoGenerateOptions, { shouldDirty: true });
+    }
+  }, [autoGenerate, autoGenerateOptions, form, setAutoGenerate, setAutoGenerateOptions]);
 
   const toggleAutoOption = (option: keyof typeof autoGenerateOptions) => {
     if (setAutoGenerateOptions) {

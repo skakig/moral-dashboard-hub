@@ -97,6 +97,8 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
             <SelectItem value="short">Short (300-500 words)</SelectItem>
             <SelectItem value="medium">Medium (1000-1500 words)</SelectItem>
             <SelectItem value="long">Long (2000-3000 words)</SelectItem>
+            <SelectItem value="in-depth">In-Depth (3000-5000 words)</SelectItem>
+            <SelectItem value="comprehensive">Comprehensive (5000-10,000 words)</SelectItem>
           </SelectContent>
         </Select>
         

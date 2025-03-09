@@ -43,19 +43,25 @@ serve(async (req) => {
 
     console.log(`Generating ${contentType} for ${platform} with moral level ${moralLevel}`);
     console.log(`Theme: ${theme.substring(0, 100)}${theme.length > 100 ? '...' : ''}`);
+    console.log(`Content length: ${contentLength}`);
     
     // Content length to approximate token length guidance
     const tokenLimits = {
       short: 250,
-      medium: 500,
-      long: 800,
+      medium: 800,
+      long: 1500,
+      "in-depth": 3000,
+      comprehensive: 5000,
     };
     
     const tokenLimit = tokenLimits[contentLength as keyof typeof tokenLimits] || tokenLimits.medium;
+    const modelToUse = contentLength === "in-depth" || contentLength === "comprehensive" 
+      ? "gpt-4o" // Use more powerful model for longer content
+      : "gpt-4o-mini"; // Use faster model for shorter content
     
     // Format keywords as string
     const keywordsString = keywords.length > 0 
-      ? `Keywords: ${keywords.join(', ')}`
+      ? `Keywords: ${Array.isArray(keywords) ? keywords.join(', ') : keywords}`
       : 'Generate appropriate keywords for this content';
 
     // Optimize prompt for faster generation
@@ -78,7 +84,9 @@ Return ONLY a JSON object with this structure:
   "keywords": ["keyword1", "keyword2"]  // Optional array of relevant hashtags/keywords
 }`;
 
-    // Use gpt-4o-mini for faster responses
+    console.log(`Using model: ${modelToUse} with token limit: ${tokenLimit}`);
+    
+    // Use gpt-4o for more complex or longer content
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -86,13 +94,13 @@ Return ONLY a JSON object with this structure:
         "Authorization": `Bearer ${openAIApiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Faster model
+        model: modelToUse,
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 1500, // Limit response size for faster generation
+        max_tokens: Math.min(4096, tokenLimit * 2), // Scale token limit based on content length
       }),
     }).catch(error => {
       console.error("Network error calling OpenAI:", error);

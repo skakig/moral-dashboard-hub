@@ -31,6 +31,9 @@ interface StepByStepArticleFormProps {
   submitLabel?: string;
   onCancel?: () => void;
   isLoading?: boolean;
+  mode?: 'create' | 'edit';
+  parentFormState?: any; // For sharing form state between views
+  onFormStateChange?: (data: any) => void; // For parent to track form changes
 }
 
 export function StepByStepArticleForm({
@@ -39,9 +42,13 @@ export function StepByStepArticleForm({
   submitLabel = "Create",
   onCancel,
   isLoading = false,
+  mode = 'create',
+  parentFormState,
+  onFormStateChange,
 }: StepByStepArticleFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState("21m00Tcm4TlvDq8ikWAM"); // Default to Rachel
+  const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false);
   
   // Form setup
   const form = useForm<ArticleFormValues>({
@@ -65,6 +72,28 @@ export function StepByStepArticleForm({
     },
     mode: "onSubmit"
   });
+  
+  // Use the parent form state if provided (for sync between wizard and all fields views)
+  useEffect(() => {
+    if (parentFormState) {
+      Object.entries(parentFormState).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          form.setValue(key as any, value);
+        }
+      });
+    }
+  }, [parentFormState, form]);
+
+  // Notify parent of form changes
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      if (onFormStateChange) {
+        onFormStateChange(value);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form, onFormStateChange]);
 
   // Auto-generate options
   const {
@@ -73,6 +102,23 @@ export function StepByStepArticleForm({
     autoGenerateOptions,
     updateAutoGenerateOptions
   } = useAutoGenerateOptions();
+
+  // Watch for auto-generate settings changes
+  useEffect(() => {
+    const subscription = form.watch((value) => {
+      // Check if the special _autoGenerate field was set
+      if (value._autoGenerate !== undefined) {
+        setAutoGenerateContent(!!value._autoGenerate);
+      }
+      
+      // Check if options were set
+      if (value._autoGenerateOptions) {
+        updateAutoGenerateOptions(value._autoGenerateOptions);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form, setAutoGenerateContent, updateAutoGenerateOptions]);
 
   // Handle platform changes for content length
   useEffect(() => {
@@ -88,10 +134,21 @@ export function StepByStepArticleForm({
           form.setValue("contentLength", "medium");
         }
       }
+      
+      // Check if we should trigger auto-generation
+      if (shouldAutoGenerate && value.theme && value.platform && value.contentType) {
+        // Only trigger once when these values are set
+        setShouldAutoGenerate(false);
+        
+        // Wait a moment to ensure form values are updated
+        setTimeout(async () => {
+          await handleGenerateContent();
+        }, 500);
+      }
     });
     
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, shouldAutoGenerate]);
 
   // Content generation logic - defined BEFORE it's used in steps
   const {
@@ -252,8 +309,13 @@ export function StepByStepArticleForm({
         data.moralLevel = parseInt(data.moralLevel, 10);
       }
       
+      // Clean up internal fields used for auto-generation
+      const cleanedData = { ...data };
+      delete cleanedData._autoGenerate;
+      delete cleanedData._autoGenerateOptions;
+      
       if (onFormSubmit) {
-        await onFormSubmit(data);
+        await onFormSubmit(cleanedData);
       }
     } catch (error) {
       console.error("Error submitting article form:", error);

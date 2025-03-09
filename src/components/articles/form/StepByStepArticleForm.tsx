@@ -66,6 +66,7 @@ export function StepByStepArticleForm({
       theme: "",
       ...initialData,
     },
+    mode: "onSubmit" // Change to onSubmit to prevent premature validation
   });
 
   const { 
@@ -262,8 +263,8 @@ export function StepByStepArticleForm({
   const isLastStep = currentStepIndex === steps.length - 1;
 
   const goToNextStep = () => {
+    // Only validate fields required for the current step
     if (currentStep.isRequired) {
-      // Check if the fields for this step are valid
       let isValid = true;
       
       if (currentStep.id === 'theme' && !form.getValues("theme")) {
@@ -271,14 +272,15 @@ export function StepByStepArticleForm({
         isValid = false;
       }
       
-      if (currentStep.id === 'platform-type' && (!form.getValues("platform") || !form.getValues("contentType"))) {
+      if (currentStep.id === 'platform-type') {
         if (!form.getValues("platform")) {
           toast.error("Please select a platform");
+          isValid = false;
         }
         if (!form.getValues("contentType")) {
           toast.error("Please select a content type");
+          isValid = false;
         }
-        isValid = false;
       }
       
       if (currentStep.id === 'content' && !form.getValues("content")) {
@@ -303,6 +305,15 @@ export function StepByStepArticleForm({
 
   const handleSubmit = async (data: ArticleFormValues) => {
     try {
+      // If we have a title but no content, ensure we require content
+      if (data.title && !data.content) {
+        form.setError("content", { 
+          type: "required", 
+          message: "Content is required when providing a title" 
+        });
+        return;
+      }
+      
       if (onFormSubmit) {
         await onFormSubmit(data);
       }

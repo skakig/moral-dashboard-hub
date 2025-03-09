@@ -1,62 +1,63 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, Save, Wand2 } from "lucide-react";
+import { Loader2, Wand2 } from "lucide-react";
 import { CardFooter } from "@/components/ui/card";
 
 interface StepControlsProps {
   isFirstStep: boolean;
   isLastStep: boolean;
-  isLoading: boolean;
-  submitLabel: string;
-  canAutoGenerate?: boolean;
-  isGeneratingContent?: boolean;
   onPrevious: () => void;
   onNext: () => void;
   onCancel?: () => void;
   onGenerate?: () => void;
+  isLoading: boolean;
+  isGeneratingContent?: boolean;
+  submitLabel?: string;
+  canAutoGenerate?: boolean;
 }
 
-export function StepControls({ 
-  isFirstStep, 
-  isLastStep, 
-  isLoading, 
-  submitLabel, 
-  canAutoGenerate, 
-  isGeneratingContent,
-  onPrevious, 
-  onNext, 
+export function StepControls({
+  isFirstStep,
+  isLastStep,
+  onPrevious,
+  onNext,
   onCancel,
-  onGenerate
+  onGenerate,
+  isLoading,
+  isGeneratingContent = false,
+  submitLabel = "Create",
+  canAutoGenerate = false,
 }: StepControlsProps) {
   return (
-    <CardFooter className="flex justify-between">
+    <CardFooter className="flex justify-between p-6 pt-0">
       <div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onPrevious}
-          disabled={isFirstStep}
-          className="mr-2"
-        >
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Previous
-        </Button>
-        {!isLastStep && (
-          <Button type="button" onClick={onNext}>
-            Next
-            <ChevronRight className="ml-2 h-4 w-4" />
+        {!isFirstStep && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onPrevious}
+            className="mr-2"
+          >
+            Previous
+          </Button>
+        )}
+        
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
           </Button>
         )}
       </div>
-      <div>
+      
+      <div className="flex gap-2">
         {canAutoGenerate && onGenerate && (
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             onClick={onGenerate}
             disabled={isGeneratingContent}
-            className="ml-2"
+            className="flex items-center"
           >
             {isGeneratingContent ? (
               <>
@@ -66,29 +67,26 @@ export function StepControls({
             ) : (
               <>
                 <Wand2 className="mr-2 h-4 w-4" />
-                Generate & Continue
+                Generate Now
               </>
             )}
           </Button>
         )}
-        {isLastStep && (
-          <Button type="submit" disabled={isLoading} className="ml-2">
+        
+        {isLastStep ? (
+          <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
               </>
             ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                {submitLabel}
-              </>
+              submitLabel
             )}
           </Button>
-        )}
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel} className="ml-2">
-            Cancel
+        ) : (
+          <Button type="button" onClick={onNext}>
+            Next
           </Button>
         )}
       </div>

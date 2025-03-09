@@ -7,6 +7,11 @@ export function useVoiceGeneration(form: any) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastAttemptTime, setLastAttemptTime] = useState<number | null>(null);
+
+  // Cooldown period of 2 seconds to prevent multiple rapid attempts
+  const COOLDOWN_PERIOD = 2000; // in milliseconds
 
   const generateVoiceContent = async (voiceId: string) => {
     const content = form.getValues('content');
@@ -16,7 +21,16 @@ export function useVoiceGeneration(form: any) {
       return;
     }
     
+    // Check for cooldown period
+    const now = Date.now();
+    if (lastAttemptTime && now - lastAttemptTime < COOLDOWN_PERIOD) {
+      toast.info('Please wait a moment before trying again');
+      return;
+    }
+    
+    setLastAttemptTime(now);
     setIsGenerating(true);
+    setError(null);
     
     try {
       // First, reset any existing voice content
@@ -31,10 +45,17 @@ export function useVoiceGeneration(form: any) {
       // Extract only text from content (remove markdown formatting)
       const plainText = content.replace(/\[.*?\]|\*\*|#/g, '').trim();
       
+      // Show a warning if text is very long
+      if (plainText.length > 4000) {
+        toast.warning('Text is very long. Only the first 4000 characters will be processed.');
+      }
+      
       // Use the edge function service to generate voice
       const result = await EdgeFunctionService.generateVoice(plainText, voiceId);
       
       if (!result) {
+        setError("Voice generation failed. Please try again later.");
+        toast.error('Voice generation failed. Please try again later.');
         return;
       }
 
@@ -55,6 +76,7 @@ export function useVoiceGeneration(form: any) {
       console.log("Voice generation successful - service:", result.service || "unknown");
     } catch (error: any) {
       console.error('Error generating voice content:', error);
+      setError(error.message || "Failed to generate voice content");
       // The error is already handled by the service
     } finally {
       setIsGenerating(false);
@@ -99,6 +121,7 @@ export function useVoiceGeneration(form: any) {
     isPlaying,
     setIsPlaying,
     togglePlayPause,
-    downloadAudio
+    downloadAudio,
+    error
   };
 }

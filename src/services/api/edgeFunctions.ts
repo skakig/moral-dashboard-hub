@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,6 +49,8 @@ export class EdgeFunctionService {
           toast.warning(`Retrying... (Attempt ${currentAttempt}/${retries + 1})`);
         }
         
+        console.log(`Calling edge function: ${functionName} (Attempt ${currentAttempt})`);
+        
         const response = await supabase.functions.invoke<EdgeFunctionResponse<T>>(
           functionName,
           { body: payload }
@@ -65,6 +68,7 @@ export class EdgeFunctionService {
           throw new Error(response.data.error);
         }
         
+        console.log(`Edge function ${functionName} succeeded`);
         return response.data as T;
       } catch (error: any) {
         console.error(`Error in ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, error);
@@ -89,29 +93,103 @@ export class EdgeFunctionService {
    * Generate speech from text using the voice generation edge function
    */
   static async generateVoice(text: string, voiceId: string) {
-    return this.callFunction<{
-      audioUrl: string;
-      fileName: string;
-      base64Audio: string;
-      service: string;
-    }>(
-      'generate-voice',
-      { text, voiceId },
-      { 
-        customErrorMessage: 'Voice generation failed. Please try again later or contact support.'
+    // Try ElevenLabs first, fallback to OpenAI TTS if it fails
+    try {
+      console.log(`Generating voice with ElevenLabs for: ${text.substring(0, 50)}...`);
+      
+      const result = await this.callFunction<{
+        audioUrl: string;
+        fileName: string;
+        base64Audio: string;
+        service: string;
+      }>(
+        'generate-voice',
+        { text, voiceId },
+        { 
+          retries: 1,
+          silent: true,
+          customErrorMessage: 'Voice generation with ElevenLabs failed. Trying backup service...'
+        }
+      );
+      
+      if (result) {
+        return result;
       }
-    );
+      
+      // If ElevenLabs fails, try with OpenAI
+      console.log("Falling back to OpenAI TTS");
+      return await this.callFunction<{
+        audioUrl: string;
+        fileName: string;
+        base64Audio: string;
+        service: string;
+      }>(
+        'generate-voice-openai',
+        { text, voice: "alloy" }, // OpenAI uses different voice IDs
+        { 
+          customErrorMessage: 'Voice generation failed. Please try again later or contact support.'
+        }
+      );
+    } catch (error) {
+      console.error("All voice generation attempts failed:", error);
+      toast.error('Voice generation failed. Please try again later.');
+      return null;
+    }
   }
 
   /**
    * Generate an image using the image generation edge function
    */
-  static async generateImage(prompt: string) {
+  static async generateImage(prompt: string, platform?: string) {
+    // Define image dimensions based on platform
+    let width = 1024;
+    let height = 1024;
+    
+    if (platform) {
+      switch (platform.toLowerCase()) {
+        case 'instagram':
+          width = 1080;
+          height = 1080;
+          break;
+        case 'facebook':
+          width = 1200;
+          height = 630;
+          break;
+        case 'twitter':
+        case 'x':
+          width = 1200;
+          height = 675;
+          break;
+        case 'linkedin':
+          width = 1200;
+          height = 627;
+          break;
+        case 'youtube':
+          width = 1280;
+          height = 720;
+          break;
+        case 'tiktok':
+          width = 1080;
+          height = 1920;
+          break;
+        case 'pinterest':
+          width = 1000;
+          height = 1500;
+          break;
+        default:
+          // Default square image
+          width = 1024;
+          height = 1024;
+      }
+    }
+    
+    console.log(`Generating image for platform: ${platform}, dimensions: ${width}x${height}`);
+    
     return this.callFunction<{
       image: string;
     }>(
       'generate-image',
-      { prompt },
+      { prompt, width, height, platform },
       { 
         customErrorMessage: 'Image generation failed. Please try again later or contact support.'
       }

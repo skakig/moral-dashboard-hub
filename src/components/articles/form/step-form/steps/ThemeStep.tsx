@@ -1,9 +1,9 @@
 
 import React from "react";
 import { UseFormReturn } from "react-hook-form";
-import { ThemeField } from "../../../components/ThemeField";
-import { ArticleFormValues } from "../../step-form/types";
-import { AutoGenerateOptions } from "../../step-form/hooks/useAutoGenerateOptions";
+import { ThemeField } from "../../components/ThemeField";
+import { ArticleFormValues } from "../types";
+import { AutoGenerateOptions } from "../hooks/useAutoGenerateOptions";
 
 interface ThemeStepProps {
   form: UseFormReturn<ArticleFormValues>;

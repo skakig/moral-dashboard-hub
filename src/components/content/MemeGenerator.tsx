@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Wand2, RefreshCw, Download, Share2, Loader2, Save } from "lucide-react";
 import { MemePreview } from "./MemePreview";
 import { MemesList } from "./MemesList";
-import { useMemeOperations } from "@/hooks/useMemeOperations";
+// Updated import path
+import { useMemeOperations } from "@/hooks/memes";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MemeFormData } from "@/types/meme";
 import { toast } from "sonner";

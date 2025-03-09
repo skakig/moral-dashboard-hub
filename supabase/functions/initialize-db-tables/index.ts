@@ -18,15 +18,26 @@ serve(async (req) => {
   try {
     console.log("Starting database initialization");
     
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Server configuration error: Missing environment variables" 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+    
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // SQL to create or update tables
     const createTablesSql = `
     -- Create the api_keys table if it doesn't exist
-    CREATE TABLE IF NOT EXISTS api_keys (
+    CREATE TABLE IF NOT EXISTS public.api_keys (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         service_name TEXT NOT NULL,
         api_key TEXT NOT NULL,
@@ -42,7 +53,7 @@ serve(async (req) => {
     );
 
     -- Create the site_settings table if it doesn't exist
-    CREATE TABLE IF NOT EXISTS site_settings (
+    CREATE TABLE IF NOT EXISTS public.site_settings (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         site_name TEXT NOT NULL,
         admin_email TEXT NOT NULL,
@@ -53,7 +64,7 @@ serve(async (req) => {
     );
 
     -- Create api_rate_limits table if it doesn't exist
-    CREATE TABLE IF NOT EXISTS api_rate_limits (
+    CREATE TABLE IF NOT EXISTS public.api_rate_limits (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         service_name TEXT NOT NULL,
         requests_used INTEGER DEFAULT 0,
@@ -63,13 +74,38 @@ serve(async (req) => {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
     );
 
+    -- Create api_function_mapping table if it doesn't exist
+    CREATE TABLE IF NOT EXISTS public.api_function_mapping (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        function_name TEXT NOT NULL,
+        service_name TEXT NOT NULL,
+        description TEXT,
+        parameters JSONB,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    );
+
+    -- Create api_usage_logs table if it doesn't exist
+    CREATE TABLE IF NOT EXISTS public.api_usage_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        service_name TEXT NOT NULL,
+        function_name TEXT,
+        request_data JSONB,
+        response_data JSONB,
+        response_time_ms INTEGER,
+        success BOOLEAN DEFAULT FALSE,
+        error_message TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    );
+
     -- Insert a default site settings record if none exists
-    INSERT INTO site_settings (site_name, admin_email, timezone, maintenance_mode)
+    INSERT INTO public.site_settings (site_name, admin_email, timezone, maintenance_mode)
     SELECT 'The Moral Hierarchy', 'admin@tmh.com', 'utc', false
-    WHERE NOT EXISTS (SELECT 1 FROM site_settings);
+    WHERE NOT EXISTS (SELECT 1 FROM public.site_settings);
     `;
 
-    // First try to execute with direct SQL
+    // First try to execute the tables creation SQL
     try {
       const { error: directError } = await supabaseAdmin.from('_sql_execution').insert({
         query: createTablesSql
@@ -82,13 +118,36 @@ serve(async (req) => {
       console.log("Successfully created/updated tables with direct SQL");
     } catch (sqlError) {
       console.error("Failed with direct SQL:", sqlError);
-      throw sqlError;
+      
+      // Try to execute in smaller parts in case of timeout or size issues
+      try {
+        // Split queries and run them separately
+        const sqlQueries = createTablesSql.split(';').filter(q => q.trim());
+        
+        for (const query of sqlQueries) {
+          if (!query.trim()) continue;
+          
+          const { error } = await supabaseAdmin.from('_sql_execution').insert({
+            query: query + ';'
+          }).select();
+          
+          if (error) {
+            console.warn(`Warning - issue with query: ${query.substring(0, 100)}...`, error);
+            // Continue with other queries
+          }
+        }
+        
+        console.log("Completed partial SQL execution");
+      } catch (partialError) {
+        console.error("Failed with partial SQL execution:", partialError);
+        throw partialError;
+      }
     }
 
     // Create the triggers and functions
     const createTriggersSql = `
     -- Create update trigger for api_keys
-    CREATE OR REPLACE FUNCTION update_api_key_updated_at()
+    CREATE OR REPLACE FUNCTION public.update_api_key_updated_at()
     RETURNS TRIGGER AS $$
     BEGIN
       NEW.updated_at = now();
@@ -97,16 +156,16 @@ serve(async (req) => {
     $$ LANGUAGE plpgsql;
 
     -- Drop trigger if it exists to avoid errors
-    DROP TRIGGER IF EXISTS set_timestamp_api_keys ON api_keys;
+    DROP TRIGGER IF EXISTS set_timestamp_api_keys ON public.api_keys;
 
     -- Create trigger
     CREATE TRIGGER set_timestamp_api_keys
-    BEFORE UPDATE ON api_keys
+    BEFORE UPDATE ON public.api_keys
     FOR EACH ROW
-    EXECUTE FUNCTION update_api_key_updated_at();
+    EXECUTE FUNCTION public.update_api_key_updated_at();
 
     -- Create update trigger for site_settings
-    CREATE OR REPLACE FUNCTION update_site_settings_updated_at()
+    CREATE OR REPLACE FUNCTION public.update_site_settings_updated_at()
     RETURNS TRIGGER AS $$
     BEGIN
       NEW.updated_at = now();
@@ -115,13 +174,13 @@ serve(async (req) => {
     $$ LANGUAGE plpgsql;
 
     -- Drop trigger if it exists to avoid errors
-    DROP TRIGGER IF EXISTS update_site_settings_timestamp ON site_settings;
+    DROP TRIGGER IF EXISTS update_site_settings_timestamp ON public.site_settings;
 
     -- Create trigger
     CREATE TRIGGER update_site_settings_timestamp
-    BEFORE UPDATE ON site_settings
+    BEFORE UPDATE ON public.site_settings
     FOR EACH ROW
-    EXECUTE FUNCTION update_site_settings_updated_at();
+    EXECUTE FUNCTION public.update_site_settings_updated_at();
     `;
 
     // Try to create triggers
@@ -144,7 +203,7 @@ serve(async (req) => {
     // Create the check_column_exists function
     const createFunctionSql = `
     -- Create a function to check if a column exists in a table
-    CREATE OR REPLACE FUNCTION check_column_exists(table_name text, column_name text)
+    CREATE OR REPLACE FUNCTION public.check_column_exists(table_name text, column_name text)
     RETURNS boolean
     LANGUAGE plpgsql
     AS $$
@@ -180,6 +239,21 @@ serve(async (req) => {
       // Continue anyway
     }
 
+    // Verify tables were created successfully
+    const { data: tablesData, error: tablesError } = await supabaseAdmin
+      .from('_sql_execution')
+      .insert({
+        query: `SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';`
+      })
+      .select();
+
+    if (tablesError) {
+      console.error("Error verifying tables:", tablesError);
+    } else {
+      const tableNames = tablesData?.[0]?.results?.map((row: any) => row.tablename) || [];
+      console.log("Available tables:", tableNames.join(', '));
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -190,7 +264,11 @@ serve(async (req) => {
   } catch (error) {
     console.error('Exception:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+        stack: error.stack
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

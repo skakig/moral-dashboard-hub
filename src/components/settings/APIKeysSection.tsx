@@ -15,39 +15,72 @@ import { toast } from "sonner";
 export function APIKeysSection() {
   const { apiKeysLoading, loadError, apiData, reloadApiData } = useAPIData();
   const [initializingDb, setInitializingDb] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
 
   // Check database schema and initialize needed tables
   const checkAndInitializeDatabase = async () => {
     try {
       setInitializingDb(true);
+      setInitializationError(null);
       
+      console.log("Checking database schema...");
       // Call the schema check function
       const { data: schemaData, error: schemaError } = await supabase.functions.invoke('check-db-schema');
       
       if (schemaError) {
         console.error("Error checking schema:", schemaError);
+        setInitializationError(`Error checking database schema: ${schemaError.message || 'Unknown error'}`);
         toast.error("Error checking database schema");
         return;
       }
       
-      if (schemaData?.missingColumns > 0) {
+      if (!schemaData) {
+        setInitializationError("No data returned from schema check");
+        toast.error("Error checking database schema: No data returned");
+        return;
+      }
+      
+      console.log("Schema check result:", schemaData);
+      
+      if (schemaData.missingColumns > 0) {
         // If there are missing columns, initialize the database tables
         toast.info("Initializing database tables and columns...");
+        console.log("Initializing database tables...");
+        
         const { data: initData, error: initError } = await supabase.functions.invoke('initialize-db-tables');
         
         if (initError) {
           console.error("Error initializing database:", initError);
+          setInitializationError(`Failed to initialize database tables: ${initError.message || 'Unknown error'}`);
           toast.error("Failed to initialize database tables");
+          return;
+        }
+        
+        if (!initData) {
+          setInitializationError("No response from database initialization");
+          toast.error("Error initializing database: No response received");
+          return;
+        }
+        
+        console.log("Database initialization result:", initData);
+        
+        if (!initData.success) {
+          setInitializationError(`Database initialization failed: ${initData.error || 'Unknown error'}`);
+          toast.error(`Failed to initialize database: ${initData.error || 'Unknown error'}`);
           return;
         }
         
         toast.success("Database initialized successfully");
         // After initialization, reload the data
         setTimeout(() => reloadApiData(), 1000);
+      } else {
+        console.log("No missing tables or columns detected");
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Exception checking/initializing database:", error);
+      setInitializationError(`Error: ${error.message || 'Unknown error'}`);
+      toast.error(`Error checking/initializing database: ${error.message || 'Unknown error'}`);
     } finally {
       setInitializingDb(false);
     }
@@ -73,12 +106,12 @@ export function APIKeysSection() {
 
   return (
     <>
-      {loadError && (
+      {(loadError || initializationError) && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error loading API keys</AlertTitle>
           <AlertDescription className="flex flex-col gap-2">
-            <p>{loadError}</p>
+            <p>{loadError || initializationError}</p>
             <div className="flex gap-2 mt-2">
               <Button 
                 variant="outline" 
@@ -103,7 +136,7 @@ export function APIKeysSection() {
         </Alert>
       )}
 
-      {!loadError && isEmptyData && !apiKeysLoading && (
+      {!loadError && !initializationError && isEmptyData && !apiKeysLoading && (
         <Alert className="mb-4">
           <InfoIcon className="h-4 w-4" />
           <AlertTitle>No API Configuration Found</AlertTitle>

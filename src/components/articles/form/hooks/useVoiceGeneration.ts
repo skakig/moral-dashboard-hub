@@ -80,9 +80,11 @@ export function useVoiceGeneration(form: any) {
         // Try using OpenAI TTS first before ElevenLabs
         // This helps avoid ElevenLabs quota issues
         try {
-          const result = await EdgeFunctionService.invokeFunction('generate-voice-openai', {
-            text: textSegments[0],
-            voice: "alloy" // OpenAI voice
+          const result = await supabase.functions.invoke('generate-voice-openai', {
+            body: {
+              text: textSegments[0],
+              voice: "alloy" // OpenAI voice
+            }
           });
           
           if (!result || result.error) {
@@ -92,8 +94,8 @@ export function useVoiceGeneration(form: any) {
           
           // Store the OpenAI result
           audioSegments.current.push({
-            audioUrl: result.audioUrl,
-            fileName: result.fileName
+            audioUrl: result.data.audioUrl,
+            fileName: result.data.fileName
           });
           
           console.log("OpenAI voice generation successful for first segment");

@@ -171,11 +171,12 @@ export function useMemeOperations() {
         return;
       }
       
-      // Use type assertion to ensure data has all required fields
+      // Use explicit type assertion to fix the deep type instantiation issue
+      // This is a safer approach than relying on TypeScript to infer types
       const typedData = data as MemeDbResponse[];
       
-      // Now map with the properly typed data
-      const formattedMemes = typedData.map(item => toMeme(item));
+      // Use the toMeme function to map database response to frontend format
+      const formattedMemes = typedData.map(dbMeme => toMeme(dbMeme));
       
       setSavedMemes(formattedMemes);
       

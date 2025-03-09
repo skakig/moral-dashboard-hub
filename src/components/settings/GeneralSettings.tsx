@@ -34,6 +34,7 @@ export function GeneralSettings() {
   const [error, setError] = useState<string | null>(null);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [originalEmail, setOriginalEmail] = useState("");
+  const [settingsId, setSettingsId] = useState<string | null>(null);
   const [settings, setSettings] = useState<SiteSettings>({
     id: "",
     site_name: "The Moral Hierarchy",
@@ -47,74 +48,77 @@ export function GeneralSettings() {
     defaultValues: { password: "" }
   });
 
-  useEffect(() => {
-    async function fetchSettings() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const { data, error } = await supabase
-          .from('site_settings')
-          .select('*')
-          .limit(1);
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .limit(1);
 
-        if (error) {
-          console.error("Error fetching settings:", error);
-          setError(`Failed to load settings: ${error.message}`);
-          toast.error("Failed to load settings: " + error.message);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          const siteData = data[0];
-          
-          setSettings({
-            id: siteData.id,
-            site_name: siteData.site_name,
-            admin_email: siteData.admin_email,
-            timezone: siteData.timezone,
-            maintenance_mode: siteData.maintenance_mode
-          });
-          
-          setOriginalEmail(siteData.admin_email);
-          
-          console.log("Settings loaded:", siteData);
-        } else {
-          console.warn("No settings found in database");
-          toast.warning("Using default settings. Please save to create settings record.");
-          
-          // Create default settings record if none exists
-          const { data: insertData, error: insertError } = await supabase
-            .from('site_settings')
-            .insert([{
-              site_name: "The Moral Hierarchy",
-              admin_email: "admin@tmh.com",
-              timezone: "utc",
-              maintenance_mode: false
-            }])
-            .select();
-            
-          if (insertError) {
-            console.error("Error creating default settings:", insertError);
-            setError(`Failed to create default settings: ${insertError.message}`);
-          } else if (insertData && insertData.length > 0) {
-            // Set the ID from the newly created record
-            setSettings({
-              ...settings,
-              id: insertData[0].id
-            });
-            console.log("Created default settings:", insertData[0]);
-          }
-        }
-      } catch (error: any) {
-        console.error("Exception fetching settings:", error);
-        setError(`An unexpected error occurred: ${error.message}`);
-        toast.error("An unexpected error occurred: " + error.message);
-      } finally {
-        setLoading(false);
+      if (error) {
+        console.error("Error fetching settings:", error);
+        setError(`Failed to load settings: ${error.message}`);
+        toast.error("Failed to load settings: " + error.message);
+        return;
       }
-    }
 
+      if (data && data.length > 0) {
+        const siteData = data[0];
+        
+        setSettings({
+          id: siteData.id,
+          site_name: siteData.site_name,
+          admin_email: siteData.admin_email,
+          timezone: siteData.timezone || "utc",
+          maintenance_mode: siteData.maintenance_mode
+        });
+        
+        setSettingsId(siteData.id);
+        setOriginalEmail(siteData.admin_email);
+        
+        console.log("Settings loaded:", siteData);
+      } else {
+        console.warn("No settings found in database");
+        toast.warning("Using default settings. Please save to create settings record.");
+        
+        // Create default settings record if none exists
+        const { data: insertData, error: insertError } = await supabase
+          .from('site_settings')
+          .insert([{
+            site_name: "The Moral Hierarchy",
+            admin_email: "admin@tmh.com",
+            timezone: "utc",
+            maintenance_mode: false
+          }])
+          .select();
+          
+        if (insertError) {
+          console.error("Error creating default settings:", insertError);
+          setError(`Failed to create default settings: ${insertError.message}`);
+        } else if (insertData && insertData.length > 0) {
+          // Set the ID from the newly created record
+          const newId = insertData[0].id;
+          setSettingsId(newId);
+          setSettings({
+            ...settings,
+            id: newId
+          });
+          console.log("Created default settings:", insertData[0]);
+        }
+      }
+    } catch (error: any) {
+      console.error("Exception fetching settings:", error);
+      setError(`An unexpected error occurred: ${error.message}`);
+      toast.error("An unexpected error occurred: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchSettings();
   }, []);
 
@@ -147,6 +151,12 @@ export function GeneralSettings() {
       setError(null);
       
       console.log("Saving settings:", settings);
+      
+      if (!settingsId) {
+        setError("Settings ID is missing. Please refresh the page.");
+        toast.error("Settings ID is missing. Please refresh the page.");
+        return;
+      }
       
       // If email is changed and password is provided, verify the password
       if (password && settings.admin_email !== originalEmail) {
@@ -181,7 +191,7 @@ export function GeneralSettings() {
           timezone: settings.timezone,
           maintenance_mode: settings.maintenance_mode
         })
-        .eq('id', settings.id);
+        .eq('id', settingsId);
 
       if (updateError) {
         console.error("Error saving settings:", updateError);
@@ -197,6 +207,9 @@ export function GeneralSettings() {
 
       toast.success("Settings saved successfully");
       console.log("Settings updated successfully");
+      
+      // Refresh settings to ensure UI is updated with the latest data
+      await fetchSettings();
       
       // Close password confirmation dialog and reset form
       setShowPasswordConfirm(false);

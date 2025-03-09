@@ -27,6 +27,7 @@ type APIKeyFormValues = z.infer<typeof apiKeyFormSchema>;
 interface APIKeyFormDialogProps {
   category?: string;
   defaultService?: string;
+  keyData?: any; // Add this property to fix the TypeScript error
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -34,6 +35,7 @@ interface APIKeyFormDialogProps {
 export function APIKeyFormDialog({ 
   category = '', 
   defaultService = '',
+  keyData, // Add this to the destructured props
   onSuccess,
   onCancel
 }: APIKeyFormDialogProps) {
@@ -43,10 +45,10 @@ export function APIKeyFormDialog({
   const form = useForm<APIKeyFormValues>({
     resolver: zodResolver(apiKeyFormSchema),
     defaultValues: {
-      serviceName: defaultService,
-      apiKey: '',
-      baseUrl: '',
-      isPrimary: false,
+      serviceName: keyData?.serviceName || defaultService,
+      apiKey: keyData?.apiKey || '',
+      baseUrl: keyData?.baseUrl || '',
+      isPrimary: keyData?.isPrimary || false,
       category: category,
     },
   });
@@ -65,7 +67,9 @@ export function APIKeyFormDialog({
           category: values.category,
           apiKey: values.apiKey,
           baseUrl: values.baseUrl || "",
-          isPrimary: values.isPrimary
+          isPrimary: values.isPrimary,
+          // If we have keyData with an id, it's an update
+          id: keyData?.id
         },
       });
       
@@ -248,7 +252,7 @@ export function APIKeyFormDialog({
               Use Demo Key
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Validating..." : "Save API Key"}
+              {loading ? "Validating..." : keyData ? "Update API Key" : "Save API Key"}
             </Button>
           </div>
         </div>

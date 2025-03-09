@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,7 +34,8 @@ export function useArticleMutations() {
       voice_base64: articleData.voice_base64 || articleData.voiceBase64 || '',
       voice_segments: articleData.voice_segments || articleData.voiceSegments || '',
       category: articleData.category || 'general',
-      status: articleData.status || 'draft'
+      status: articleData.status || 'draft',
+      publish_date: articleData.publish_date || null
     };
   };
   

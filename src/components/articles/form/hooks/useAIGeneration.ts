@@ -38,6 +38,34 @@ export function useAIGeneration() {
     }
   }, []);
 
+  // Add the missing generateKeywords method
+  const generateKeywords = useCallback(async (theme: string, platform: string, contentType: string): Promise<string[]> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Call the edge function to generate keywords
+      const result = await EdgeFunctionService.generateSEOData({
+        theme,
+        platform,
+        contentType
+      });
+      
+      if (!result || !result.keywords) {
+        throw new Error('Failed to generate keywords. Please try again.');
+      }
+      
+      return result.keywords;
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to generate keywords';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const resetGeneratedContent = useCallback(() => {
     setGeneratedContent(null);
   }, []);
@@ -46,6 +74,7 @@ export function useAIGeneration() {
     loading,
     generatedContent,
     generateContent,
+    generateKeywords,
     resetGeneratedContent,
     error
   };

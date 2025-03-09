@@ -10,11 +10,26 @@ import {
   toDbMemeRecord
 } from '@/types/meme';
 
+// Define structure for database response to avoid type confusion
+interface MemeDbResponse {
+  id: string;
+  prompt: string;
+  image_url: string;
+  meme_text: string;
+  platform_tags?: string[];
+  created_at: string;
+  user_id?: string;
+  engagement_score?: number;
+}
+
 export function useMemeOperations() {
   const [savedMemes, setSavedMemes] = useState<Meme[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Add missing states for meme generator
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Check authentication status
   useEffect(() => {
@@ -35,10 +50,35 @@ export function useMemeOperations() {
     };
   }, []);
 
+  // Generate meme image function
+  const generateMemeImage = async (prompt: string, platform?: string): Promise<string | null> => {
+    try {
+      setIsGenerating(true);
+      setError(null);
+      
+      // Call your edge function or API to generate the image
+      // This is a mock implementation - replace with actual implementation
+      const response = await new Promise<string>((resolve) => {
+        setTimeout(() => {
+          resolve('https://placehold.co/600x400/png');
+        }, 1000);
+      });
+      
+      toast.success('Meme image generated!');
+      return response;
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate image');
+      toast.error(`Error generating image: ${err.message}`);
+      return null;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Create or save a meme
   const saveMeme = async (memeData: MemeFormData): Promise<Meme | null> => {
     try {
-      setIsLoading(true);
+      setIsSaving(true);
       setError(null);
       
       const { data: userData } = await supabase.auth.getUser();
@@ -77,7 +117,7 @@ export function useMemeOperations() {
       }
       
       // Convert response back to frontend format
-      const newMeme = toMeme(data as DbMemeRecord);
+      const newMeme = toMeme(data as MemeDbResponse);
       
       // Add to local state
       setSavedMemes(prevMemes => [newMeme, ...prevMemes]);
@@ -90,7 +130,7 @@ export function useMemeOperations() {
       toast.error(`Error saving meme: ${err.message}`);
       return null;
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
   
@@ -122,9 +162,12 @@ export function useMemeOperations() {
         throw error;
       }
       
+      // Cast data to proper type to avoid infinite type instantiation
+      const memeRecords = data as MemeDbResponse[];
+      
       // Convert each record to frontend format and set state
-      const formattedMemes = (data || []).map(
-        (item: DbMemeRecord) => toMeme(item)
+      const formattedMemes = (memeRecords || []).map(
+        (item: MemeDbResponse) => toMeme(item as any)
       );
       
       setSavedMemes(formattedMemes);
@@ -137,10 +180,53 @@ export function useMemeOperations() {
     }
   }, []);
   
-  // Load memes on initial mount
-  useEffect(() => {
-    fetchMemes();
-  }, [fetchMemes]);
+  // Implement download meme function
+  const downloadMeme = async (imageUrl: string, topText: string, bottomText: string) => {
+    try {
+      // Basic implementation - in a real app you might render the meme with text first
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = `meme-${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('Meme downloaded!');
+    } catch (err: any) {
+      toast.error('Failed to download meme');
+      console.error('Download error:', err);
+    }
+  };
+  
+  // Implement share meme function
+  const shareMeme = async (
+    platform: string, 
+    imageUrl: string, 
+    text: string, 
+    options?: { redirectUrl?: string, tags?: string[] }
+  ) => {
+    try {
+      // Mock implementation - would connect to share API in real app
+      let shareUrl = '';
+      
+      switch (platform) {
+        case 'twitter':
+          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(options?.redirectUrl || window.location.href)}`;
+          break;
+        case 'facebook':
+          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(options?.redirectUrl || window.location.href)}`;
+          break;
+        default:
+          toast.info(`Sharing to ${platform} not implemented yet`);
+          return;
+      }
+      
+      window.open(shareUrl, '_blank');
+      toast.success(`Shared to ${platform}!`);
+    } catch (err: any) {
+      toast.error('Failed to share meme');
+      console.error('Share error:', err);
+    }
+  };
   
   // Delete a meme
   const deleteMeme = async (id: string): Promise<boolean> => {
@@ -176,8 +262,13 @@ export function useMemeOperations() {
     isLoading,
     error,
     isAuthenticated,
+    isGenerating,
+    isSaving,
     saveMeme,
     fetchMemes,
-    deleteMeme
+    deleteMeme,
+    generateMemeImage,
+    downloadMeme,
+    shareMeme
   };
 }

@@ -1,4 +1,3 @@
-
 export interface Article {
   id: string;
   title: string;
@@ -50,4 +49,19 @@ export interface ContentTheme {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ArticleUpdateInput {
+  id: string;
+  title?: string;
+  content?: string;
+  seo_keywords?: string[];
+  meta_description?: string | null;
+  featured_image?: string | null;
+  excerpt?: string;
+  voice_url?: string;
+  voice_generated?: boolean;
+  voice_file_name?: string;
+  voice_base64?: string;
+  moral_level?: number;
 }

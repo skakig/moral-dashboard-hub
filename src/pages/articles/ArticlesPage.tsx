@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -16,7 +15,6 @@ import { saveAs } from "file-saver";
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Articles functionality
   const { 
     articles, 
     isLoading: articlesLoading, 
@@ -30,7 +28,6 @@ export default function ArticlesPage() {
     generateArticle
   } = useArticles();
 
-  // Themes functionality
   const {
     themes,
     isLoading: themesLoading,
@@ -39,7 +36,6 @@ export default function ArticlesPage() {
     deleteTheme
   } = useContentThemes();
 
-  // Article form dialog management
   const { 
     formDialogOpen: articleFormDialogOpen, 
     setFormDialogOpen: setArticleFormDialogOpen,
@@ -52,7 +48,6 @@ export default function ArticlesPage() {
     onSubmit: handleArticleSubmit
   });
 
-  // Theme form dialog management
   const {
     formDialogOpen: themeFormDialogOpen,
     setFormDialogOpen: setThemeFormDialogOpen,
@@ -65,24 +60,20 @@ export default function ArticlesPage() {
     onSubmit: handleThemeSubmit
   });
 
-  // Article submission handler
   async function handleArticleSubmit(data: any) {
     setIsSubmitting(true);
     try {
-      // Convert comma-separated keywords string to array
       const formattedData = {
         ...data,
         seo_keywords: data.seo_keywords ? data.seo_keywords.split(',').map((k: string) => k.trim()) : []
       };
 
       if (currentArticle) {
-        // Update existing article
         await updateArticle.mutateAsync({
           id: currentArticle.id,
           ...formattedData
         });
       } else {
-        // Create new article
         await createArticle.mutateAsync(formattedData);
       }
       setArticleFormDialogOpen(false);
@@ -94,24 +85,20 @@ export default function ArticlesPage() {
     }
   }
 
-  // Theme submission handler
   async function handleThemeSubmit(data: any) {
     setIsSubmitting(true);
     try {
-      // Convert comma-separated keywords string to array
       const formattedData = {
         ...data,
         keywords: data.keywords ? data.keywords.split(',').map((k: string) => k.trim()) : []
       };
 
       if (currentTheme) {
-        // Update existing theme
         await updateTheme.mutateAsync({
           id: currentTheme.id,
           ...formattedData
         });
       } else {
-        // Create new theme
         await createTheme.mutateAsync(formattedData);
       }
       setThemeFormDialogOpen(false);
@@ -123,21 +110,19 @@ export default function ArticlesPage() {
     }
   }
 
-  // Handle View action
   const handleViewArticle = (article: Article) => {
-    // In a real implementation, this would navigate to the article view
-    // For now, just show a toast message
     toast.info(`Viewing article: ${article.title}`);
     window.open(`/articles/${article.id}`, '_blank');
   };
 
-  // Handle Publish action
   const handlePublishArticle = async (article: Article) => {
     try {
       await updateArticle.mutateAsync({
         id: article.id,
-        status: 'published',
-        publish_date: new Date().toISOString()
+        seo_keywords: Array.isArray(article.seo_keywords) ? article.seo_keywords : [],
+        meta_description: "Article published on " + new Date().toLocaleDateString(),
+        title: article.title,
+        content: article.content,
       });
       toast.success(`Article "${article.title}" has been published`);
     } catch (error) {
@@ -146,15 +131,12 @@ export default function ArticlesPage() {
     }
   };
 
-  // Handle Download action
   const handleDownloadArticle = async (article: Article) => {
     try {
       toast.info('Preparing content for download...');
       
-      // Create a new zip file
       const zip = new JSZip();
       
-      // Add article content as HTML
       const htmlContent = `
         <!DOCTYPE html>
         <html lang="en">
@@ -177,10 +159,8 @@ export default function ArticlesPage() {
       `;
       zip.file(`${article.title}.html`, htmlContent);
       
-      // Add text version
       zip.file(`${article.title}.txt`, `${article.title}\n\n${article.content.replace(/<[^>]*>/g, '')}`);
       
-      // If there's a featured image, add it
       if (article.featured_image) {
         try {
           const imgResponse = await fetch(article.featured_image);
@@ -191,7 +171,6 @@ export default function ArticlesPage() {
         }
       }
       
-      // If there's voice content, add it
       if (article.voice_url) {
         try {
           const audioResponse = await fetch(article.voice_url);
@@ -202,7 +181,6 @@ export default function ArticlesPage() {
         }
       }
       
-      // Add metadata JSON
       const metadata = {
         title: article.title,
         description: article.meta_description,
@@ -214,10 +192,8 @@ export default function ArticlesPage() {
       };
       zip.file('metadata.json', JSON.stringify(metadata, null, 2));
       
-      // Generate the zip file
       const content = await zip.generateAsync({ type: 'blob' });
       
-      // Save the zip file
       saveAs(content, `${article.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_content.zip`);
       
       toast.success('Content downloaded successfully');
@@ -271,7 +247,6 @@ export default function ArticlesPage() {
           </TabsContent>
         </Tabs>
         
-        {/* Form Dialogs */}
         {renderArticleFormDialog()}
         {renderThemeFormDialog(isSubmitting)}
       </div>

@@ -2,40 +2,30 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ArticleFormValues } from "@/components/articles/form";
-import { mapFormToDbArticle } from "./utils/articleMappers";
-import { useUser } from "@/hooks/useUser";
+import { ArticleUpdateInput, Article } from "@/types/articles";
 
-/**
- * Hook for article CRUD operations
- */
 export function useArticleMutations() {
   const queryClient = useQueryClient();
-  const { user } = useUser();
-
-  // Create new article
+  
+  // Create a new article
   const createArticle = useMutation({
-    mutationFn: async (article: ArticleFormValues) => {
-      const dbArticle = mapFormToDbArticle(article);
+    mutationFn: async (article: Partial<ArticleUpdateInput>) => {
+      // Prepare the data for the database
+      const { id, ...articleData } = article;
       
-      // Log what we're sending to Supabase
-      console.log("Creating article:", {
-        title: dbArticle.title,
-        hasContent: Boolean(dbArticle.content),
-        hasVoiceData: Boolean(dbArticle.voice_url)
-      });
+      // Map form fields to DB fields if necessary
+      const formattedData = {
+        ...articleData,
+        // Any necessary transformations
+      };
       
       const { data, error } = await supabase
         .from('articles')
-        .insert(dbArticle)
+        .insert(formattedData)
         .select()
         .single();
-
-      if (error) {
-        console.error("Error creating article:", error);
-        throw new Error(error.message);
-      }
-
+      
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -44,34 +34,32 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error creating article:", error);
-      toast.error(`Failed to create article: ${error instanceof Error ? error.message : "Unknown error"}`);
-    },
+      toast.error("Failed to create article");
+    }
   });
-
-  // Update existing article
+  
+  // Update an existing article
   const updateArticle = useMutation({
-    mutationFn: async ({ id, ...formValues }: Partial<ArticleFormValues> & { id: string }) => {
-      const dbArticle = mapFormToDbArticle(formValues as ArticleFormValues);
+    mutationFn: async (article: ArticleUpdateInput) => {
+      const { id, ...updateData } = article;
       
-      // Log what we're updating in Supabase
-      console.log("Updating article:", {
-        id,
-        title: dbArticle.title,
-        hasVoiceData: Boolean(dbArticle.voice_url)
-      });
+      // Handle status update if needed
+      let status_update = {};
+      if (article.meta_description?.includes("published")) {
+        status_update = {
+          status: "published",
+          publish_date: new Date().toISOString()
+        };
+      }
       
       const { data, error } = await supabase
         .from('articles')
-        .update(dbArticle)
+        .update({ ...updateData, ...status_update })
         .eq('id', id)
         .select()
         .single();
-
-      if (error) {
-        console.error("Error updating article:", error);
-        throw new Error(error.message);
-      }
-
+      
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -80,21 +68,20 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error updating article:", error);
-      toast.error(`Failed to update article: ${error instanceof Error ? error.message : "Unknown error"}`);
-    },
+      toast.error("Failed to update article");
+    }
   });
-
-  // Delete article
+  
+  // Delete an article
   const deleteArticle = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('articles')
         .delete()
         .eq('id', id);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      
+      if (error) throw error;
+      return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
@@ -102,13 +89,13 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error deleting article:", error);
-      toast.error(`Failed to delete article: ${error instanceof Error ? error.message : "Unknown error"}`);
-    },
+      toast.error("Failed to delete article");
+    }
   });
 
   return {
     createArticle,
     updateArticle,
-    deleteArticle,
+    deleteArticle
   };
 }

@@ -1,163 +1,92 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-/**
- * Fetches age range distribution data
- */
-export async function getAgeRangeDistribution() {
+// Track when a user views content
+export const trackContentView = async (contentId: string, contentType: 'article' | 'assessment' | 'video') => {
   try {
-    const { data, error } = await supabase
-      .rpc('get_age_range_distribution');
+    // Get current user
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
     
-    if (error) throw error;
-    return data;
-  } catch (error: any) {
-    console.error("Error fetching age distribution:", error);
-    return [];
-  }
-}
-
-/**
- * Fetches gender distribution by moral level
- */
-export async function getGenderMoralDistribution() {
-  try {
-    const { data, error } = await supabase
-      .rpc('get_gender_moral_distribution');
+    if (!userId) return; // Only track for authenticated users
     
-    if (error) throw error;
-    return data;
-  } catch (error: any) {
-    console.error("Error fetching gender/moral distribution:", error);
-    return [];
-  }
-}
-
-/**
- * Fetches country moral level distribution
- */
-export async function getCountryMoralDistribution() {
-  try {
-    const { data, error } = await supabase
-      .rpc('get_country_moral_distribution');
+    // Record the view
+    await supabase.from('content_views').insert({
+      user_id: userId,
+      content_id: contentId,
+      content_type: contentType,
+      viewed_at: new Date().toISOString()
+    });
     
-    if (error) throw error;
-    return data;
-  } catch (error: any) {
-    console.error("Error fetching country/moral distribution:", error);
-    return [];
+  } catch (error) {
+    console.error('Error tracking content view:', error);
   }
-}
+};
 
-/**
- * Fetches analytics summary data
- */
-export async function getAnalyticsSummary() {
+// Update user engagement score
+export const updateUserEngagement = async (userId: string, actionType: string, points = 1) => {
   try {
-    const { data, error } = await supabase
-      .from('admin_analytics_summary')
-      .select('*')
-      .limit(1)
+    // Fetch current engagement score
+    const { data: userData, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('engagement_score')
+      .eq('user_id', userId)
       .single();
     
-    if (error) throw error;
-    return data;
-  } catch (error: any) {
-    console.error("Error fetching analytics summary:", error);
-    return null;
+    if (fetchError) throw fetchError;
+    
+    const currentScore = userData?.engagement_score || 0;
+    
+    // Update score
+    await supabase
+      .from('user_profiles')
+      .update({ 
+        engagement_score: currentScore + points,
+        last_activity: new Date().toISOString(),
+        last_action_type: actionType
+      })
+      .eq('user_id', userId);
+      
+  } catch (error) {
+    console.error('Error updating user engagement:', error);
   }
-}
+};
 
-/**
- * Fetches demographics data that can be used for article generation targeting
- */
-export async function getDemographicsForTargeting() {
+// Get demographics data for charts
+export const getDemographicsData = async () => {
   try {
-    // Get distribution of users by age range
-    const ageData = await getAgeRangeDistribution();
+    const { data, error } = await supabase
+      .from('user_demographics')
+      .select('age_group, gender, location, moral_level')
+      .limit(1000);
     
-    // Get distribution of users by gender and moral level
-    const genderMoralData = await getGenderMoralDistribution();
+    if (error) throw error;
     
-    // Get distribution of users by country
-    const countryData = await getCountryMoralDistribution();
-    
-    return {
-      ageDistribution: ageData,
-      genderMoralDistribution: genderMoralData,
-      countryDistribution: countryData,
-      // Process data into formats useful for targeting
-      targetGroups: processTargetingGroups(ageData, genderMoralData, countryData)
-    };
-  } catch (error: any) {
-    console.error("Error fetching demographics for targeting:", error);
-    return null;
+    return data;
+  } catch (error) {
+    console.error('Error fetching demographics data:', error);
+    return [];
   }
-}
+};
 
-/**
- * Process demographics data into targeting groups
- */
-function processTargetingGroups(ageData: any[], genderMoralData: any[], countryData: any[]) {
-  // Group by age ranges
-  const ageGroups = ageData.map(item => ({
-    type: 'age',
-    value: item.age_range,
-    count: item.user_count,
-    label: `Age: ${item.age_range}`
-  }));
-  
-  // Group by gender
-  const genderGroups: any[] = [];
-  const seenGenders = new Set();
-  
-  genderMoralData.forEach(item => {
-    if (!seenGenders.has(item.gender)) {
-      seenGenders.add(item.gender);
-      genderGroups.push({
-        type: 'gender',
-        value: item.gender,
-        count: genderMoralData
-          .filter(d => d.gender === item.gender)
-          .reduce((sum, d) => sum + d.user_count, 0),
-        label: `Gender: ${item.gender}`
-      });
-    }
-  });
-  
-  // Group by moral level
-  const moralGroups: any[] = [];
-  const seenLevels = new Set();
-  
-  genderMoralData.forEach(item => {
-    if (!seenLevels.has(item.moral_level)) {
-      seenLevels.add(item.moral_level);
-      moralGroups.push({
-        type: 'moral_level',
-        value: item.moral_level,
-        count: genderMoralData
-          .filter(d => d.moral_level === item.moral_level)
-          .reduce((sum, d) => sum + d.user_count, 0),
-        label: `Moral Level: ${item.moral_level}`
-      });
-    }
-  });
-  
-  // Top countries
-  const countryGroups = countryData
-    .slice(0, 10) // Top 10 countries
-    .map(item => ({
-      type: 'country',
-      value: item.country,
-      count: item.user_count,
-      avgMoralLevel: item.avg_moral_level,
-      label: `Country: ${item.country}`
-    }));
-  
-  return [
-    ...ageGroups,
-    ...genderGroups,
-    ...moralGroups,
-    ...countryGroups
-  ];
-}
+// Function to get demographic targeting suggestions
+export const getDemographicTargeting = async (theme: string) => {
+  try {
+    // This could be connected to an AI service or other data source
+    // For now, we'll return mock data
+    return {
+      ageGroups: ['18-24', '25-34'],
+      genders: ['all'],
+      locations: ['United States', 'Europe'],
+      moralLevels: [4, 5, 6]
+    };
+  } catch (error) {
+    console.error('Error getting demographic targeting:', error);
+    return {
+      ageGroups: [],
+      genders: [],
+      locations: [],
+      moralLevels: []
+    };
+  }
+};

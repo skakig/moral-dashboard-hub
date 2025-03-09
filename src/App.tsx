@@ -1,8 +1,8 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
+import { default as Dashboard } from "./pages/Index";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
+import { default as Register } from "./pages/Login"; // Temporary using Login as Register since Register page doesn't exist
 import Settings from "./pages/Settings";
 import ArticlesPage from "./pages/articles/ArticlesPage";
 import ArticleViewPage from "./pages/articles/ArticleViewPage";

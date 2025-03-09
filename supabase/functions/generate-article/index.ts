@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { theme, keywords, contentType, moralLevel, contentLength = "medium" } = await req.json();
+    const { theme, keywords, contentType, moralLevel, platform = "general", contentLength = "medium" } = await req.json();
 
     // Construct the prompt based on TMH knowledge
     const tmhContext = `The Moral Hierarchy (TMH) is a framework with 9 levels of moral development:
@@ -45,13 +45,13 @@ serve(async (req) => {
         targetLength = "1000-1500 words";
     }
 
-    // Adjust instructions based on content type
+    // Adjust instructions based on content type and platform
     let contentSpecificInstructions = "";
     
-    if (contentType === "social_media") {
+    if (contentType.includes("social_media")) {
       contentSpecificInstructions = `
-      Create a compelling social media script for ${keywords.join(', ')} that:
-      1. Is optimized for the platform and length specified
+      Create a compelling social media post for ${platform} about ${keywords?.join(', ') || theme} that:
+      1. Is optimized for ${platform} and ${contentLength} length
       2. Includes relevant hashtags and calls-to-action
       3. Has an engaging hook in the first 3 seconds/lines
       4. References moral hierarchy concepts in an accessible way
@@ -59,12 +59,39 @@ serve(async (req) => {
       `;
     } else if (contentType.includes("youtube")) {
       contentSpecificInstructions = `
-      Create a YouTube script that:
-      1. Has a strong hook in the first 15 seconds
+      Create a YouTube ${contentType.includes("shorts") ? "Shorts" : "script"} that:
+      1. Has a strong hook in the first ${contentType.includes("shorts") ? "3" : "15"} seconds
       2. Includes timestamps and chapter markers
       3. Contains calls-to-action for engagement (like, subscribe)
       4. Balances educational content with engaging delivery
       5. Ends with a question to encourage comments
+      `;
+    } else if (platform === "Instagram" && contentType.includes("reels")) {
+      contentSpecificInstructions = `
+      Create a script for Instagram Reels that:
+      1. Has a captivating first 3 seconds
+      2. Includes trending audio suggestions
+      3. Has clear, concise talking points
+      4. Incorporates moral concepts in an engaging, visually-oriented way
+      5. Suggests simple visual transitions or effects
+      `;
+    } else if (platform === "TikTok") {
+      contentSpecificInstructions = `
+      Create a TikTok script that:
+      1. Has a viral-worthy hook in the first 3 seconds
+      2. Uses trending sounds or concepts if relevant
+      3. Is paced for the TikTok format (fast, engaging)
+      4. Makes complex moral concepts approachable and entertaining
+      5. Includes suggestions for simple visual effects
+      `;
+    } else if (contentType.includes("tweet")) {
+      contentSpecificInstructions = `
+      Create a Twitter thread that:
+      1. Starts with a powerful, shareable first tweet
+      2. Breaks complex ideas into tweet-sized chunks
+      3. Uses numbering or clear connections between tweets
+      4. Incorporates relevant hashtags strategically
+      5. Ends with a call to action or thought-provoking question
       `;
     } else {
       contentSpecificInstructions = `
@@ -77,6 +104,8 @@ serve(async (req) => {
       `;
     }
 
+    console.log("Sending request to OpenAI with content type:", contentType, "platform:", platform);
+
     // Construct the system prompt
     const systemPrompt = `You are an expert content writer for The Moral Hierarchy (TMH), a platform focused on moral development and ethical growth. 
     ${tmhContext}
@@ -85,7 +114,7 @@ serve(async (req) => {
     
     Your content should:
     1. Be written at moral development level ${moralLevel} (approximately)
-    2. Incorporate these keywords naturally: ${keywords.join(', ')}
+    2. Incorporate these keywords naturally: ${keywords?.join(', ') || theme}
     3. Be approximately ${targetLength} in length
     4. Format the content in Markdown for easy reading
 
@@ -103,7 +132,7 @@ serve(async (req) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Create ${contentType} content about ${theme} that would resonate with people interested in moral development.` }
+          { role: 'user', content: `Create ${contentType} content for ${platform} about ${theme || keywords?.join(', ')} that would resonate with people interested in moral development.` }
         ],
         temperature: 0.7,
       }),

@@ -16,7 +16,7 @@ import Login from "@/pages/Login";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 import AIContent from "@/pages/AIContent";
-import Articles from "@/pages/Articles";
+import Articles from "@/pages/articles";
 import Demographics from "./pages/Demographics";
 import UserProfile from "./pages/UserProfile";
 

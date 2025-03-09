@@ -34,7 +34,15 @@ export function ArticleViewer() {
           throw error;
         }
         
-        setArticle(data);
+        // Ensure the status field conforms to the expected type
+        const validStatus = ['draft', 'scheduled', 'published'].includes(data.status) 
+          ? data.status as "draft" | "scheduled" | "published" 
+          : "draft";
+        
+        setArticle({
+          ...data,
+          status: validStatus
+        } as Article);
       } catch (error) {
         console.error('Error fetching article:', error);
         toast.error('Failed to load article');
@@ -134,7 +142,7 @@ export function ArticleViewer() {
               
               <div className="flex items-center">
                 <User className="mr-1 h-4 w-4" />
-                {article.author || 'Unknown'}
+                {article.author_id || 'Unknown'}
               </div>
               
               {article.category && (

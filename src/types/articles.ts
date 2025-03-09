@@ -18,6 +18,7 @@ export interface Article {
   voice_file_name?: string;
   voice_base64?: string;
   moral_level?: number;
+  author_id?: string; // Add author_id from the database
 }
 
 export interface ArticleSocialPost {

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Article } from "@/types/articles";
+import { ArticleFormValues } from "@/components/articles/form";
 
 export function useArticles() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,16 +41,44 @@ export function useArticles() {
     },
   });
 
+  // Map form values to database fields
+  const mapFormToDbArticle = (formValues: ArticleFormValues) => {
+    // Extract keywords from comma-separated string
+    const seoKeywords = formValues.seoKeywords 
+      ? formValues.seoKeywords.split(',').map(k => k.trim()).filter(Boolean)
+      : [];
+      
+    // Map the form fields to database fields
+    return {
+      title: formValues.title,
+      content: formValues.content || '',
+      excerpt: formValues.excerpt || '',
+      meta_description: formValues.metaDescription || null,
+      featured_image: formValues.featuredImage || null,
+      seo_keywords: seoKeywords,
+      status: 'draft', // Default to draft
+      category: formValues.platform || 'General', // Use platform as category
+      voice_url: formValues.voiceUrl || null,
+      voice_generated: formValues.voiceGenerated || false,
+      moral_level: formValues.moralLevel ? Number(formValues.moralLevel) : 5,
+      // Note: not trying to send fields that aren't in the DB schema
+      // contentLength, platform, contentType, etc. are not DB fields
+    };
+  };
+
   // Create new article
   const createArticle = useMutation({
-    mutationFn: async (article: Omit<Article, 'id' | 'created_at' | 'updated_at' | 'view_count' | 'engagement_score'>) => {
+    mutationFn: async (article: ArticleFormValues) => {
+      const dbArticle = mapFormToDbArticle(article);
+      
       const { data, error } = await supabase
         .from('articles')
-        .insert(article)
+        .insert(dbArticle)
         .select()
         .single();
 
       if (error) {
+        console.error("Error creating article:", error);
         throw new Error(error.message);
       }
 
@@ -67,10 +96,12 @@ export function useArticles() {
 
   // Update existing article
   const updateArticle = useMutation({
-    mutationFn: async ({ id, ...article }: Partial<Article> & { id: string }) => {
+    mutationFn: async ({ id, ...formValues }: Partial<ArticleFormValues> & { id: string }) => {
+      const dbArticle = mapFormToDbArticle(formValues as ArticleFormValues);
+      
       const { data, error } = await supabase
         .from('articles')
-        .update(article)
+        .update(dbArticle)
         .eq('id', id)
         .select()
         .single();
@@ -119,7 +150,9 @@ export function useArticles() {
     keywords: string[];
     contentType: string;
     moralLevel: number;
+    platform?: string;
     contentLength?: string;
+    tone?: string;
   }) => {
     try {
       const response = await supabase.functions.invoke('generate-article', {

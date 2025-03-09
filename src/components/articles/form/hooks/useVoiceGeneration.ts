@@ -13,7 +13,7 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const generateVoiceContent = async () => {
+  const generateVoiceContent = async (voiceId?: string) => {
     try {
       setIsGenerating(true);
       toast.info("Generating voice content...");
@@ -40,7 +40,7 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
           body: {
             text: textToConvert,
             title: title,
-            voiceId: "21m00Tcm4TlvDq8ikWAM" // Default ElevenLabs voice ID (Rachel)
+            voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM" // Default ElevenLabs voice ID (Rachel)
           }
         });
         
@@ -95,7 +95,7 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
             text: textToConvert,
             options: {
               title: title,
-              voiceId: "21m00Tcm4TlvDq8ikWAM", // Default ElevenLabs voice ID (Rachel)
+              voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM", // Default ElevenLabs voice ID (Rachel)
               modelId: "eleven_multilingual_v2" // Use the high-quality model
             }
           }
@@ -207,7 +207,7 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
     isGenerating, 
     audioUrl,
     isPlaying,
-    setIsPlaying,  // Make sure setIsPlaying is exposed
+    setIsPlaying,
     togglePlayPause,
     downloadAudio
   };

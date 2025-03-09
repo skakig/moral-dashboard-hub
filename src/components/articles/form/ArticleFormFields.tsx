@@ -10,11 +10,23 @@ import { ThemeField } from "./components/ThemeField";
 import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { useAIGeneration } from "./hooks/useAIGeneration";
 import { Button } from "@/components/ui/button";
-import { FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Mic, Loader2, Download, Play, Pause } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Voice options with IDs from ElevenLabs
+const voiceOptions = [
+  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel (Default)" },
+  { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
+  { id: "MF3mGyEYCl7XYWbV9V6O", name: "Adam" },
+  { id: "TxGEqnHWrfWFTfGW9XjX", name: "Josh" },
+  { id: "VR6AewLTigWG4xSOukaG", name: "Nicole" },
+  { id: "pNInz6obpgDQGcFmaJgB", name: "Sam" },
+];
 
 // Main ArticleFormFields component
 export function ArticleFormFields({ form }) {
@@ -22,6 +34,7 @@ export function ArticleFormFields({ form }) {
   const [platform, setPlatform] = useState(form.watch("platform") || "");
   const [contentLength, setContentLength] = useState(form.watch("contentLength") || "medium");
   const [moralLevel, setMoralLevel] = useState(form.watch("moralLevel") || 5);
+  const [selectedVoice, setSelectedVoice] = useState("21m00Tcm4TlvDq8ikWAM"); // Default to Rachel
   const { 
     generateVoiceContent, 
     isGenerating: isGeneratingVoice, 
@@ -119,6 +132,11 @@ export function ArticleFormFields({ form }) {
     }
   };
 
+  // Function to handle voice generation with the selected voice
+  const handleGenerateVoice = async () => {
+    await generateVoiceContent(selectedVoice);
+  };
+
   return (
     <div className="space-y-4">
       <BasicInfoFields form={form} />
@@ -161,67 +179,90 @@ export function ArticleFormFields({ form }) {
       </div>
       
       {form.watch("content") && (
-        <FormField
-          control={form.control}
-          name="voiceGenerated"
-          render={() => (
-            <FormItem>
-              <FormLabel>Voice Content</FormLabel>
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={generateVoiceContent}
-                    disabled={isGeneratingVoice}
-                    className="flex items-center gap-2"
-                  >
-                    {isGeneratingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-                    {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
-                  </Button>
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="voiceGenerated"
+            render={() => (
+              <FormItem>
+                <FormLabel>Voice Content</FormLabel>
+                <div className="flex flex-col space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <FormLabel className="min-w-24">Voice Style:</FormLabel>
+                    <Select 
+                      defaultValue={selectedVoice} 
+                      onValueChange={setSelectedVoice}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Select voice style" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {voiceOptions.map(voice => (
+                          <SelectItem key={voice.id} value={voice.id}>
+                            {voice.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   
-                  {voiceGenerated && (
-                    <>
-                      <span className="text-sm text-green-600">Voice content generated!</span>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={togglePlayPause}
-                        className="flex items-center gap-2"
-                      >
-                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        {isPlaying ? "Pause" : "Play"}
-                      </Button>
-                      
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={downloadAudio}
-                        className="flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download
-                      </Button>
-                    </>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleGenerateVoice}
+                      disabled={isGeneratingVoice}
+                      className="flex items-center gap-2"
+                    >
+                      {isGeneratingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                      {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
+                    </Button>
+                    
+                    {voiceGenerated && (
+                      <>
+                        <span className="text-sm text-green-600">Voice content generated!</span>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={togglePlayPause}
+                          className="flex items-center gap-2"
+                        >
+                          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                          {isPlaying ? "Pause" : "Play"}
+                        </Button>
+                        
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={downloadAudio}
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  
+                  {voiceGenerated && audioUrl && (
+                    <div className="mt-2 p-2 border rounded bg-muted/50">
+                      <audio 
+                        controls 
+                        src={audioUrl} 
+                        className="w-full" 
+                        onPlay={() => setIsPlaying(true)}
+                        onPause={() => setIsPlaying(false)}
+                        onEnded={() => setIsPlaying(false)}
+                      />
+                    </div>
                   )}
                 </div>
-                
-                {voiceGenerated && audioUrl && (
-                  <div className="mt-2 p-2 border rounded bg-muted/50">
-                    <audio 
-                      controls 
-                      src={audioUrl} 
-                      className="w-full" 
-                      onPlay={() => setIsPlaying(true)}
-                      onPause={() => setIsPlaying(false)}
-                      onEnded={() => setIsPlaying(false)}
-                    />
-                  </div>
-                )}
-              </div>
-            </FormItem>
-          )}
-        />
+              </FormItem>
+            )}
+          />
+        </div>
       )}
       
       <MetaDescriptionField form={form} />

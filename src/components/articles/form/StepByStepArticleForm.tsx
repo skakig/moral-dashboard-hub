@@ -9,6 +9,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, ChevronRight, Wand2, Mic, Play, Pause, Download, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 
 // Components for each step
 import { ThemeField } from "./components/ThemeField";
@@ -22,6 +24,17 @@ import { FeaturedImageField } from "./components/FeaturedImageField";
 // Hooks
 import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { useAIGeneration } from "./hooks/useAIGeneration";
+
+// Voice options with IDs from ElevenLabs
+const voiceOptions = [
+  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel (Default)" },
+  { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
+  { id: "MF3mGyEYCl7XYWbV9V6O", name: "Adam" },
+  { id: "TxGEqnHWrfWFTfGW9XjX", name: "Josh" },
+  { id: "VR6AewLTigWG4xSOukaG", name: "Nicole" },
+  { id: "pNInz6obpgDQGcFmaJgB", name: "Sam" },
+];
 
 // The form schema
 const articleFormSchema = z.object({
@@ -70,6 +83,7 @@ export function StepByStepArticleForm({
 }: StepByStepArticleFormProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [selectedVoice, setSelectedVoice] = useState("21m00Tcm4TlvDq8ikWAM"); // Default to Rachel
   
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
@@ -177,6 +191,11 @@ export function StepByStepArticleForm({
     }
   };
 
+  // Function to handle voice generation with the selected voice
+  const handleGenerateVoice = async () => {
+    await generateVoiceContent(selectedVoice);
+  };
+
   // Define steps
   const steps: Step[] = [
     {
@@ -242,12 +261,33 @@ export function StepByStepArticleForm({
       component: (
         <div className="space-y-4">
           {form.watch("content") ? (
-            <div className="flex flex-col space-y-2">
+            <div className="flex flex-col space-y-4">
+              <div className="flex items-center space-x-3">
+                <FormLabel className="min-w-24">Voice Style:</FormLabel>
+                <Select 
+                  defaultValue={selectedVoice} 
+                  onValueChange={setSelectedVoice}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select voice style" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {voiceOptions.map(voice => (
+                      <SelectItem key={voice.id} value={voice.id}>
+                        {voice.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div className="flex items-center space-x-2">
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={generateVoiceContent}
+                  onClick={handleGenerateVoice}
                   disabled={isGeneratingVoice}
                   className="flex items-center gap-2"
                 >

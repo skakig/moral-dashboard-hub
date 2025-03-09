@@ -119,9 +119,8 @@ export function useMemeOperations() {
         throw error;
       }
       
-      // Convert response back to frontend format
-      // Fix: Use an explicit type assertion to avoid deep instantiation
-      const dbResponse = data as unknown as MemeDbResponse;
+      // Convert response back to frontend format using explicit type
+      const dbResponse = data as MemeDbResponse;
       const newMeme = toMeme(dbResponse);
       
       // Add to local state
@@ -172,9 +171,8 @@ export function useMemeOperations() {
         return;
       }
       
-      // Fix: Use type assertion to ensure data has all required fields
-      // This avoids the "property does not exist" errors and infinite type instantiation
-      const typedData = data as unknown as MemeDbResponse[];
+      // Use type assertion to ensure data has all required fields
+      const typedData = data as MemeDbResponse[];
       
       // Now map with the properly typed data
       const formattedMemes = typedData.map(item => toMeme(item));

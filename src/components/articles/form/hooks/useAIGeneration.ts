@@ -45,8 +45,8 @@ export function useAIGeneration() {
     
     try {
       // Call the edge function to generate keywords
-      // Fixed: Pass theme as the first parameter, as expected by the function
-      const result = await EdgeFunctionService.generateSEOData(theme, '');
+      // Note: Using an empty string as the second parameter for metaDescription
+      const result = await EdgeFunctionService.generateSEOData(theme, "");
       
       if (!result || !result.keywords) {
         throw new Error('Failed to generate keywords. Please try again.');

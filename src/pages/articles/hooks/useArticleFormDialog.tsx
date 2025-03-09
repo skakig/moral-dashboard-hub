@@ -7,12 +7,10 @@ import { Article } from "@/types/articles";
 
 interface UseArticleFormDialogProps {
   onSubmit: (data: any) => Promise<void>;
-  generateArticle?: (params: any) => Promise<any>;
 }
 
 export function useArticleFormDialog({
-  onSubmit,
-  generateArticle
+  onSubmit
 }: UseArticleFormDialogProps) {
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
@@ -37,7 +35,6 @@ export function useArticleFormDialog({
               onSubmit={onSubmit}
               onCancel={() => setFormDialogOpen(false)}
               isLoading={isSubmitting}
-              generateArticle={generateArticle}
             />
           </div>
         </ScrollArea>

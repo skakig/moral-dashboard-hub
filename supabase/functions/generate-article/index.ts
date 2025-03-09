@@ -2,8 +2,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Get the API key from environment variables
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY') || Deno.env.get('OPEN_AI_TMH') || "";
+// Get the API key from environment variables - check multiple possible env var names
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY') || 
+                    Deno.env.get('OPEN_AI_TMH') || 
+                    Deno.env.get('OPEN-AI-CUSTOM-GPT');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

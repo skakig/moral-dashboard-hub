@@ -2,7 +2,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+// Check multiple possible environment variable names for the OpenAI API key
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY') || 
+                    Deno.env.get('OPEN_AI_TMH') || 
+                    Deno.env.get('OPEN-AI-CUSTOM-GPT');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +19,22 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Received request to generate-seo-data function");
+    
+    if (!openAIApiKey) {
+      console.error("OpenAI API key is missing");
+      return new Response(
+        JSON.stringify({ 
+          error: 'Configuration error', 
+          details: 'OpenAI API key is not configured' 
+        }), 
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
     const { content, theme, platform, contentType } = await req.json();
 
     if (!content && !theme) {

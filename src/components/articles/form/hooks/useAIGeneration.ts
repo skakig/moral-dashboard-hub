@@ -58,6 +58,7 @@ export function useAIGeneration() {
       };
       
       setGeneratedContent(content);
+      toast.success('Content generated successfully!');
       return content;
     } catch (error) {
       console.error('Error generating content:', error);

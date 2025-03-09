@@ -96,12 +96,9 @@ serve(async (req) => {
 
     // Fall back to OpenAI TTS if ElevenLabs fails or isn't configured
     if (openAIApiKey) {
-      console.log("Using OpenAI TTS API...");
+      console.log("Using OpenAI TTS...");
       
-      // Use OpenAI API instead
-      const openAiVoice = getOpenAIVoiceFromElevenLabsId(voiceId);
-      
-      const openAiResponse = await fetch("https://api.openai.com/v1/audio/speech", {
+      const openAIResponse = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -110,7 +107,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "tts-1",
           input: trimmedText,
-          voice: openAiVoice,
+          voice: "alloy", // OpenAI voice options: alloy, echo, fable, onyx, nova, shimmer
           response_format: "mp3",
         }),
       }).catch(e => {
@@ -118,25 +115,15 @@ serve(async (req) => {
         throw new Error("Network error contacting OpenAI");
       });
 
-      if (!openAiResponse.ok) {
-        const errorText = await openAiResponse.text();
-        let errorMessage = `OpenAI API error: ${openAiResponse.status} ${openAiResponse.statusText}`;
-        
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error?.message || errorMessage;
-        } catch (e) {
-          // Use text if we can't parse JSON
-          errorMessage = `${errorMessage} - ${errorText.substring(0, 300)}`;
-        }
-        
-        console.error("OpenAI API error:", errorMessage);
-        throw new Error(errorMessage);
+      if (!openAIResponse.ok) {
+        const errorData = await openAIResponse.json().catch(e => ({}));
+        console.error("OpenAI API error:", errorData);
+        throw new Error(`OpenAI API error: ${openAIResponse.status} ${openAIResponse.statusText}`);
       }
 
-      console.log("OpenAI TTS response received successfully");
+      console.log("OpenAI response received successfully");
       
-      const audioArrayBuffer = await openAiResponse.arrayBuffer();
+      const audioArrayBuffer = await openAIResponse.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
 
       const fileName = `voice_${Date.now()}.mp3`;
@@ -152,14 +139,14 @@ serve(async (req) => {
       );
     }
 
-    throw new Error("No available text-to-speech service");
+    throw new Error("No valid voice service available");
 
   } catch (error) {
     console.error("Voice generation error:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || "Failed to generate voice content",
-        details: error.toString()
+        error: error.message || "Failed to generate voice",
+        details: error.toString() 
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -168,18 +155,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Helper function to map ElevenLabs voice IDs to OpenAI voices
-function getOpenAIVoiceFromElevenLabsId(elevenlabsId: string): string {
-  const voiceMap: Record<string, string> = {
-    '21m00Tcm4TlvDq8ikWAM': 'nova', // Rachel
-    'AZnzlk1XvdvUeBnXmlld': 'shimmer', // Domi
-    'EXAVITQu4vr4xnSDxMaL': 'nova', // Sarah
-    'MF3mGyEYCl7XYWbV9V6O': 'echo', // Adam
-    'TxGEqnHWrfWFTfGW9XjX': 'onyx', // Josh
-    'VR6AewLTigWG4xSOukaG': 'alloy', // Nicole
-    'pNInz6obpgDQGcFmaJgB': 'fable', // Sam
-  };
-  
-  return voiceMap[elevenlabsId] || 'alloy'; // Default to alloy if no mapping exists
-}

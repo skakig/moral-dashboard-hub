@@ -30,6 +30,8 @@ interface VoiceStepProps {
   togglePlayPause: () => void;
   setIsPlaying: (value: boolean) => void;
   downloadAudio: () => void;
+  onNext?: () => void;
+  onBack?: () => void;
 }
 
 export function VoiceStep({
@@ -42,10 +44,12 @@ export function VoiceStep({
   onGenerate,
   togglePlayPause,
   setIsPlaying,
-  downloadAudio
+  downloadAudio,
+  onNext,
+  onBack
 }: VoiceStepProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-col space-y-6">
         <div className="flex items-center space-x-3">
           <FormLabel className="min-w-24">Voice Style:</FormLabel>
@@ -136,6 +140,22 @@ export function VoiceStep({
           </div>
         )}
       </div>
+
+      {/* Navigation Buttons */}
+      {(onNext || onBack) && (
+        <div className="flex justify-between mt-8">
+          {onBack && (
+            <Button variant="outline" onClick={onBack}>
+              Previous
+            </Button>
+          )}
+          {onNext && (
+            <Button onClick={onNext}>
+              Next: Featured Image
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

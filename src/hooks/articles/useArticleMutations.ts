@@ -13,15 +13,35 @@ export function useArticleMutations() {
       // Prepare the data for the database
       const { id, ...articleData } = article;
       
+      // Normalize moral level to a number
+      const moralLevel = typeof articleData.moralLevel === 'string' 
+        ? parseInt(articleData.moralLevel, 10) 
+        : (articleData.moralLevel || 5);
+        
+      // Convert keywords from string to array if needed
+      let seoKeywords = articleData.seoKeywords || [];
+      if (typeof seoKeywords === 'string') {
+        seoKeywords = seoKeywords.split(',').map(k => k.trim()).filter(Boolean);
+      }
+      
       // Set default values for required fields
       const formattedData = {
         ...articleData,
         category: articleData.category || 'general', // Default category
         content: articleData.content || '', // Ensure content is never undefined/null
         title: articleData.title || 'Untitled', // Ensure title is never undefined/null
-        status: 'draft' // Default status
-        // Any necessary transformations
+        status: 'draft', // Default status
+        moral_level: moralLevel,
+        seo_keywords: seoKeywords,
+        meta_description: articleData.metaDescription || '',
+        featured_image: articleData.featuredImage || '',
+        voice_url: articleData.voiceUrl || '',
+        voice_generated: articleData.voiceGenerated || false,
+        voice_file_name: articleData.voiceFileName || '',
+        voice_base64: articleData.voiceBase64 || '',
       };
+      
+      console.log("Creating article with data:", formattedData);
       
       const { data, error } = await supabase
         .from('articles')
@@ -29,7 +49,11 @@ export function useArticleMutations() {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
+      
       return data;
     },
     onSuccess: () => {
@@ -47,23 +71,52 @@ export function useArticleMutations() {
     mutationFn: async (article: ArticleUpdateInput) => {
       const { id, ...updateData } = article;
       
-      // Handle status update if needed
-      let status_update = {};
-      if (article.meta_description?.includes("published")) {
-        status_update = {
-          status: "published",
-          publish_date: new Date().toISOString()
-        };
+      // Normalize moral level to a number
+      const moralLevel = typeof updateData.moralLevel === 'string' 
+        ? parseInt(updateData.moralLevel, 10) 
+        : (updateData.moralLevel || 5);
+      
+      // Convert keywords from string to array if needed
+      let seoKeywords = updateData.seoKeywords || [];
+      if (typeof seoKeywords === 'string') {
+        seoKeywords = seoKeywords.split(',').map(k => k.trim()).filter(Boolean);
       }
+      
+      // Format the data for database update
+      const formattedData = {
+        ...updateData,
+        moral_level: moralLevel,
+        seo_keywords: seoKeywords,
+        meta_description: updateData.metaDescription || '',
+        featured_image: updateData.featuredImage || '',
+        voice_url: updateData.voiceUrl || '',
+        voice_generated: updateData.voiceGenerated || false,
+        voice_file_name: updateData.voiceFileName || '',
+        voice_base64: updateData.voiceBase64 || '',
+      };
+      
+      // Handle status update if needed
+      if (updateData.status) {
+        formattedData.status = updateData.status;
+        if (updateData.status === 'published') {
+          formattedData.publish_date = new Date().toISOString();
+        }
+      }
+      
+      console.log("Updating article with ID:", id, "Data:", formattedData);
       
       const { data, error } = await supabase
         .from('articles')
-        .update({ ...updateData, ...status_update })
+        .update(formattedData)
         .eq('id', id)
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
+      
       return data;
     },
     onSuccess: () => {

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -74,6 +74,25 @@ export function StepByStepArticleForm({
     updateAutoGenerateOptions
   } = useAutoGenerateOptions();
 
+  // Handle platform changes for content length
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "platform") {
+        // Set default content length based on platform
+        const platform = value.platform;
+        if (platform === "YouTube") {
+          form.setValue("contentLength", "long");
+        } else if (platform === "Instagram" || platform === "Twitter" || platform === "TikTok") {
+          form.setValue("contentLength", "short");
+        } else if (platform === "Facebook" || platform === "LinkedIn") {
+          form.setValue("contentLength", "medium");
+        }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   // Content generation logic - defined BEFORE it's used in steps
   const {
     isGeneratingContent,
@@ -125,8 +144,14 @@ export function StepByStepArticleForm({
       description: 'Configure the tone, length, and moral level of your content',
       component: (
         <ConfigStep 
-          form={form} 
-          setContentLength={(value) => form.setValue("contentLength", value)} 
+          data={form.getValues()}
+          onDataChange={(data) => {
+            Object.entries(data).forEach(([key, value]) => {
+              form.setValue(key as any, value);
+            });
+          }}
+          onNext={() => goToNextStep()}
+          onBack={() => goToPreviousStep()}
         />
       ),
       isRequired: false,
@@ -139,7 +164,9 @@ export function StepByStepArticleForm({
         <ContentStep 
           form={form} 
           isGenerating={isGeneratingContent} 
-          onGenerate={handleGenerateContent} 
+          onGenerate={handleGenerateContent}
+          onNext={() => goToNextStep()}
+          onBack={() => goToPreviousStep()}
         />
       ),
       isRequired: true,
@@ -169,6 +196,8 @@ export function StepByStepArticleForm({
           togglePlayPause={togglePlayPause}
           setIsPlaying={setIsPlaying}
           downloadAudio={downloadAudio}
+          onNext={() => goToNextStep()}
+          onBack={() => goToPreviousStep()}
         />
       ),
       isRequired: false,
@@ -202,7 +231,8 @@ export function StepByStepArticleForm({
     goToNextStep,
     goToPreviousStep,
     goToStepById,
-    canAutoGenerate
+    canAutoGenerate,
+    nextStepTitle
   } = useArticleFormSteps(form, steps, handleGenerateContent);
 
   // Form submission
@@ -215,6 +245,11 @@ export function StepByStepArticleForm({
           message: "Content is required when providing a title" 
         });
         return;
+      }
+      
+      // Convert moralLevel to number if it's a string
+      if (typeof data.moralLevel === 'string') {
+        data.moralLevel = parseInt(data.moralLevel, 10);
       }
       
       if (onFormSubmit) {
@@ -244,8 +279,7 @@ export function StepByStepArticleForm({
       onNext={goToNextStep}
       onCancel={onCancel}
       onGenerate={handleGenerateContent}
-    >
-      {currentStep.component}
-    </ArticleFormLayout>
+      nextStepTitle={nextStepTitle}
+    />
   );
 }

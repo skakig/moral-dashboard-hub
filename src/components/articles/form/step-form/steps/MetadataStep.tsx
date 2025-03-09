@@ -1,54 +1,101 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Copy } from "lucide-react";
-import { MetaDescriptionField } from "../../components/MetaDescriptionField";
+import { Wand2, Loader2 } from "lucide-react";
 import { ArticleFormValues } from "../../StepByStepArticleForm";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MetadataStepProps {
   form: UseFormReturn<ArticleFormValues>;
+  onNext?: () => void;
+  onBack?: () => void;
 }
 
-export function MetadataStep({ form }: MetadataStepProps) {
-  const handleCopyField = (fieldName: keyof ArticleFormValues, successMessage: string) => {
-    const value = form.getValues(fieldName);
-    if (value) {
-      navigator.clipboard.writeText(String(value));
-      toast.success(successMessage);
-    } else {
-      toast.error(`No ${fieldName} to copy`);
+export function MetadataStep({ form, onNext, onBack }: MetadataStepProps) {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const generateSEOData = async () => {
+    try {
+      setIsGenerating(true);
+      
+      const content = form.getValues("content") || "";
+      const theme = form.getValues("theme") || "";
+      const platform = form.getValues("platform") || "general";
+      const contentType = form.getValues("contentType") || "article";
+      
+      if (!content && !theme) {
+        toast.error("Please enter content or theme first");
+        setIsGenerating(false);
+        return;
+      }
+      
+      toast.info("Generating SEO data...");
+      
+      // Call the edge function to generate SEO data
+      const { data, error } = await supabase.functions.invoke("generate-seo-data", {
+        body: { content, theme, platform, contentType }
+      });
+      
+      if (error) throw error;
+      
+      if (!data) {
+        throw new Error("No data returned from SEO generation");
+      }
+      
+      // Update form fields with generated data
+      form.setValue("metaDescription", data.metaDescription || "", { shouldDirty: true });
+      form.setValue("seoKeywords", Array.isArray(data.keywords) ? data.keywords.join(", ") : "", { shouldDirty: true });
+      
+      toast.success("SEO data generated successfully!");
+    } catch (error) {
+      console.error("Error generating SEO data:", error);
+      toast.error("Failed to generate SEO data");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <MetaDescriptionField form={form} />
-      
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">SEO Metadata</h3>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={generateSEOData}
+          disabled={isGenerating}
+          className="flex items-center gap-2"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Wand2 className="w-4 h-4" />
+              Generate SEO Data
+            </>
+          )}
+        </Button>
+      </div>
+
       <FormField
         control={form.control}
-        name="seoKeywords"
+        name="metaDescription"
         render={({ field }) => (
           <FormItem>
-            <div className="flex justify-between items-center">
-              <FormLabel>Keywords (comma separated)</FormLabel>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 px-2 text-xs flex items-center gap-1"
-                onClick={() => handleCopyField("seoKeywords", 'Keywords copied to clipboard')}
-              >
-                <Copy className="h-3 w-3" />
-                Copy
-              </Button>
-            </div>
+            <FormLabel>Meta Description</FormLabel>
             <FormControl>
               <Textarea
-                placeholder="Enter SEO keywords, separated by commas"
+                placeholder="Brief description for search engines..."
+                className="min-h-24"
                 {...field}
               />
             </FormControl>
@@ -56,6 +103,39 @@ export function MetadataStep({ form }: MetadataStepProps) {
           </FormItem>
         )}
       />
+
+      <FormField
+        control={form.control}
+        name="seoKeywords"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Keywords (comma separated)</FormLabel>
+            <FormControl>
+              <Input
+                placeholder="moral hierarchy, ethics, personal growth, etc."
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Navigation Buttons */}
+      {(onNext || onBack) && (
+        <div className="flex justify-between mt-8">
+          {onBack && (
+            <Button variant="outline" onClick={onBack}>
+              Previous
+            </Button>
+          )}
+          {onNext && (
+            <Button onClick={onNext}>
+              Next: Voice Content
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

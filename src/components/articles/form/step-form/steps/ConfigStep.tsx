@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { StepHeader } from "../StepHeader";
@@ -11,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
   const [level, setLevel] = useState<number>(data?.moralLevel || 5);
-  const [tags, setTags] = useState<string[]>(data?.tags || []);
-  const [tag, setTag] = useState("");
+  const [contentLength, setContentLength] = useState<string>(data?.contentLength || "medium");
   
   const handleLevelChange = (value: string) => {
     const newLevel = parseInt(value, 10);
@@ -20,28 +18,11 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
     onDataChange({ ...data, moralLevel: newLevel });
   };
   
-  const addTag = () => {
-    if (tag && !tags.includes(tag)) {
-      const newTags = [...tags, tag];
-      setTags(newTags);
-      onDataChange({ ...data, tags: newTags });
-      setTag("");
-    }
+  const handleContentLengthChange = (value: string) => {
+    setContentLength(value);
+    onDataChange({ ...data, contentLength: value });
   };
-  
-  const removeTag = (tagToRemove: string) => {
-    const newTags = tags.filter(t => t !== tagToRemove);
-    setTags(newTags);
-    onDataChange({ ...data, tags: newTags });
-  };
-  
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    }
-  };
-  
+
   // When we interpret the moral level with levels
   const getMoralLevelText = (level: number): string => {
     const levelTexts = {
@@ -58,6 +39,9 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
     
     return levelTexts[level as keyof typeof levelTexts] || "Level 5: Empathy";
   };
+
+  // Determine next step name
+  const nextStepName = "Content";
 
   return (
     <div className="space-y-6">
@@ -98,42 +82,31 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
         </Card>
       </div>
       
-      <Separator />
-      
       <div>
-        <Label htmlFor="tags" className="block mb-2">Tags (Optional)</Label>
-        <div className="flex">
-          <Input 
-            id="tags"
-            value={tag}
-            onChange={(e) => setTag(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Add keywords or tags and press Enter"
-            className="flex-grow"
-          />
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={addTag}
-            className="ml-2"
-          >
-            Add
-          </Button>
-        </div>
+        <Label htmlFor="content-length" className="block mb-2">
+          Content Length
+        </Label>
+        <Select
+          value={contentLength}
+          onValueChange={handleContentLengthChange}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select content length" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="short">Short (300-500 words)</SelectItem>
+            <SelectItem value="medium">Medium (1000-1500 words)</SelectItem>
+            <SelectItem value="long">Long (2000-3000 words)</SelectItem>
+          </SelectContent>
+        </Select>
         
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {tags.map((tag, index) => (
-              <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => removeTag(tag)}>
-                {tag} ×
-              </Badge>
-            ))}
-          </div>
-        )}
-        
-        <p className="mt-2 text-sm text-gray-500">
-          Tags help categorize your content and improve searchability.
-        </p>
+        <Card className="mt-4 bg-muted/50">
+          <CardContent className="pt-6">
+            <p className="text-sm">
+              Content length should match your chosen platform. Longer content works better for blogs and YouTube, while shorter formats are ideal for social media.
+            </p>
+          </CardContent>
+        </Card>
       </div>
             
       <div className="flex justify-between mt-8">
@@ -141,7 +114,7 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
           Previous
         </Button>
         <Button onClick={onNext}>
-          Next: Content
+          Next: {nextStepName}
         </Button>
       </div>
     </div>

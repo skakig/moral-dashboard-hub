@@ -16,6 +16,7 @@ interface StepControlsProps {
   submitLabel?: string;
   canAutoGenerate?: boolean;
   onBack?: () => void;
+  nextStepTitle?: string;
 }
 
 export function StepControls({
@@ -30,6 +31,7 @@ export function StepControls({
   submitLabel = "Create",
   canAutoGenerate = false,
   onBack,
+  nextStepTitle,
 }: StepControlsProps) {
   return (
     <CardFooter className="flex justify-between p-6 pt-0">
@@ -88,7 +90,7 @@ export function StepControls({
           </Button>
         ) : (
           <Button type="button" onClick={onNext}>
-            Next
+            {nextStepTitle ? `Next: ${nextStepTitle}` : "Next"}
           </Button>
         )}
       </div>

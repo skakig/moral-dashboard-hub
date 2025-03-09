@@ -1,70 +1,62 @@
 
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState, useCallback } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { ArticleFormValues, Step } from "../types";
+import { Step } from "../types";
 
 export function useArticleFormSteps(
-  form: UseFormReturn<ArticleFormValues>,
+  form: UseFormReturn<any>,
   steps: Step[],
-  handleGenerateContent: () => Promise<void>
+  autoGenerateHandler?: () => Promise<void>
 ) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  
+
   const currentStep = steps[currentStepIndex];
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === steps.length - 1;
 
-  const goToNextStep = () => {
-    // Only validate fields required for the current step
-    if (currentStep.isRequired) {
-      let isValid = true;
-      
-      if (currentStep.id === 'theme' && !form.getValues("theme")) {
-        form.setError("theme", { type: "required", message: "Theme is required" });
-        isValid = false;
-      }
-      
-      if (currentStep.id === 'platform-type') {
-        if (!form.getValues("platform")) {
-          toast.error("Please select a platform");
-          isValid = false;
-        }
-        if (!form.getValues("contentType")) {
-          toast.error("Please select a content type");
-          isValid = false;
-        }
-      }
-      
-      if (currentStep.id === 'content' && !form.getValues("content")) {
-        form.setError("content", { type: "required", message: "Content is required" });
-        isValid = false;
-      }
-      
-      if (currentStep.id === 'basic-info' && !form.getValues("title")) {
-        form.setError("title", { type: "required", message: "Title is required" });
-        isValid = false;
-      }
-      
-      if (!isValid) return;
+  // Get valid steps based on form state
+  const getValidSteps = useCallback(() => {
+    return steps.filter(step => !step.isRequired || form.getValues()[step.id]);
+  }, [steps, form]);
+
+  // Go to next step
+  const goToNextStep = useCallback(() => {
+    if (currentStepIndex < steps.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
     }
-    
-    setCurrentStepIndex(prev => (prev < steps.length - 1 ? prev + 1 : prev));
-  };
+  }, [currentStepIndex, steps.length]);
 
-  const goToPreviousStep = () => {
-    setCurrentStepIndex(prev => (prev > 0 ? prev - 1 : prev));
-  };
+  // Go to previous step
+  const goToPreviousStep = useCallback(() => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
+    }
+  }, [currentStepIndex]);
 
-  const goToStepById = (stepId: string) => {
-    const stepIndex = steps.findIndex(step => step.id === stepId);
+  // Go to a specific step by ID
+  const goToStepById = useCallback((id: string) => {
+    const stepIndex = steps.findIndex(step => step.id === id);
     if (stepIndex !== -1) {
       setCurrentStepIndex(stepIndex);
     }
-  };
+  }, [steps]);
 
-  // Check if we can auto-generate content (when theme, platform, and contentType are filled)
-  const canAutoGenerate = Boolean(form.watch("theme") && form.watch("platform") && form.watch("contentType"));
+  // Determine if we can auto-generate content
+  const canAutoGenerate = useCallback(() => {
+    const theme = form.getValues("theme");
+    const platform = form.getValues("platform");
+    const contentType = form.getValues("contentType");
+    
+    return Boolean(theme && platform && contentType && autoGenerateHandler);
+  }, [form, autoGenerateHandler]);
+
+  // Get the title of the next step
+  const getNextStepTitle = useCallback(() => {
+    if (currentStepIndex < steps.length - 1) {
+      return steps[currentStepIndex + 1].title;
+    }
+    return null;
+  }, [currentStepIndex, steps]);
 
   return {
     currentStep,
@@ -74,6 +66,7 @@ export function useArticleFormSteps(
     goToNextStep,
     goToPreviousStep,
     goToStepById,
-    canAutoGenerate
+    canAutoGenerate: canAutoGenerate(),
+    nextStepTitle: getNextStepTitle()
   };
 }

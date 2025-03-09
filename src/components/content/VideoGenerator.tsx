@@ -5,84 +5,124 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { Wand2, Loader2 } from "lucide-react";
 import { VideosList } from "./VideosList";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 export function VideoGenerator() {
-  const [prompt, setPrompt] = useState("");
-  const [duration, setDuration] = useState(15);
-  const [style, setStyle] = useState("realistic");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [platform, setPlatform] = useState("youtube");
+  const [duration, setDuration] = useState("30");
+  const [voiceStyle, setVoiceStyle] = useState("casual");
   
   const handleGenerate = async () => {
-    if (!prompt) return;
+    if (!prompt) {
+      toast.error("Please enter a prompt for your video");
+      return;
+    }
     
     setIsGenerating(true);
+    toast.info("Video generation started. This might take a few minutes...");
     
-    // Simulate API call to generate video
+    // Simulate API call
     setTimeout(() => {
       setIsGenerating(false);
-      // Video generation success would happen here
-    }, 2000);
+      toast.success("Video generated successfully!");
+    }, 3000);
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle>Generate AI Video</CardTitle>
+          <CardTitle>Generate New Video</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="prompt">Video Description</Label>
+            <Label htmlFor="platform">Platform</Label>
+            <Select
+              value={platform}
+              onValueChange={setPlatform}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="youtube">YouTube</SelectItem>
+                <SelectItem value="tiktok">TikTok</SelectItem>
+                <SelectItem value="instagram">Instagram Reels</SelectItem>
+                <SelectItem value="facebook">Facebook</SelectItem>
+                <SelectItem value="linkedin">LinkedIn</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="prompt">Video Prompt</Label>
             <Textarea
               id="prompt"
-              placeholder="Describe the video you want to generate in detail..."
+              placeholder="Describe the video you want to generate..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[120px]"
+              rows={4}
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="style">Visual Style</Label>
-              <Select value={style} onValueChange={setStyle}>
-                <SelectTrigger id="style">
-                  <SelectValue placeholder="Select a style" />
+              <Label htmlFor="duration">Duration (seconds)</Label>
+              <Select
+                value={duration}
+                onValueChange={setDuration}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select duration" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="realistic">Realistic</SelectItem>
-                  <SelectItem value="cartoon">Cartoon</SelectItem>
-                  <SelectItem value="3d">3D Animation</SelectItem>
-                  <SelectItem value="cinematic">Cinematic</SelectItem>
-                  <SelectItem value="abstract">Abstract</SelectItem>
+                  <SelectItem value="15">15 seconds (Short)</SelectItem>
+                  <SelectItem value="30">30 seconds (Medium)</SelectItem>
+                  <SelectItem value="60">60 seconds (Long)</SelectItem>
+                  <SelectItem value="120">2 minutes (Extended)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
             <div className="space-y-2">
-              <Label>Duration: {duration} seconds</Label>
-              <Slider
-                defaultValue={[15]}
-                min={5}
-                max={60}
-                step={5}
-                onValueChange={(values) => setDuration(values[0])}
-              />
+              <Label htmlFor="voiceStyle">Voice Style</Label>
+              <Select
+                value={voiceStyle}
+                onValueChange={setVoiceStyle}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select voice style" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="professional">Professional</SelectItem>
+                  <SelectItem value="casual">Casual</SelectItem>
+                  <SelectItem value="excited">Excited</SelectItem>
+                  <SelectItem value="serious">Serious</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
           <div className="pt-4">
-            <div className="bg-muted/30 rounded-lg h-[240px] flex items-center justify-center">
+            <div className="w-full h-64 bg-muted/30 rounded-lg flex items-center justify-center">
               <p className="text-muted-foreground">Video preview will appear here</p>
+              {/* Video preview will go here */}
             </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={() => setPrompt("")}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setPrompt("");
+              setDuration("30");
+              setVoiceStyle("casual");
+            }}
+          >
             Reset
           </Button>
           <Button onClick={handleGenerate} disabled={isGenerating || !prompt}>
@@ -103,7 +143,7 @@ export function VideoGenerator() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Your Videos</CardTitle>
+          <CardTitle>Saved Videos</CardTitle>
         </CardHeader>
         <CardContent>
           <VideosList />

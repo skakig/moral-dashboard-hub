@@ -36,19 +36,22 @@ export class EdgeFunctionService {
   /**
    * Generate an image using AI
    */
-  static async generateImage(prompt: string) {
+  static async generateImage(prompt: string, platform?: string, width = 1024, height = 1024) {
     try {
       // Get the preferred service for image generation
       const mapping = await getPreferredServiceForFunction('generate-image');
       const service = mapping?.service_name || 'StableDiffusion';
       
-      console.log(`Using ${service} for image generation`);
+      console.log(`Using ${service} for image generation with platform: ${platform || 'general'}`);
       
       // Call the edge function
       const { data, error } = await supabase.functions.invoke('generate-image', {
         body: { 
           prompt,
-          service
+          service,
+          platform,
+          width,
+          height
         }
       });
       

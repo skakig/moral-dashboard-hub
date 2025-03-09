@@ -6,6 +6,32 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { MemeGenerator } from "@/components/content/MemeGenerator";
 import { VideoGenerator } from "@/components/content/VideoGenerator";
 import { SchedulePlanner } from "@/components/content/SchedulePlanner";
+import { Suspense } from "react";
+
+// Lazy loading components for better performance
+const LazyComponent = ({ component: Component, isActive }: { component: React.ComponentType<any>, isActive: boolean }) => {
+  if (!isActive) {
+    return (
+      <Card>
+        <CardContent className="h-64 flex items-center justify-center">
+          <p className="text-muted-foreground">Select this tab to load the content</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Suspense fallback={
+      <Card>
+        <CardContent className="h-64 flex items-center justify-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </CardContent>
+      </Card>
+    }>
+      <Component />
+    </Suspense>
+  );
+};
 
 export default function AIContent() {
   const [activeTab, setActiveTab] = useState("memes");
@@ -28,57 +54,15 @@ export default function AIContent() {
           </TabsList>
           
           <TabsContent value="memes">
-            {activeTab === "memes" ? (
-              <MemeGenerator />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Meme Generator</CardTitle>
-                  <CardDescription>
-                    Create viral memes with AI-powered image and text generation
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-64 flex items-center justify-center">
-                  <p className="text-muted-foreground">Select this tab to load the meme generator</p>
-                </CardContent>
-              </Card>
-            )}
+            <LazyComponent component={MemeGenerator} isActive={activeTab === "memes"} />
           </TabsContent>
           
           <TabsContent value="videos">
-            {activeTab === "videos" ? (
-              <VideoGenerator />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Video Generator</CardTitle>
-                  <CardDescription>
-                    Create engaging video content with AI-powered tools
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-64 flex items-center justify-center">
-                  <p className="text-muted-foreground">Select this tab to load the video generator</p>
-                </CardContent>
-              </Card>
-            )}
+            <LazyComponent component={VideoGenerator} isActive={activeTab === "videos"} />
           </TabsContent>
           
           <TabsContent value="scheduler">
-            {activeTab === "scheduler" ? (
-              <SchedulePlanner />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Content Scheduler</CardTitle>
-                  <CardDescription>
-                    Plan and schedule your content across multiple platforms
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="h-64 flex items-center justify-center">
-                  <p className="text-muted-foreground">Select this tab to load the content scheduler</p>
-                </CardContent>
-              </Card>
-            )}
+            <LazyComponent component={SchedulePlanner} isActive={activeTab === "scheduler"} />
           </TabsContent>
         </Tabs>
       </div>

@@ -10,6 +10,7 @@ import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { Button } from "@/components/ui/button";
 import { FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Mic } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 // Main ArticleFormFields component now acts as a coordinator
 export function ArticleFormFields({ form }) {
@@ -46,7 +47,15 @@ export function ArticleFormFields({ form }) {
         setContentLength={setContentLength} 
       />
       
-      <ContentField form={form} />
+      <div>
+        <h3 className="text-lg font-medium mb-2">Article Content</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Enter your article content below or use AI to generate content based on your settings.
+          The content should align with The Moral Hierarchy principles at level {form.watch("moralLevel") || "5"}.
+        </p>
+        <Separator className="mb-4" />
+        <ContentField form={form} />
+      </div>
       
       {form.watch("content") && (
         <FormField

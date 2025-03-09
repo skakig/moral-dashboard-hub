@@ -2,6 +2,7 @@
 import { useState } from "react";
 
 export interface AutoGenerateOptions {
+  content: boolean;
   voice: boolean;
   image: boolean;
 }
@@ -9,6 +10,7 @@ export interface AutoGenerateOptions {
 export function useAutoGenerateOptions() {
   const [autoGenerateContent, setAutoGenerateContent] = useState(true);
   const [autoGenerateOptions, setAutoGenerateOptions] = useState<AutoGenerateOptions>({
+    content: true,
     voice: false,
     image: false,
   });

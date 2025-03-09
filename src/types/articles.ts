@@ -1,3 +1,4 @@
+
 export interface Article {
   id: string;
   title: string;
@@ -66,4 +67,17 @@ export interface ArticleUpdateInput {
   voice_base64?: string;
   moral_level?: number;
   status?: "draft" | "scheduled" | "published";
+  
+  // Support for camelCase versions for form data
+  seoKeywords?: string[] | string;
+  metaDescription?: string | null;
+  featuredImage?: string | null;
+  voiceUrl?: string;
+  voiceGenerated?: boolean;
+  voiceFileName?: string;
+  voiceBase64?: string;
+  moralLevel?: number | string;
+  
+  // Allow category for create operation
+  category?: string;
 }

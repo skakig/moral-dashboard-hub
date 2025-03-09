@@ -14,12 +14,12 @@ export function useArticleMutations() {
       const { id, ...articleData } = article;
       
       // Normalize moral level to a number
-      const moralLevel = typeof articleData.moralLevel === 'string' 
-        ? parseInt(articleData.moralLevel, 10) 
-        : (articleData.moralLevel || 5);
+      const moralLevel = typeof articleData.moral_level === 'string' 
+        ? parseInt(articleData.moral_level, 10) 
+        : (articleData.moral_level || articleData.moralLevel || 5);
         
       // Convert keywords from string to array if needed
-      let seoKeywords = articleData.seoKeywords || [];
+      let seoKeywords = articleData.seo_keywords || articleData.seoKeywords || [];
       if (typeof seoKeywords === 'string') {
         seoKeywords = seoKeywords.split(',').map(k => k.trim()).filter(Boolean);
       }
@@ -33,12 +33,12 @@ export function useArticleMutations() {
         status: 'draft', // Default status
         moral_level: moralLevel,
         seo_keywords: seoKeywords,
-        meta_description: articleData.metaDescription || '',
-        featured_image: articleData.featuredImage || '',
-        voice_url: articleData.voiceUrl || '',
-        voice_generated: articleData.voiceGenerated || false,
-        voice_file_name: articleData.voiceFileName || '',
-        voice_base64: articleData.voiceBase64 || '',
+        meta_description: articleData.meta_description || articleData.metaDescription || '',
+        featured_image: articleData.featured_image || articleData.featuredImage || '',
+        voice_url: articleData.voice_url || articleData.voiceUrl || '',
+        voice_generated: articleData.voice_generated || articleData.voiceGenerated || false,
+        voice_file_name: articleData.voice_file_name || articleData.voiceFileName || '',
+        voice_base64: articleData.voice_base64 || articleData.voiceBase64 || '',
       };
       
       console.log("Creating article with data:", formattedData);
@@ -72,12 +72,12 @@ export function useArticleMutations() {
       const { id, ...updateData } = article;
       
       // Normalize moral level to a number
-      const moralLevel = typeof updateData.moralLevel === 'string' 
-        ? parseInt(updateData.moralLevel, 10) 
-        : (updateData.moralLevel || 5);
+      const moralLevel = typeof updateData.moral_level === 'string' 
+        ? parseInt(updateData.moral_level, 10) 
+        : (updateData.moral_level || updateData.moralLevel || 5);
       
       // Convert keywords from string to array if needed
-      let seoKeywords = updateData.seoKeywords || [];
+      let seoKeywords = updateData.seo_keywords || updateData.seoKeywords || [];
       if (typeof seoKeywords === 'string') {
         seoKeywords = seoKeywords.split(',').map(k => k.trim()).filter(Boolean);
       }
@@ -87,12 +87,12 @@ export function useArticleMutations() {
         ...updateData,
         moral_level: moralLevel,
         seo_keywords: seoKeywords,
-        meta_description: updateData.metaDescription || '',
-        featured_image: updateData.featuredImage || '',
-        voice_url: updateData.voiceUrl || '',
-        voice_generated: updateData.voiceGenerated || false,
-        voice_file_name: updateData.voiceFileName || '',
-        voice_base64: updateData.voiceBase64 || '',
+        meta_description: updateData.meta_description || updateData.metaDescription || '',
+        featured_image: updateData.featured_image || updateData.featuredImage || '',
+        voice_url: updateData.voice_url || updateData.voiceUrl || '',
+        voice_generated: updateData.voice_generated || updateData.voiceGenerated || false,
+        voice_file_name: updateData.voice_file_name || updateData.voiceFileName || '',
+        voice_base64: updateData.voice_base64 || updateData.voiceBase64 || '',
       };
       
       // Handle status update if needed

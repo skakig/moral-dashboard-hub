@@ -280,6 +280,8 @@ export function StepByStepArticleForm({
       onCancel={onCancel}
       onGenerate={handleGenerateContent}
       nextStepTitle={nextStepTitle}
-    />
+    >
+      {currentStep.component}
+    </ArticleFormLayout>
   );
 }

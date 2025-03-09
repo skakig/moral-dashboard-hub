@@ -145,6 +145,8 @@ Return ONLY a JSON object with this structure:
       };
     }
     
+    console.log("Successfully generated content with title:", parsedContent.title);
+    
     return new Response(
       JSON.stringify(parsedContent),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -1,6 +1,7 @@
 
+import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { EdgeFunctionService } from "@/services/api/edgeFunctions";
 
 interface GenerateArticleParams {
   theme: string;
@@ -16,31 +17,33 @@ interface GenerateArticleParams {
  * Hook for AI article generation
  */
 export function useArticleGeneration() {
+  const [loading, setLoading] = useState(false);
+  
   // Generate article using AI
   const generateArticle = async (params: GenerateArticleParams) => {
     try {
+      setLoading(true);
       toast.info(`Generating content for ${params.contentType}...`);
       
-      const response = await supabase.functions.invoke('generate-article', {
-        body: params,
-      });
-
-      if (response.error) {
-        console.error("Error response from generate-article function:", response.error);
-        toast.error("Failed to generate article");
+      const response = await EdgeFunctionService.generateArticle(params);
+      
+      if (!response) {
         return null;
       }
 
       toast.success("Content generated successfully");
-      return response.data;
+      return response;
     } catch (error) {
       console.error("Error generating article:", error);
-      toast.error("Failed to generate article");
+      // The error is already handled by the service
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
   return {
     generateArticle,
+    loading
   };
 }

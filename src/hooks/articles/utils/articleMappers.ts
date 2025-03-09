@@ -33,7 +33,7 @@ export const mapFormToDbArticle = (formValues: ArticleFormValues) => {
     voice_generated: formValues.voiceGenerated || false,
     voice_file_name: formValues.voiceFileName || null, 
     voice_base64: formValues.voiceBase64 || null,
-    moral_level: formValues.moralLevel ? Number(formValues.moralLevel) : 5,
-    excerpt: formValues.excerpt || null
+    moral_level: formValues.moralLevel ? Number(formValues.moralLevel) : 5
+    // Remove the excerpt field as it doesn't exist in the database schema
   };
 };

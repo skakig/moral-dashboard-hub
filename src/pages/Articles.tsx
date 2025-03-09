@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ArticleToolbar } from "@/components/articles/ArticleToolbar";
 import { ArticlesTable } from "@/components/articles/ArticlesTable";
-import { ArticleForm } from "@/components/articles/ArticleForm";
+import { ArticleForm } from "@/components/articles/form";
 import { ThemeForm } from "@/components/themes/ThemeForm";
 import { ThemesTable } from "@/components/themes/ThemesTable";
 import { useArticles } from "@/hooks/useArticles";

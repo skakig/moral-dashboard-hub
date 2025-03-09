@@ -48,7 +48,7 @@ export function useMemeOperations() {
       }
       
       // Enhance the prompt for better AI generation
-      const enhancedPrompt = `Create a high-quality meme image for: ${prompt}. Make it look realistic, detailed, and suitable for a meme.`;
+      const enhancedPrompt = `Create a high-quality meme image for: ${prompt}. Make it look realistic, detailed, and suitable for a meme. Use vibrant colors and clear imagery that communicates the concept well.`;
       
       const result = await EdgeFunctionService.generateImage(enhancedPrompt, platform, width, height);
       

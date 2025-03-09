@@ -23,7 +23,7 @@ export default function Settings() {
         setCheckingConnection(true);
         setConnectionError(null);
         
-        // Simple query to test connection
+        // Use the edge function to check database schema
         const { data, error } = await supabase.functions.invoke('check-db-schema');
         
         if (error) {
@@ -34,6 +34,26 @@ export default function Settings() {
           setConnectionError(`Database connection error: ${data?.error || "Unknown error"}`);
         } else {
           console.log("Supabase connection successful:", data);
+          
+          // If there are missing tables but we have a success response, that means
+          // we need to initialize the database
+          if (data.missingColumns > 0) {
+            console.log("Some database tables/columns need to be initialized");
+            try {
+              // Try to initialize tables
+              const initResult = await supabase.functions.invoke('initialize-db-tables');
+              
+              if (initResult.error) {
+                console.error("Error initializing database tables:", initResult.error);
+                setConnectionError(`Failed to initialize database tables: ${initResult.error.message}`);
+              } else {
+                console.log("Database tables initialized successfully:", initResult.data);
+              }
+            } catch (initError: any) {
+              console.error("Exception initializing database tables:", initError);
+              setConnectionError(`Failed to initialize database tables: ${initError.message}`);
+            }
+          }
         }
       } catch (err: any) {
         console.error("Exception checking Supabase connection:", err);
@@ -48,6 +68,30 @@ export default function Settings() {
 
   const handleRetryConnection = () => {
     window.location.reload();
+  };
+
+  const handleInitializeTables = async () => {
+    try {
+      setCheckingConnection(true);
+      setConnectionError(null);
+      
+      // Call the initialize tables edge function
+      const { data, error } = await supabase.functions.invoke('initialize-db-tables');
+      
+      if (error) {
+        console.error("Error initializing database tables:", error);
+        setConnectionError(`Failed to initialize database tables: ${error.message}`);
+      } else {
+        console.log("Database tables initialized successfully:", data);
+        // Reload page to check if initialization worked
+        window.location.reload();
+      }
+    } catch (err: any) {
+      console.error("Exception initializing database tables:", err);
+      setConnectionError(`Failed to initialize database tables: ${err.message}`);
+    } finally {
+      setCheckingConnection(false);
+    }
   };
 
   if (connectionError) {
@@ -66,14 +110,22 @@ export default function Settings() {
             <AlertTitle>Database Connection Error</AlertTitle>
             <AlertDescription className="flex flex-col gap-2">
               <p>{connectionError}</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="self-start mt-2"
-                onClick={handleRetryConnection}
-              >
-                Retry Connection
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRetryConnection}
+                >
+                  Retry Connection
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  onClick={handleInitializeTables}
+                >
+                  Initialize Database Tables
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         </div>

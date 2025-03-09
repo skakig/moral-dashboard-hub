@@ -71,8 +71,26 @@ export function StepByStepArticleForm({
     autoGenerateContent,
     setAutoGenerateContent,
     autoGenerateOptions,
-    setAutoGenerateOptions
+    updateAutoGenerateOptions
   } = useAutoGenerateOptions();
+
+  // Content generation logic - defined BEFORE it's used in steps
+  const {
+    isGeneratingContent,
+    isGeneratingVoice,
+    isPlaying,
+    audioUrl,
+    handleGenerateContent,
+    handleGenerateVoice,
+    togglePlayPause,
+    downloadAudio,
+    setIsPlaying
+  } = useContentGeneration(
+    form,
+    autoGenerateOptions,
+    selectedVoice,
+    (stepId) => goToStepById(stepId)
+  );
 
   // Define steps
   const steps = [
@@ -87,7 +105,7 @@ export function StepByStepArticleForm({
           autoGenerate={autoGenerateContent} 
           setAutoGenerate={setAutoGenerateContent}
           autoGenerateOptions={autoGenerateOptions}
-          setAutoGenerateOptions={setAutoGenerateOptions}
+          setAutoGenerateOptions={updateAutoGenerateOptions}
         />
       ),
       isRequired: true,
@@ -186,24 +204,6 @@ export function StepByStepArticleForm({
     goToStepById,
     canAutoGenerate
   } = useArticleFormSteps(form, steps, handleGenerateContent);
-
-  // Content generation logic
-  const {
-    isGeneratingContent,
-    isGeneratingVoice,
-    isPlaying,
-    audioUrl,
-    handleGenerateContent,
-    handleGenerateVoice,
-    togglePlayPause,
-    downloadAudio,
-    setIsPlaying
-  } = useContentGeneration(
-    form,
-    autoGenerateOptions,
-    selectedVoice,
-    goToStepById
-  );
 
   // Form submission
   const handleSubmit = async (data: ArticleFormValues) => {

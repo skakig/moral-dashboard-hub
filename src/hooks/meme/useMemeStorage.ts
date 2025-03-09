@@ -87,8 +87,8 @@ export function useMemeStorage() {
       
       if (error) throw error;
       
-      // Convert DB data to frontend format
-      const memes = (data as any[]).map(dbMeme => toMeme(dbMeme));
+      // Fix: Fix the type instantiation issue by using a proper type assertion
+      const memes = (data || []).map((dbMeme: any) => toMeme(dbMeme));
       setSavedMemes(memes);
     } catch (error) {
       console.error('Error fetching memes:', error);

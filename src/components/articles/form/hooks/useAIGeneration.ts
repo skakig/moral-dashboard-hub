@@ -1,65 +1,52 @@
 
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
+import { EdgeFunctionService } from '@/services/api/edgeFunctions';
 import { GenerationParams, GeneratedContent } from './ai-generation/types';
-import { debounce } from './ai-generation/debounceUtils';
-import { generateKeywords as generateKeywordsUtil } from './ai-generation/keywordUtils';
-import { generateContent as generateContentUtil } from './ai-generation/contentGenerator';
 
 export function useAIGeneration() {
   const [loading, setLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
-  const [generationProgress, setGenerationProgress] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 2;
+  const [error, setError] = useState<string | null>(null);
 
-  const generateContent = async (params: GenerationParams) => {
+  const generateContent = useCallback(async (params: GenerationParams): Promise<GeneratedContent> => {
     setLoading(true);
-    setGenerationProgress(10); // Start progress
+    setError(null);
     
     try {
-      setGenerationProgress(25); // Update progress
+      const result = await EdgeFunctionService.generateContent(params);
       
-      const content = await generateContentUtil(params, retryCount, MAX_RETRIES);
-      
-      setGenerationProgress(90); // Almost done
-      
-      // Reset retry count on success
-      setRetryCount(0);
-      
-      if (content) {
-        setGeneratedContent(content);
-        setGenerationProgress(100); // Done
+      if (!result || !result.content) {
+        throw new Error('Failed to generate content. Please try again.');
       }
       
+      const content: GeneratedContent = {
+        title: result.title || params.theme || '',
+        content: result.content,
+        metaDescription: result.metaDescription || '',
+        keywords: result.keywords || [],
+      };
+      
+      setGeneratedContent(content);
       return content;
-    } catch (error) {
-      setGenerationProgress(0); // Reset progress on error
-      return null;
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to generate content';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Create a debounced version of generateContent
-  const debouncedGenerate = useCallback(
-    debounce((params: GenerationParams) => generateContent(params), 1000),
-    []
-  );
-
-  // Generate SEO keywords based on theme, platform, and content type
-  const generateKeywords = async (theme: string, platform: string, contentType: string) => {
-    return generateKeywordsUtil(theme, platform, contentType);
-  };
-
-  const resetGeneratedContent = () => setGeneratedContent(null);
+  const resetGeneratedContent = useCallback(() => {
+    setGeneratedContent(null);
+  }, []);
 
   return {
     loading,
     generatedContent,
     generateContent,
-    debouncedGenerate,
-    generateKeywords,
     resetGeneratedContent,
-    generationProgress
+    error
   };
 }

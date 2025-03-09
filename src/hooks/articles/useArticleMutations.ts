@@ -35,9 +35,7 @@ export function useArticleMutations() {
       voice_base64: articleData.voice_base64 || articleData.voiceBase64 || '',
       voice_segments: articleData.voice_segments || articleData.voiceSegments || '',
       category: articleData.category || 'general',
-      status: articleData.status || 'draft',
-      excerpt: articleData.excerpt || '',
-      publish_date: articleData.publish_date || null
+      status: articleData.status || 'draft'
     };
   };
   
@@ -52,18 +50,60 @@ export function useArticleMutations() {
       
       console.log("Creating article with data:", formattedData);
       
-      const { data, error } = await supabase
-        .from('articles')
-        .insert(formattedData)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("Supabase insert error:", error);
-        throw error;
+      // Handle the excerpt field separately
+      if (articleData.excerpt) {
+        try {
+          const { data, error } = await supabase
+            .from('articles')
+            .insert({
+              ...formattedData,
+              excerpt: articleData.excerpt
+            })
+            .select()
+            .single();
+          
+          if (error) {
+            console.error("Supabase insert error:", error);
+            throw error;
+          }
+          
+          return data;
+        } catch (error) {
+          console.error("Error creating article with excerpt:", error);
+          // Fall back to creating without excerpt if that's the issue
+          if (String(error).includes("column of 'articles'")) {
+            console.log("Trying again without excerpt field");
+            const { data, error: fallbackError } = await supabase
+              .from('articles')
+              .insert(formattedData)
+              .select()
+              .single();
+            
+            if (fallbackError) {
+              console.error("Supabase insert fallback error:", fallbackError);
+              throw fallbackError;
+            }
+            
+            return data;
+          } else {
+            throw error;
+          }
+        }
+      } else {
+        // Standard insert without excerpt
+        const { data, error } = await supabase
+          .from('articles')
+          .insert(formattedData)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error("Supabase insert error:", error);
+          throw error;
+        }
+        
+        return data;
       }
-      
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
@@ -93,19 +133,61 @@ export function useArticleMutations() {
       
       console.log("Updating article with ID:", id, "Data:", formattedData);
       
-      const { data, error } = await supabase
-        .from('articles')
-        .update(formattedData)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("Supabase update error:", error);
-        throw error;
+      // Handle the excerpt field separately if provided
+      if (updateData.excerpt !== undefined) {
+        try {
+          const { data, error } = await supabase
+            .from('articles')
+            .update({
+              ...formattedData,
+              excerpt: updateData.excerpt
+            })
+            .eq('id', id)
+            .select()
+            .single();
+          
+          if (error) {
+            console.error("Supabase update error with excerpt:", error);
+            if (String(error).includes("column of 'articles'")) {
+              console.log("Trying update without excerpt field");
+              const { data: fallbackData, error: fallbackError } = await supabase
+                .from('articles')
+                .update(formattedData)
+                .eq('id', id)
+                .select()
+                .single();
+              
+              if (fallbackError) {
+                throw fallbackError;
+              }
+              
+              return fallbackData;
+            } else {
+              throw error;
+            }
+          }
+          
+          return data;
+        } catch (error) {
+          console.error("Error with excerpt field:", error);
+          throw error;
+        }
+      } else {
+        // Standard update without excerpt
+        const { data, error } = await supabase
+          .from('articles')
+          .update(formattedData)
+          .eq('id', id)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error("Supabase update error:", error);
+          throw error;
+        }
+        
+        return data;
       }
-      
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });

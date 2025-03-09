@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { EdgeFunctionService } from '@/services/api/edgeFunctions';
@@ -204,9 +203,10 @@ export function useVoiceGeneration(form: any) {
         newAudio.onended = () => setIsPlaying(false);
         
         // Handle errors
-        newAudio.onerror = (e) => {
+        newAudio.onerror = (e: Event) => {
           console.error("Audio playback error:", e);
-          setError(`Audio playback error: ${(e.target as HTMLAudioElement).error?.message || "Unknown error"}`);
+          const audioElem = e.target as HTMLAudioElement;
+          setError(`Audio playback error: ${audioElem?.error?.message || "Unknown error"}`);
           setIsPlaying(false);
         };
         

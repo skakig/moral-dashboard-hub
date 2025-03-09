@@ -1,4 +1,3 @@
-
 export interface Article {
   id: string;
   title: string;
@@ -66,4 +65,5 @@ export interface ArticleUpdateInput {
   voice_file_name?: string;
   voice_base64?: string;
   moral_level?: number;
+  status?: "draft" | "scheduled" | "published";
 }

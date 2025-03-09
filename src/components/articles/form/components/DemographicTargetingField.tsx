@@ -1,179 +1,140 @@
-import React, { useState, useEffect } from "react";
-import { UseFormReturn } from "react-hook-form";
+
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getDemographicsForTargeting } from "@/services/analyticsService";
-import { Loader2, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
+import { getDemographicTargeting } from "@/services/analyticsService";
 
 interface DemographicTargetingFieldProps {
-  form: UseFormReturn<any>;
+  value: any;
+  onChange: (value: any) => void;
 }
 
-export function DemographicTargetingField({ form }: DemographicTargetingFieldProps) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [targetGroups, setTargetGroups] = useState<any[]>([]);
-  const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
-  
-  const demographicTargeting = form.watch("demographicTargeting") || false;
+export function DemographicTargetingField({ value, onChange }: DemographicTargetingFieldProps) {
+  const [demographics, setDemographics] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   
   useEffect(() => {
-    if (demographicTargeting) {
-      loadDemographicTargets();
-    }
-  }, [demographicTargeting]);
-  
-  const loadDemographicTargets = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const data = await getDemographicsForTargeting();
-      
-      if (!data) {
-        throw new Error("Failed to load demographic data");
+    const fetchDemographics = async () => {
+      try {
+        const data = getDemographicTargeting();
+        setDemographics(data);
+      } catch (error) {
+        console.error("Error fetching demographics:", error);
+      } finally {
+        setLoading(false);
       }
-      
-      setTargetGroups(data.targetGroups || []);
-      
-      // Set initial value if form field is empty
-      const currentTargets = form.watch("targetDemographics");
-      if (!currentTargets || !currentTargets.length) {
-        form.setValue("targetDemographics", []);
-      } else {
-        setSelectedTargets(currentTargets);
-      }
-    } catch (err: any) {
-      console.error("Error loading demographic targets:", err);
-      setError(err.message || "Failed to load demographic data");
-      toast.error("Failed to load demographic data");
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleToggleDemographicTargeting = (checked: boolean) => {
-    form.setValue("demographicTargeting", checked);
+    };
     
-    if (checked && targetGroups.length === 0) {
-      loadDemographicTargets();
-    }
-  };
+    fetchDemographics();
+  }, []);
   
-  const handleTargetSelect = (target: string) => {
-    const newTargets = selectedTargets.includes(target)
-      ? selectedTargets.filter(t => t !== target)
-      : [...selectedTargets, target];
+  const handleSelection = (category: string, id: string) => {
+    const newValue = { ...value };
     
-    setSelectedTargets(newTargets);
-    form.setValue("targetDemographics", newTargets);
+    if (!newValue[category]) {
+      newValue[category] = [];
+    }
+    
+    const index = newValue[category].indexOf(id);
+    if (index > -1) {
+      newValue[category].splice(index, 1);
+    } else {
+      newValue[category].push(id);
+    }
+    
+    onChange(newValue);
   };
   
-  const getTargetGroupByValue = (value: string) => {
-    return targetGroups.find(group => group.value === value);
-  };
+  if (loading) {
+    return <div>Loading demographic targeting options...</div>;
+  }
+  
+  if (!demographics) {
+    return <div>Unable to load demographic options.</div>;
+  }
   
   return (
-    <div className="space-y-4">
-      <div className="flex items-start space-x-2">
-        <Checkbox
-          id="demographicTargeting"
-          checked={demographicTargeting}
-          onCheckedChange={handleToggleDemographicTargeting}
-        />
-        <div className="grid gap-1.5 leading-none">
-          <Label
-            htmlFor="demographicTargeting"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Enable Demographic Targeting
-          </Label>
-          <p className="text-sm text-muted-foreground">
-            Target content toward specific demographic groups for more effective engagement
-          </p>
+    <div className="space-y-6">
+      <div>
+        <Label className="mb-2 block">Age Ranges</Label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {demographics.ageRanges.map((range: any) => (
+            <div key={range.id} className="flex items-center space-x-2">
+              <Checkbox 
+                id={`age-${range.id}`} 
+                checked={value?.ageRanges?.includes(range.id)} 
+                onCheckedChange={() => handleSelection('ageRanges', range.id)}
+              />
+              <Label htmlFor={`age-${range.id}`} className="text-sm">{range.label}</Label>
+            </div>
+          ))}
         </div>
       </div>
       
-      {demographicTargeting && (
-        <div className="border rounded-md p-4 mt-2">
-          <h3 className="text-sm font-medium mb-2 flex items-center">
-            <Users className="h-4 w-4 mr-1" />
-            Target Demographics
-          </h3>
-          
-          {loading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
-              <span className="text-sm text-muted-foreground">Loading demographic data...</span>
+      <Separator />
+      
+      <div>
+        <Label className="mb-2 block">Gender</Label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {demographics.genders.map((gender: any) => (
+            <div key={gender.id} className="flex items-center space-x-2">
+              <Checkbox 
+                id={`gender-${gender.id}`} 
+                checked={value?.genders?.includes(gender.id)} 
+                onCheckedChange={() => handleSelection('genders', gender.id)}
+              />
+              <Label htmlFor={`gender-${gender.id}`} className="text-sm">{gender.label}</Label>
             </div>
-          ) : error ? (
-            <div className="py-2 text-sm text-red-500">{error}</div>
-          ) : targetGroups.length === 0 ? (
-            <div className="py-2 text-sm text-muted-foreground">No demographic data available</div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {selectedTargets.map(target => {
-                  const group = getTargetGroupByValue(target);
-                  return (
-                    <Badge 
-                      key={target} 
-                      variant="secondary"
-                      className="cursor-pointer"
-                      onClick={() => handleTargetSelect(target)}
-                    >
-                      {group?.label || target} (×)
-                    </Badge>
-                  );
-                })}
-                {selectedTargets.length === 0 && (
-                  <div className="text-sm text-muted-foreground">No demographics selected</div>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="demographicSelect">Add Target Group</Label>
-                <Select 
-                  onValueChange={handleTargetSelect}
-                  value=""
-                >
-                  <SelectTrigger id="demographicSelect">
-                    <SelectValue placeholder="Select demographic group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {targetGroups.length > 0 ? (
-                      <>
-                        <SelectItem value="" disabled>Select demographic group</SelectItem>
-                        {targetGroups
-                          .filter(group => !selectedTargets.includes(group.value))
-                          .map(group => (
-                            <SelectItem 
-                              key={`${group.type}-${group.value}`} 
-                              value={group.value}
-                            >
-                              {group.label} ({group.count} users)
-                            </SelectItem>
-                          ))
-                        }
-                      </>
-                    ) : (
-                      <SelectItem value="" disabled>No demographics available</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="text-xs text-muted-foreground">
-                <p>Content will be optimized for these demographic groups</p>
-              </div>
-            </div>
-          )}
+          ))}
         </div>
-      )}
+      </div>
+      
+      <Separator />
+      
+      <div>
+        <Label className="mb-2 block">Regions</Label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {demographics.regions.map((region: any) => (
+            <div key={region.id} className="flex items-center space-x-2">
+              <Checkbox 
+                id={`region-${region.id}`} 
+                checked={value?.regions?.includes(region.id)} 
+                onCheckedChange={() => handleSelection('regions', region.id)}
+              />
+              <Label htmlFor={`region-${region.id}`} className="text-sm">{region.label}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <Separator />
+      
+      <div>
+        <Label className="mb-2 block">Interests</Label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {demographics.interests.map((interest: any) => (
+            <div key={interest.id} className="flex items-center space-x-2">
+              <Checkbox 
+                id={`interest-${interest.id}`} 
+                checked={value?.interests?.includes(interest.id)} 
+                onCheckedChange={() => handleSelection('interests', interest.id)}
+              />
+              <Label htmlFor={`interest-${interest.id}`} className="text-sm">{interest.label}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Card className="mt-4 bg-muted/50">
+        <CardContent className="pt-6">
+          <div className="text-sm">
+            <p>Targeting will help optimize your content for specific audiences. You can select multiple options in each category.</p>
+            <p className="mt-2 italic text-muted-foreground">Note: This will affect AI-generated content but won't restrict visibility.</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

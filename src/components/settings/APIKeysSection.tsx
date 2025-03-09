@@ -8,7 +8,7 @@ import { APIRateLimits } from "./APIRateLimits";
 export function APIKeysSection() {
   const [activeTab, setActiveTab] = useState("api-keys");
   
-  // Mock data for usage stats and rate limits that match the expected types
+  // Format usageStats to match the expected interface
   const usageStats = {
     byService: {
       "OpenAI": { requests: 250, successRate: 98.5, cost: 12.50 },
@@ -23,38 +23,35 @@ export function APIKeysSection() {
     }
   };
   
+  // Format rateLimits to match the expected interface
   const rateLimits = [
     { 
       id: "1", 
-      service: "OpenAI", 
-      limit_type: "hourly", 
-      limit_value: 100, 
-      current_usage: 12,
-      reset_time: new Date(Date.now() + 3600000).toISOString()
+      service_name: "OpenAI", 
+      requests_used: 12,
+      request_limit: 100, 
+      reset_date: new Date(Date.now() + 3600000).toISOString()
     },
     { 
       id: "2", 
-      service: "OpenAI", 
-      limit_type: "daily", 
-      limit_value: 1000, 
-      current_usage: 250,
-      reset_time: new Date(Date.now() + 86400000).toISOString()
+      service_name: "OpenAI", 
+      requests_used: 250,
+      request_limit: 1000, 
+      reset_date: new Date(Date.now() + 86400000).toISOString()
     },
     { 
       id: "3", 
-      service: "ElevenLabs", 
-      limit_type: "hourly", 
-      limit_value: 50, 
-      current_usage: 5,
-      reset_time: new Date(Date.now() + 3600000).toISOString()
+      service_name: "ElevenLabs", 
+      requests_used: 5,
+      request_limit: 50, 
+      reset_date: new Date(Date.now() + 3600000).toISOString()
     },
     { 
       id: "4", 
-      service: "StableDiffusion", 
-      limit_type: "daily", 
-      limit_value: 300, 
-      current_usage: 85,
-      reset_time: new Date(Date.now() + 86400000).toISOString()
+      service_name: "StableDiffusion", 
+      requests_used: 85,
+      request_limit: 300, 
+      reset_date: new Date(Date.now() + 86400000).toISOString()
     }
   ];
   

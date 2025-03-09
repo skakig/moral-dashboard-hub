@@ -25,7 +25,7 @@ export function useArticleGeneration() {
       setLoading(true);
       toast.info(`Generating content for ${params.contentType}...`);
       
-      // Use the existing generateContent function instead of non-existent generateArticle
+      // Use the existing generateContent function
       const response = await EdgeFunctionService.generateContent({
         prompt: params.theme,
         content_type: params.contentType,

@@ -1,163 +1,138 @@
 
-import React from "react";
-import { UseFormReturn } from "react-hook-form";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Slider } from "@/components/ui/slider";
+import { useState, useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArticleFormValues } from "../types";
+import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
+import { StepHeader } from "../StepHeader";
+import { StepControls } from "../StepControls";
 
-interface ConfigStepProps {
-  form: UseFormReturn<ArticleFormValues>;
-  setContentLength: (value: string) => void;
-}
-
-export function ConfigStep({ form, setContentLength }: ConfigStepProps) {
+export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
+  const [level, setLevel] = useState<number>(data?.moralLevel || 5);
+  const [tags, setTags] = useState<string[]>(data?.tags || []);
+  const [tag, setTag] = useState("");
+  
   const handleSliderChange = (value: number[]) => {
-    form.setValue("moralLevel", value[0], { shouldDirty: true });
+    // Convert to a number explicitly
+    const newLevel = Number(value[0]);
+    setLevel(newLevel);
+    onDataChange({ ...data, moralLevel: newLevel });
   };
-
-  const getMoralLevelColor = (value: number | string): string => {
-    const level = Number(value);
-    
-    if (level <= 3) {
-      return "bg-red-500"; // Low moral level
-    } else if (level > 3 && level <= 6) {
-      return "bg-yellow-500"; // Medium moral level
-    } else {
-      return "bg-green-500"; // High moral level
+  
+  const addTag = () => {
+    if (tag && !tags.includes(tag)) {
+      const newTags = [...tags, tag];
+      setTags(newTags);
+      onDataChange({ ...data, tags: newTags });
+      setTag("");
     }
   };
-
-  const getMoralLevelLabel = (value: number | string): string => {
-    const level = Number(value);
-
-    switch (level) {
-      case 1:
-        return "Survival Ethics";
-      case 2:
-        return "Self-Interest";
-      case 3:
-        return "Social Conformity";
-      case 4:
-        return "Law & Order";
-      case 5:
-        return "Human Rights";
-      case 6:
-        return "Empathetic Morality";
-      case 7:
-        return "Universal Ethics";
-      case 8:
-        return "Holistic Morality";
-      case 9:
-        return "Transcendent Morality";
-      default:
-        return `Level ${level}`;
+  
+  const removeTag = (tagToRemove: string) => {
+    const newTags = tags.filter(t => t !== tagToRemove);
+    setTags(newTags);
+    onDataChange({ ...data, tags: newTags });
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
     }
+  };
+  
+  // When we interpret the moral level with levels
+  const getMoralLevelText = (level: number): string => {
+    if (level <= 1) return "Level 1: Survival Morality";
+    if (level > 1 && level <= 2) return "Level 2: Self-Interest";
+    if (level > 2 && level <= 3) return "Level 3: Social Contract";
+    if (level > 3 && level <= 4) return "Level 4: Fairness";
+    if (level > 4 && level <= 5) return "Level 5: Empathy";
+    if (level > 5 && level <= 6) return "Level 6: Altruism";
+    if (level > 6 && level <= 7) return "Level 7: Integrity";
+    if (level > 7 && level <= 8) return "Level 8: Virtue";
+    return "Level 9: Self-Actualization"; 
   };
 
   return (
     <div className="space-y-6">
-      <FormField
-        control={form.control}
-        name="tone"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Tone of Voice</FormLabel>
-            <Select
-              onValueChange={(value) => {
-                field.onChange(value);
-                form.trigger("tone");
-              }}
-              value={field.value}
-              defaultValue="informative"
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a tone" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="informative">Informative</SelectItem>
-                <SelectItem value="conversational">Conversational</SelectItem>
-                <SelectItem value="professional">Professional</SelectItem>
-                <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
-                <SelectItem value="persuasive">Persuasive</SelectItem>
-                <SelectItem value="empathetic">Empathetic</SelectItem>
-                <SelectItem value="authoritative">Authoritative</SelectItem>
-                <SelectItem value="humorous">Humorous</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormDescription>
-              Choose the tone for your content
-            </FormDescription>
-          </FormItem>
-        )}
+      <StepHeader 
+        title="Content Configuration" 
+        description="Customize your content settings"
       />
-
-      <FormField
-        control={form.control}
-        name="contentLength"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Content Length</FormLabel>
-            <Select
-              onValueChange={(value) => {
-                field.onChange(value);
-                setContentLength(value);
-                form.trigger("contentLength");
-              }}
-              value={field.value}
-              defaultValue="medium"
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a length" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="short">Short (~250 words)</SelectItem>
-                <SelectItem value="medium">Medium (~500 words)</SelectItem>
-                <SelectItem value="long">Long (~1000 words)</SelectItem>
-                <SelectItem value="comprehensive">Comprehensive (1500+ words)</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormDescription>
-              Choose how detailed your content should be
-            </FormDescription>
-          </FormItem>
+      
+      <div>
+        <Label htmlFor="moral-level" className="block mb-2">
+          Moral Level: <span className="font-medium">{getMoralLevelText(level)}</span>
+        </Label>
+        <Slider 
+          id="moral-level"
+          min={1} 
+          max={9} 
+          step={1} 
+          value={[level]} 
+          onValueChange={handleSliderChange}
+          className="w-full"
+        />
+        <div className="flex justify-between mt-1 text-xs text-gray-500">
+          <span>Level 1</span>
+          <span>Level 9</span>
+        </div>
+        
+        <Card className="mt-4 bg-muted/50">
+          <CardContent className="pt-6">
+            <p className="text-sm">
+              The moral level affects the perspective and ethical foundation of your content. Higher levels create content with greater moral complexity and depth.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Separator />
+      
+      <div>
+        <Label htmlFor="tags" className="block mb-2">Tags (Optional)</Label>
+        <div className="flex">
+          <Input 
+            id="tags"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Add keywords or tags and press Enter"
+            className="flex-grow"
+          />
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={addTag}
+            className="ml-2"
+          >
+            Add
+          </Button>
+        </div>
+        
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {tags.map((tag, index) => (
+              <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => removeTag(tag)}>
+                {tag} ×
+              </Badge>
+            ))}
+          </div>
         )}
-      />
-
-      <FormField
-        control={form.control}
-        name="moralLevel"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              <div className="flex justify-between items-center">
-                <span>Moral Complexity Level</span>
-                <Badge variant="secondary" className={getMoralLevelColor(field.value)}>
-                  {getMoralLevelLabel(field.value)}
-                </Badge>
-              </div>
-            </FormLabel>
-            <FormControl>
-              <Slider
-                defaultValue={[Number(field.value) || 5]}
-                max={9}
-                min={1}
-                step={1}
-                onValueChange={handleSliderChange}
-                value={[Number(field.value) || 5]}
-              />
-            </FormControl>
-            <FormDescription>
-              Select the moral level of the content (1-9)
-            </FormDescription>
-          </FormItem>
-        )}
+        
+        <p className="mt-2 text-sm text-gray-500">
+          Tags help categorize your content and improve searchability.
+        </p>
+      </div>
+            
+      <StepControls 
+        onNext={onNext} 
+        onBack={onBack}
+        nextLabel="Next: Content" 
       />
     </div>
   );

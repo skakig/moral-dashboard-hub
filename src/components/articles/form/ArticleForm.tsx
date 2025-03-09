@@ -65,6 +65,8 @@ export function ArticleForm({
       seoKeywords: "",
       voiceUrl: "",
       voiceGenerated: false,
+      voiceFileName: "",
+      voiceBase64: "",
       moralLevel: 5,
       theme: "",
       ...initialData,

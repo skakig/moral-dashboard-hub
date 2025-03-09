@@ -16,53 +16,74 @@ export function useImageGeneration() {
     }
 
     setLoading(true);
+    let attempt = 1;
+    
     try {
       toast.info('Generating image...');
 
-      // Call the generate-image edge function
-      const { data, error } = await supabase.functions.invoke('generate-image', {
-        body: { prompt }
-      });
+      // Try to generate the image with retries
+      while (attempt <= MAX_RETRIES + 1) {
+        try {
+          // Call the generate-image edge function
+          const { data, error } = await supabase.functions.invoke('generate-image', {
+            body: { prompt }
+          });
 
-      if (error) {
-        console.error("Error from generate-image function:", error);
-        
-        // If we've retried less than MAX_RETRIES, try again
-        if (retryCount < MAX_RETRIES) {
-          setRetryCount(retryCount + 1);
-          toast.warning(`Retrying image generation (Attempt ${retryCount + 1}/${MAX_RETRIES})...`);
-          return generateImage(prompt);
+          if (error) {
+            console.error(`Error from generate-image function (Attempt ${attempt}/${MAX_RETRIES + 1}):`, error);
+            
+            if (attempt <= MAX_RETRIES) {
+              attempt++;
+              toast.warning(`Retrying image generation (Attempt ${attempt}/${MAX_RETRIES + 1})...`);
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+              continue;
+            }
+            
+            throw new Error(error.message || 'Failed to generate image');
+          }
+
+          if (!data || data.error) {
+            console.error(`Error in response data (Attempt ${attempt}/${MAX_RETRIES + 1}):`, data?.error);
+            
+            if (attempt <= MAX_RETRIES) {
+              attempt++;
+              toast.warning(`Retrying image generation (Attempt ${attempt}/${MAX_RETRIES + 1})...`);
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+              continue;
+            }
+            
+            throw new Error(data?.error || 'Failed to generate image');
+          }
+
+          if (!data.image) {
+            throw new Error('No image data returned');
+          }
+
+          // Reset retry count on success
+          setRetryCount(0);
+          
+          setGeneratedImage(data.image);
+          toast.success('Image generated successfully!');
+          return data.image;
+        } catch (attemptError) {
+          if (attempt > MAX_RETRIES) {
+            throw attemptError;
+          }
+          attempt++;
         }
-        
-        throw new Error(error.message || 'Failed to generate image');
       }
-
-      if (!data || data.error) {
-        console.error("Error in response data:", data?.error);
-        
-        // If we've retried less than MAX_RETRIES, try again
-        if (retryCount < MAX_RETRIES) {
-          setRetryCount(retryCount + 1);
-          toast.warning(`Retrying image generation (Attempt ${retryCount + 1}/${MAX_RETRIES})...`);
-          return generateImage(prompt);
-        }
-        
-        throw new Error(data?.error || 'Failed to generate image');
-      }
-
-      if (!data.image) {
-        throw new Error('No image data returned');
-      }
-
-      // Reset retry count on success
-      setRetryCount(0);
-      
-      setGeneratedImage(data.image);
-      toast.success('Image generated successfully!');
-      return data.image;
     } catch (error: any) {
       console.error('Error generating image:', error);
-      toast.error(`Failed to generate image: ${error.message || 'Unknown error'}`);
+      
+      // Provide more helpful error messages
+      let errorMessage = error.message || 'Unknown error';
+      if (errorMessage.includes('API key')) {
+        errorMessage = 'API key error - please check your OpenAI API key configuration';
+      } else if (errorMessage.includes('rate limit')) {
+        errorMessage = 'OpenAI rate limit reached - please try again later';
+      }
+      
+      toast.error(`Failed to generate image: ${errorMessage}`);
       return null;
     } finally {
       setLoading(false);

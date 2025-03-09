@@ -19,10 +19,15 @@ serve(async (req) => {
     const openAIApiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("OPEN_AI_TMH");
     
     if (!openAIApiKey) {
-      throw new Error("API key not configured. Please set OPENAI_API_KEY.");
+      throw new Error("API key not configured. Please set OPENAI_API_KEY or OPEN_AI_TMH.");
     }
 
-    const { prompt } = await req.json();
+    const requestData = await req.json().catch(error => {
+      console.error("Error parsing request JSON:", error);
+      throw new Error("Invalid request format. Please provide valid JSON.");
+    });
+    
+    const { prompt } = requestData;
 
     if (!prompt) {
       throw new Error("Prompt is required");
@@ -44,18 +49,35 @@ serve(async (req) => {
         size: "1024x1024",
         response_format: "b64_json",
       }),
+    }).catch(error => {
+      console.error("Network error during OpenAI API call:", error);
+      throw new Error("Network error while contacting OpenAI API. Please try again.");
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error("OpenAI API error:", errorData);
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+      const errorText = await response.text();
+      let errorMessage = "OpenAI API error";
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error?.message || errorMessage;
+      } catch (e) {
+        // If parsing fails, use the raw text
+        errorMessage = `${errorMessage}: ${errorText}`;
+      }
+      
+      console.error("OpenAI API error:", errorMessage);
+      throw new Error(`OpenAI API error: ${errorMessage}`);
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(error => {
+      console.error("Error parsing OpenAI API response:", error);
+      throw new Error("Failed to parse response from OpenAI API.");
+    });
     
     if (!data.data || !data.data[0] || !data.data[0].b64_json) {
-      throw new Error("Invalid response from OpenAI API");
+      console.error("Invalid response structure from OpenAI:", JSON.stringify(data).substring(0, 200));
+      throw new Error("Invalid response format from OpenAI API");
     }
 
     const base64Image = data.data[0].b64_json;

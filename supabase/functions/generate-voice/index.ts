@@ -23,41 +23,56 @@ serve(async (req) => {
       throw new Error("API keys not configured. Please set either OPENAI_API_KEY or ELEVENLABS_API_KEY.");
     }
 
-    const { text, voiceId } = await req.json();
+    const requestData = await req.json().catch(e => {
+      console.error("Error parsing JSON:", e);
+      throw new Error("Invalid request format");
+    });
+    
+    const { text, voiceId } = requestData;
 
     if (!text) {
       throw new Error("Text is required");
     }
 
-    console.log(`Generating voice for text (length: ${text.length}) with voice ID: ${voiceId || "default"}`);
+    // Trim the text if it's too long - prevents API timeouts
+    const trimmedText = text.length > 4000 ? text.substring(0, 4000) + "..." : text;
+    
+    console.log(`Generating voice for text (length: ${trimmedText.length}) with voice ID: ${voiceId || "default"}`);
 
     // Try ElevenLabs first if API key is available
     if (elevenLabsApiKey) {
       try {
+        console.log("Attempting to use ElevenLabs API...");
+        
         // Use ElevenLabs API
-        const response = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + (voiceId || "21m00Tcm4TlvDq8ikWAM"), {
+        const elevenLabsResponse = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + (voiceId || "21m00Tcm4TlvDq8ikWAM"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "xi-api-key": elevenLabsApiKey,
           },
           body: JSON.stringify({
-            text: text,
+            text: trimmedText,
             model_id: "eleven_multilingual_v2",
             voice_settings: {
               stability: 0.5,
               similarity_boost: 0.75,
             },
           }),
+        }).catch(e => {
+          console.error("ElevenLabs network error:", e);
+          throw new Error("Network error contacting ElevenLabs");
         });
 
-        if (!response.ok) {
-          const errorData = await response.text();
+        if (!elevenLabsResponse.ok) {
+          const errorData = await elevenLabsResponse.text();
           console.error("ElevenLabs API error:", errorData);
-          throw new Error(`ElevenLabs API error: ${response.statusText}`);
+          throw new Error(`ElevenLabs API error: ${elevenLabsResponse.status} ${elevenLabsResponse.statusText}`);
         }
 
-        const audioArrayBuffer = await response.arrayBuffer();
+        console.log("ElevenLabs response received successfully");
+        
+        const audioArrayBuffer = await elevenLabsResponse.arrayBuffer();
         const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
 
         const fileName = `voice_${Date.now()}.mp3`;
@@ -67,11 +82,13 @@ serve(async (req) => {
             audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
             fileName: fileName,
             base64Audio: base64Audio,
+            service: "elevenlabs"
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (elevenLabsError) {
         console.error("ElevenLabs processing error:", elevenLabsError);
+        console.log("Falling back to OpenAI TTS...");
         // Fall back to OpenAI if ElevenLabs fails
         if (!openAIApiKey) throw elevenLabsError;
       }
@@ -79,10 +96,12 @@ serve(async (req) => {
 
     // Fall back to OpenAI TTS if ElevenLabs fails or isn't configured
     if (openAIApiKey) {
+      console.log("Using OpenAI TTS API...");
+      
       // Use OpenAI API instead
       const openAiVoice = getOpenAIVoiceFromElevenLabsId(voiceId);
       
-      const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      const openAiResponse = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -90,19 +109,34 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: "tts-1",
-          input: text,
+          input: trimmedText,
           voice: openAiVoice,
           response_format: "mp3",
         }),
+      }).catch(e => {
+        console.error("OpenAI network error:", e);
+        throw new Error("Network error contacting OpenAI");
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("OpenAI API error:", errorData);
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+      if (!openAiResponse.ok) {
+        const errorText = await openAiResponse.text();
+        let errorMessage = `OpenAI API error: ${openAiResponse.status} ${openAiResponse.statusText}`;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorMessage;
+        } catch (e) {
+          // Use text if we can't parse JSON
+          errorMessage = `${errorMessage} - ${errorText.substring(0, 300)}`;
+        }
+        
+        console.error("OpenAI API error:", errorMessage);
+        throw new Error(errorMessage);
       }
 
-      const audioArrayBuffer = await response.arrayBuffer();
+      console.log("OpenAI TTS response received successfully");
+      
+      const audioArrayBuffer = await openAiResponse.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
 
       const fileName = `voice_${Date.now()}.mp3`;
@@ -112,6 +146,7 @@ serve(async (req) => {
           audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
           fileName: fileName,
           base64Audio: base64Audio,
+          service: "openai"
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

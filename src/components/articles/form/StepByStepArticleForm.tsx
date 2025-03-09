@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -23,6 +22,7 @@ import {
 // Import hooks and types
 import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { useAIGeneration } from "./hooks/useAIGeneration";
+import { useImageGeneration } from "./hooks/useImageGeneration";
 import { ArticleFormValues, articleFormSchema, Step } from "./step-form/types";
 
 export type { ArticleFormValues } from "./step-form/types";
@@ -46,6 +46,10 @@ export function StepByStepArticleForm({
   const [error, setError] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState("21m00Tcm4TlvDq8ikWAM"); // Default to Rachel
   const [autoGenerateContent, setAutoGenerateContent] = useState(true);
+  const [autoGenerateOptions, setAutoGenerateOptions] = useState({
+    voice: false,
+    image: false,
+  });
   
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
@@ -80,6 +84,7 @@ export function StepByStepArticleForm({
   } = useVoiceGeneration(form);
   
   const { loading: isGeneratingContent, generateContent } = useAIGeneration();
+  const { generateImage, loading: isGeneratingImage } = useImageGeneration();
 
   const handleGenerateContent = async () => {
     try {
@@ -141,6 +146,32 @@ export function StepByStepArticleForm({
           form.setValue("seoKeywords", content.keywords.join(', '), { shouldDirty: true });
         }
 
+        // If auto-generate voice is enabled, generate voice content
+        if (autoGenerateOptions.voice) {
+          // Move to content step first to ensure content is available
+          const contentStepIndex = steps.findIndex(step => step.id === 'content');
+          if (contentStepIndex !== -1) {
+            setCurrentStepIndex(contentStepIndex);
+            
+            // Wait a bit for the UI to update before generating voice
+            setTimeout(async () => {
+              await generateVoiceContent(selectedVoice);
+              toast.success("Voice content generated successfully");
+            }, 500);
+          }
+        }
+        
+        // If auto-generate image is enabled, generate featured image
+        if (autoGenerateOptions.image) {
+          const imagePrompt = `Create a high-quality featured image for: ${content.title}. Platform: ${platform}, Content type: ${contentType}`;
+          
+          const imageUrl = await generateImage(imagePrompt, platform);
+          if (imageUrl) {
+            form.setValue("featuredImage", imageUrl, { shouldDirty: true });
+            toast.success("Featured image generated successfully");
+          }
+        }
+
         // Move to the content step
         const contentStepIndex = steps.findIndex(step => step.id === 'content');
         if (contentStepIndex !== -1) {
@@ -170,7 +201,9 @@ export function StepByStepArticleForm({
           form={form} 
           onGenerate={handleGenerateContent} 
           autoGenerate={autoGenerateContent} 
-          setAutoGenerate={setAutoGenerateContent} 
+          setAutoGenerate={setAutoGenerateContent}
+          autoGenerateOptions={autoGenerateOptions}
+          setAutoGenerateOptions={setAutoGenerateOptions}
         />
       ),
       isRequired: true,

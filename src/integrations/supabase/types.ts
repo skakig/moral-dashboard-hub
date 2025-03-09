@@ -494,6 +494,7 @@ export type Database = {
       }
       articles: {
         Row: {
+          author_id: string | null
           category: string
           content: string
           created_at: string | null
@@ -514,6 +515,7 @@ export type Database = {
           voice_url: string | null
         }
         Insert: {
+          author_id?: string | null
           category: string
           content: string
           created_at?: string | null
@@ -534,6 +536,7 @@ export type Database = {
           voice_url?: string | null
         }
         Update: {
+          author_id?: string | null
           category?: string
           content?: string
           created_at?: string | null

@@ -27,18 +27,30 @@ import {
   Trash, 
   Calendar, 
   Share2,
-  ExternalLink 
+  ExternalLink,
+  Download 
 } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface ArticlesTableProps {
   articles: Article[];
   onEdit: (article: Article) => void;
   onDelete: (articleId: string) => void;
+  onPublish?: (article: Article) => void;
+  onView?: (article: Article) => void;
+  onDownload?: (article: Article) => void;
 }
 
-export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps) {
+export function ArticlesTable({ 
+  articles, 
+  onEdit, 
+  onDelete, 
+  onPublish, 
+  onView, 
+  onDownload 
+}: ArticlesTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<Article | null>(null);
 
@@ -51,6 +63,31 @@ export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps
     if (articleToDelete) {
       onDelete(articleToDelete.id);
       setDeleteDialogOpen(false);
+      setArticleToDelete(null);
+    }
+  };
+
+  const handleViewClick = (article: Article) => {
+    if (onView) {
+      onView(article);
+    } else {
+      toast.info(`View functionality not implemented for: ${article.title}`);
+    }
+  };
+
+  const handlePublishClick = (article: Article) => {
+    if (onPublish) {
+      onPublish(article);
+    } else {
+      toast.info(`Article would be published: ${article.title}`);
+    }
+  };
+
+  const handleDownloadClick = (article: Article) => {
+    if (onDownload) {
+      onDownload(article);
+    } else {
+      toast.info(`Download functionality not implemented for: ${article.title}`);
     }
   };
 
@@ -137,16 +174,20 @@ export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps
                         <FileEdit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewClick(article)}>
                         <ExternalLink className="mr-2 h-4 w-4" />
                         View
                       </DropdownMenuItem>
                       {article.status !== "published" && (
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handlePublishClick(article)}>
                           <Calendar className="mr-2 h-4 w-4" />
                           Publish Now
                         </DropdownMenuItem>
                       )}
+                      <DropdownMenuItem onClick={() => handleDownloadClick(article)}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Content
+                      </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Share2 className="mr-2 h-4 w-4" />
                         Social Media

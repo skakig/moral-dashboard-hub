@@ -7,39 +7,68 @@ import { ArticleUpdateInput, Article } from "@/types/articles";
 export function useArticleMutations() {
   const queryClient = useQueryClient();
   
+  // Helper function to normalize values and ensure type compatibility
+  const normalizeArticleData = (articleData: any) => {
+    // Normalize moral level to a number
+    const moralLevel = articleData.moral_level || articleData.moralLevel;
+    const parsedMoralLevel = typeof moralLevel === 'string' 
+      ? parseInt(moralLevel, 10) 
+      : (moralLevel || 5);
+    
+    // Convert keywords from string to array if needed
+    let seoKeywords = articleData.seo_keywords || articleData.seoKeywords || [];
+    if (typeof seoKeywords === 'string') {
+      seoKeywords = seoKeywords.split(',').map((k: string) => k.trim()).filter(Boolean);
+    }
+    
+    // Format the data for database
+    const formattedData = {
+      content: articleData.content || '', // Ensure content is never undefined/null
+      title: articleData.title || 'Untitled', // Ensure title is never undefined/null
+      moral_level: parsedMoralLevel,
+      seo_keywords: seoKeywords,
+      meta_description: articleData.meta_description || articleData.metaDescription || '',
+      featured_image: articleData.featured_image || articleData.featuredImage || '',
+      voice_url: articleData.voice_url || articleData.voiceUrl || '',
+      voice_generated: articleData.voice_generated || articleData.voiceGenerated || false,
+      voice_file_name: articleData.voice_file_name || articleData.voiceFileName || '',
+      voice_base64: articleData.voice_base64 || articleData.voiceBase64 || '',
+    };
+
+    // Add optional fields only if they exist
+    if (articleData.category) {
+      formattedData.category = articleData.category;
+    }
+    
+    if (articleData.excerpt) {
+      formattedData.excerpt = articleData.excerpt;
+    }
+    
+    if (articleData.status) {
+      formattedData.status = articleData.status;
+    }
+
+    return formattedData;
+  };
+  
   // Create a new article
   const createArticle = useMutation({
     mutationFn: async (article: Partial<ArticleUpdateInput> & { category?: string }) => {
       // Prepare the data for the database
       const { id, ...articleData } = article;
       
-      // Normalize moral level to a number
-      const moralLevel = typeof articleData.moral_level === 'string' 
-        ? parseInt(articleData.moral_level, 10) 
-        : (articleData.moral_level || articleData.moralLevel || 5);
-        
-      // Convert keywords from string to array if needed
-      let seoKeywords = articleData.seo_keywords || articleData.seoKeywords || [];
-      if (typeof seoKeywords === 'string') {
-        seoKeywords = seoKeywords.split(',').map(k => k.trim()).filter(Boolean);
+      // Format the data for database
+      const formattedData = normalizeArticleData(articleData);
+      
+      // Add default category for new articles
+      if (!formattedData.category) {
+        formattedData.category = 'general';
       }
       
-      // Set default values for required fields
-      const formattedData = {
-        ...articleData,
-        category: articleData.category || 'general', // Default category
-        content: articleData.content || '', // Ensure content is never undefined/null
-        title: articleData.title || 'Untitled', // Ensure title is never undefined/null
-        status: 'draft', // Default status
-        moral_level: moralLevel,
-        seo_keywords: seoKeywords,
-        meta_description: articleData.meta_description || articleData.metaDescription || '',
-        featured_image: articleData.featured_image || articleData.featuredImage || '',
-        voice_url: articleData.voice_url || articleData.voiceUrl || '',
-        voice_generated: articleData.voice_generated || articleData.voiceGenerated || false,
-        voice_file_name: articleData.voice_file_name || articleData.voiceFileName || '',
-        voice_base64: articleData.voice_base64 || articleData.voiceBase64 || '',
-      };
+      // Add default status for new articles
+      if (!formattedData.status) {
+        formattedData.status = 'draft';
+      }
       
       console.log("Creating article with data:", formattedData);
       
@@ -71,29 +100,8 @@ export function useArticleMutations() {
     mutationFn: async (article: ArticleUpdateInput) => {
       const { id, ...updateData } = article;
       
-      // Normalize moral level to a number
-      const moralLevel = typeof updateData.moral_level === 'string' 
-        ? parseInt(updateData.moral_level, 10) 
-        : (updateData.moral_level || updateData.moralLevel || 5);
-      
-      // Convert keywords from string to array if needed
-      let seoKeywords = updateData.seo_keywords || updateData.seoKeywords || [];
-      if (typeof seoKeywords === 'string') {
-        seoKeywords = seoKeywords.split(',').map(k => k.trim()).filter(Boolean);
-      }
-      
-      // Format the data for database update
-      const formattedData = {
-        ...updateData,
-        moral_level: moralLevel,
-        seo_keywords: seoKeywords,
-        meta_description: updateData.meta_description || updateData.metaDescription || '',
-        featured_image: updateData.featured_image || updateData.featuredImage || '',
-        voice_url: updateData.voice_url || updateData.voiceUrl || '',
-        voice_generated: updateData.voice_generated || updateData.voiceGenerated || false,
-        voice_file_name: updateData.voice_file_name || updateData.voiceFileName || '',
-        voice_base64: updateData.voice_base64 || updateData.voiceBase64 || '',
-      };
+      // Format the data for database
+      const formattedData = normalizeArticleData(updateData);
       
       // Handle status update if needed
       if (updateData.status) {

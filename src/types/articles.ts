@@ -19,7 +19,7 @@ export interface Article {
   voice_file_name?: string;
   voice_base64?: string;
   moral_level?: number;
-  author_id?: string; // Add author_id from the database
+  author_id?: string;
 }
 
 export interface ArticleSocialPost {
@@ -65,8 +65,9 @@ export interface ArticleUpdateInput {
   voice_generated?: boolean;
   voice_file_name?: string;
   voice_base64?: string;
-  moral_level?: number;
+  moral_level?: number | string;
   status?: "draft" | "scheduled" | "published";
+  publish_date?: string | null;
   
   // Support for camelCase versions for form data
   seoKeywords?: string[] | string;

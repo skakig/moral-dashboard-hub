@@ -23,35 +23,47 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // First check if the exec_sql function exists
-    const checkFunctionQuery = `
-      SELECT EXISTS (
-        SELECT 1 
-        FROM pg_proc 
-        JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid 
-        WHERE proname = 'exec_sql' AND pg_namespace.nspname = 'public'
-      ) as function_exists;
-    `;
+    // Check if tables exist first
+    const tables = ['api_keys', 'site_settings', 'api_rate_limits'];
+    let missingTables = 0;
     
-    // Direct SQL query to check if function exists
-    const { data: functionData, error: functionError } = await supabaseAdmin.from('_sql_execution').insert({
-      query: checkFunctionQuery
-    }).select();
+    for (const table of tables) {
+      const { data, error } = await supabaseAdmin
+        .from('_sql_execution')
+        .insert({
+          query: `SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            AND table_name = '${table}'
+          );`
+        })
+        .select();
+      
+      if (error) {
+        console.error(`Error checking if table ${table} exists:`, error);
+        missingTables++;
+        continue;
+      }
+      
+      if (data && data[0]?.results?.[0]?.exists === false) {
+        console.log(`Table ${table} does not exist`);
+        missingTables++;
+      }
+    }
     
-    const execSqlExists = !functionError && functionData && functionData[0]?.results?.[0]?.function_exists === true;
-    
-    if (!execSqlExists) {
+    if (missingTables > 0) {
+      console.log(`${missingTables} tables need to be created`);
       return new Response(
         JSON.stringify({ 
           success: true, 
           schema: {},
-          missingColumns: 1, // Signal that initialization is needed
-          message: "The exec_sql function is missing and needs to be created"
+          missingColumns: missingTables, // Signal that initialization is needed
+          message: `${missingTables} tables are missing and need to be created`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
+    
     // Define a list of required columns for each table
     const requiredColumns = {
       'api_keys': ['id', 'service_name', 'api_key', 'category', 'is_primary', 'status', 'is_active', 'validation_errors'],
@@ -65,60 +77,32 @@ serve(async (req) => {
     for (const [table, columns] of Object.entries(requiredColumns)) {
       results[table] = {};
       
-      // First check if the table exists
-      const tableExistsQuery = `
-        SELECT EXISTS (
-          SELECT 1
-          FROM information_schema.tables
-          WHERE table_name = '${table}'
-        ) as table_exists;
-      `;
-      
-      try {
-        const { data: tableExists, error: tableError } = await supabaseAdmin.rpc('exec_sql', { 
-          sql: tableExistsQuery
-        });
+      for (const column of columns) {
+        const { data, error } = await supabaseAdmin
+          .from('_sql_execution')
+          .insert({
+            query: `SELECT EXISTS (
+              SELECT FROM information_schema.columns 
+              WHERE table_schema = 'public'
+              AND table_name = '${table}'
+              AND column_name = '${column}'
+            );`
+          })
+          .select();
         
-        const tableExistsResult = !tableError && tableExists && tableExists[0]?.table_exists === true;
-        
-        if (!tableExistsResult) {
-          // If table doesn't exist, mark all columns as missing
-          for (const column of columns) {
-            results[table][column] = false;
-            missingColumns++;
-          }
+        if (error) {
+          console.error(`Error checking column ${table}.${column}:`, error);
+          results[table][column] = false;
+          missingColumns++;
           continue;
         }
-      } catch (error) {
-        console.error(`Error checking if table ${table} exists:`, error);
-        // Assume table is missing if we can't check
-        for (const column of columns) {
+        
+        if (data && data[0]?.results?.[0]?.exists === false) {
+          console.log(`Column ${table}.${column} does not exist`);
           results[table][column] = false;
           missingColumns++;
-        }
-        continue;
-      }
-      
-      // Table exists, now check columns
-      for (const column of columns) {
-        try {
-          const { data: exists, error } = await supabaseAdmin.rpc('check_column_exists', {
-            table_name: table,
-            column_name: column
-          });
-          
-          if (error) {
-            console.error(`Error checking ${table}.${column}:`, error);
-            results[table][column] = false;
-            missingColumns++;
-          } else {
-            results[table][column] = !!exists;
-            if (!exists) missingColumns++;
-          }
-        } catch (error) {
-          console.error(`Exception checking ${table}.${column}:`, error);
-          results[table][column] = false;
-          missingColumns++;
+        } else {
+          results[table][column] = true;
         }
       }
     }

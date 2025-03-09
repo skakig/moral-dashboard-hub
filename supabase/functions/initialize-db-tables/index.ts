@@ -52,29 +52,37 @@ serve(async (req) => {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
     );
 
+    -- Create api_rate_limits table if it doesn't exist
+    CREATE TABLE IF NOT EXISTS api_rate_limits (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        service_name TEXT NOT NULL,
+        requests_used INTEGER DEFAULT 0,
+        request_limit INTEGER NOT NULL,
+        reset_date TIMESTAMP WITH TIME ZONE DEFAULT now() + interval '1 day',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    );
+
     -- Insert a default site settings record if none exists
     INSERT INTO site_settings (site_name, admin_email, timezone, maintenance_mode)
     SELECT 'The Moral Hierarchy', 'admin@tmh.com', 'utc', false
     WHERE NOT EXISTS (SELECT 1 FROM site_settings);
     `;
 
-    // First try to execute with raw SQL
+    // First try to execute with direct SQL
     try {
-      const result = await supabaseAdmin.rpc('exec_sql', { sql: createTablesSql });
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-    } catch (sqlError) {
-      console.error("Failed with exec_sql, trying direct SQL:", sqlError);
-      
-      // If that fails, try direct SQL execution
       const { error: directError } = await supabaseAdmin.from('_sql_execution').insert({
         query: createTablesSql
       }).select();
       
       if (directError) {
-        throw new Error(`Failed to initialize database: ${directError.message}`);
+        throw new Error(`Failed to initialize database with direct SQL: ${directError.message}`);
       }
+      
+      console.log("Successfully created/updated tables with direct SQL");
+    } catch (sqlError) {
+      console.error("Failed with direct SQL:", sqlError);
+      throw sqlError;
     }
 
     // Create the triggers and functions
@@ -118,14 +126,6 @@ serve(async (req) => {
 
     // Try to create triggers
     try {
-      const result = await supabaseAdmin.rpc('exec_sql', { sql: createTriggersSql });
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-    } catch (triggerError) {
-      console.error("Failed to create triggers, trying direct SQL:", triggerError);
-      
-      // If that fails, try direct SQL execution
       const { error: directError } = await supabaseAdmin.from('_sql_execution').insert({
         query: createTriggersSql
       }).select();
@@ -133,13 +133,57 @@ serve(async (req) => {
       if (directError) {
         console.warn(`Warning - failed to create triggers: ${directError.message}`);
         // Continue anyway, triggers are less critical
+      } else {
+        console.log("Successfully created triggers and functions");
       }
+    } catch (triggerError) {
+      console.error("Failed to create triggers:", triggerError);
+      // Continue anyway, triggers are less critical
+    }
+
+    // Create the check_column_exists function
+    const createFunctionSql = `
+    -- Create a function to check if a column exists in a table
+    CREATE OR REPLACE FUNCTION check_column_exists(table_name text, column_name text)
+    RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+      column_exists boolean;
+    BEGIN
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_schema = 'public'
+        AND table_name = check_column_exists.table_name
+        AND column_name = check_column_exists.column_name
+      ) INTO column_exists;
+      
+      RETURN column_exists;
+    END;
+    $$;
+    `;
+    
+    // Try to create the function
+    try {
+      const { error: functionError } = await supabaseAdmin.from('_sql_execution').insert({
+        query: createFunctionSql
+      }).select();
+      
+      if (functionError) {
+        console.warn(`Warning - failed to create check_column_exists function: ${functionError.message}`);
+        // Continue anyway
+      } else {
+        console.log("Successfully created check_column_exists function");
+      }
+    } catch (functionError) {
+      console.error("Failed to create function:", functionError);
+      // Continue anyway
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Database tables, columns, and triggers initialized successfully"
+        message: "Database tables, columns, triggers, and functions initialized successfully"
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

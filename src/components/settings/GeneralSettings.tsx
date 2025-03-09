@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,11 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 interface SiteSettings {
   id: string;
@@ -19,10 +23,16 @@ interface SiteSettings {
   maintenance_mode: boolean;
 }
 
+const passwordConfirmSchema = z.object({
+  password: z.string().min(1, "Password is required"),
+});
+
 export function GeneralSettings() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [originalEmail, setOriginalEmail] = useState("");
   const [settings, setSettings] = useState<SiteSettings>({
     id: "",
     site_name: "The Moral Hierarchy",
@@ -31,13 +41,17 @@ export function GeneralSettings() {
     maintenance_mode: false
   });
 
+  const passwordForm = useForm<{ password: string }>({
+    resolver: zodResolver(passwordConfirmSchema),
+    defaultValues: { password: "" }
+  });
+
   useEffect(() => {
     async function fetchSettings() {
       try {
         setLoading(true);
         setError(null);
         
-        // Use direct query instead of RPC
         const { data, error } = await supabase
           .from('site_settings')
           .select('*')
@@ -53,7 +67,6 @@ export function GeneralSettings() {
         if (data && data.length > 0) {
           const siteData = data[0];
           
-          // Explicitly map the fields to ensure type safety
           setSettings({
             id: siteData.id,
             site_name: siteData.site_name,
@@ -62,12 +75,13 @@ export function GeneralSettings() {
             maintenance_mode: siteData.maintenance_mode
           });
           
+          setOriginalEmail(siteData.admin_email);
+          
           console.log("Settings loaded:", siteData);
         } else {
           console.warn("No settings found in database");
           toast.warning("Using default settings. Please save to create settings record.");
           
-          // If no settings found, try to create a default record
           const { error: insertError } = await supabase
             .from('site_settings')
             .insert([{
@@ -95,20 +109,54 @@ export function GeneralSettings() {
 
   const handleSave = async () => {
     try {
-      setSaving(true);
-      setError(null);
-      
-      // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(settings.admin_email)) {
         toast.error("Please enter a valid email address");
-        setSaving(false);
         return;
       }
 
+      if (settings.admin_email !== originalEmail) {
+        setShowPasswordConfirm(true);
+        return;
+      }
+
+      await saveSettings();
+    } catch (error: any) {
+      console.error("Exception preparing save:", error);
+      setError(`An unexpected error occurred: ${error.message}`);
+      toast.error("An unexpected error occurred: " + error.message);
+    }
+  };
+
+  const saveSettings = async (password?: string) => {
+    try {
+      setSaving(true);
+      setError(null);
+      
       console.log("Saving settings:", settings);
       
-      // Use direct update query instead of RPC
+      if (password) {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          setError("You must be logged in to change admin email");
+          toast.error("Authentication required to change admin email");
+          return;
+        }
+        
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email!,
+          password: password
+        });
+        
+        if (signInError) {
+          console.error("Password verification failed:", signInError);
+          setError("Incorrect password. Admin email was not updated.");
+          toast.error("Password verification failed");
+          return;
+        }
+      }
+      
       const { error: updateError } = await supabase
         .from('site_settings')
         .update({
@@ -127,8 +175,16 @@ export function GeneralSettings() {
         return;
       }
 
+      if (settings.admin_email !== originalEmail) {
+        setOriginalEmail(settings.admin_email);
+      }
+
       toast.success("Settings saved successfully");
       console.log("Settings updated successfully");
+      
+      setShowPasswordConfirm(false);
+      passwordForm.reset();
+      
     } catch (error: any) {
       console.error("Exception saving settings:", error);
       setError(`An unexpected error occurred: ${error.message}`);
@@ -136,6 +192,10 @@ export function GeneralSettings() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePasswordConfirm = async (data: { password: string }) => {
+    await saveSettings(data.password);
   };
 
   if (loading) {
@@ -150,75 +210,132 @@ export function GeneralSettings() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>General Settings</CardTitle>
-        <CardDescription>
-          Manage system-wide settings for TMH
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-2">
-          <Label htmlFor="site-name">Site Name</Label>
-          <Input 
-            id="site-name" 
-            value={settings.site_name} 
-            onChange={(e) => setSettings({...settings, site_name: e.target.value})}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="admin-email">Admin Email</Label>
-          <Input 
-            id="admin-email" 
-            type="email"
-            value={settings.admin_email} 
-            onChange={(e) => setSettings({...settings, admin_email: e.target.value})}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="timezone">Timezone</Label>
-          <Select 
-            value={settings.timezone}
-            onValueChange={(value) => setSettings({...settings, timezone: value})}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select timezone" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="utc">UTC</SelectItem>
-              <SelectItem value="est">Eastern Time (EST)</SelectItem>
-              <SelectItem value="pst">Pacific Time (PST)</SelectItem>
-              <SelectItem value="gmt">Greenwich Mean Time (GMT)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="maintenance-mode">Maintenance Mode</Label>
-            <p className="text-sm text-muted-foreground">
-              Put the site in maintenance mode
-            </p>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>General Settings</CardTitle>
+          <CardDescription>
+            Manage system-wide settings for TMH
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="space-y-2">
+            <Label htmlFor="site-name">Site Name</Label>
+            <Input 
+              id="site-name" 
+              value={settings.site_name} 
+              onChange={(e) => setSettings({...settings, site_name: e.target.value})}
+            />
           </div>
-          <Switch 
-            id="maintenance-mode" 
-            checked={settings.maintenance_mode}
-            onCheckedChange={(checked) => setSettings({...settings, maintenance_mode: checked})}
-          />
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
-      </CardFooter>
-    </Card>
+          <div className="space-y-2">
+            <Label htmlFor="admin-email">Admin Email</Label>
+            <Input 
+              id="admin-email" 
+              type="email"
+              value={settings.admin_email} 
+              onChange={(e) => setSettings({...settings, admin_email: e.target.value})}
+            />
+            {settings.admin_email !== originalEmail && (
+              <p className="text-sm text-amber-500 mt-1">
+                Changing admin email will require password confirmation for security.
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select 
+              value={settings.timezone}
+              onValueChange={(value) => setSettings({...settings, timezone: value})}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="utc">UTC</SelectItem>
+                <SelectItem value="est">Eastern Time (EST)</SelectItem>
+                <SelectItem value="pst">Pacific Time (PST)</SelectItem>
+                <SelectItem value="gmt">Greenwich Mean Time (GMT)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="maintenance-mode">Maintenance Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Put the site in maintenance mode
+              </p>
+            </div>
+            <Switch 
+              id="maintenance-mode" 
+              checked={settings.maintenance_mode}
+              onCheckedChange={(checked) => setSettings({...settings, maintenance_mode: checked})}
+            />
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Dialog open={showPasswordConfirm} onOpenChange={setShowPasswordConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Your Password</DialogTitle>
+            <DialogDescription>
+              For security, please enter your password to confirm admin email changes.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...passwordForm}>
+            <form onSubmit={passwordForm.handleSubmit(handlePasswordConfirm)} className="space-y-4">
+              <FormField
+                control={passwordForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        placeholder="Enter your password" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowPasswordConfirm(false);
+                    setSettings(prev => ({...prev, admin_email: originalEmail}));
+                    passwordForm.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Verifying..." : "Confirm"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

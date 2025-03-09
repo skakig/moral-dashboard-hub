@@ -1,46 +1,40 @@
 
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Article } from "@/types/articles";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Download, Play, Pause, FileText } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
-import { useActivityTracking } from "@/hooks/useActivityTracking";
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
+import { Article } from '@/types/articles';
+import { ChevronLeft, Calendar, User, Tag, Volume2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function ArticleViewer() {
   const { id } = useParams<{ id: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null);
-  
-  // When component loads, fetch the article data
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     async function fetchArticle() {
-      if (!id) return;
-      
       try {
+        if (!id) {
+          throw new Error('Article ID is required');
+        }
+        
+        setLoading(true);
         const { data, error } = await supabase
           .from('articles')
           .select('*')
           .eq('id', id)
           .single();
         
-        if (error) throw error;
-        
-        // Type assertion to ensure it matches the Article type
-        setArticle(data as Article);
-        
-        // Create audio player if there's a voice URL
-        if (data.voice_url) {
-          const player = new Audio(data.voice_url);
-          player.addEventListener('ended', () => setAudioPlaying(false));
-          setAudioPlayer(player);
+        if (error) {
+          throw error;
         }
+        
+        setArticle(data);
       } catch (error) {
         console.error('Error fetching article:', error);
         toast.error('Failed to load article');
@@ -50,138 +44,155 @@ export function ArticleViewer() {
     }
     
     fetchArticle();
-    
-    // Cleanup
-    return () => {
-      if (audioPlayer) {
-        audioPlayer.pause();
-        audioPlayer.removeEventListener('ended', () => setAudioPlaying(false));
-      }
-    };
   }, [id]);
-  
-  // Play/pause audio
-  const toggleAudio = () => {
-    if (!audioPlayer) return;
+
+  useEffect(() => {
+    // Initialize audio player if there's a voice URL
+    if (article?.voice_url) {
+      const audioElement = new Audio(article.voice_url);
+      setAudio(audioElement);
+      
+      // Clean up when component unmounts
+      return () => {
+        audioElement.pause();
+        audioElement.src = '';
+      };
+    }
+  }, [article?.voice_url]);
+
+  const togglePlayPause = () => {
+    if (!audio) return;
     
-    if (audioPlaying) {
-      audioPlayer.pause();
+    if (isPlaying) {
+      audio.pause();
     } else {
-      audioPlayer.play().catch(error => {
-        console.error('Error playing audio:', error);
-        toast.error('Failed to play audio');
-      });
+      audio.play();
     }
     
-    setAudioPlaying(!audioPlaying);
+    setIsPlaying(!isPlaying);
   };
-  
-  // Download content
-  const downloadText = () => {
-    if (!article) return;
-    
-    const blob = new Blob([article.content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${article.title || 'article'}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-  
+
   if (loading) {
     return (
-      <div className="space-y-4 p-4">
-        <Skeleton className="h-12 w-3/4" />
-        <Skeleton className="h-6 w-1/2" />
-        <div className="space-y-2 mt-6">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
+      <div className="container py-8">
+        <div className="flex justify-center items-center min-h-[300px]">
+          <div className="animate-pulse text-center">
+            <div className="h-8 w-64 bg-muted rounded mb-4 mx-auto"></div>
+            <div className="h-4 w-48 bg-muted rounded mx-auto"></div>
+          </div>
         </div>
       </div>
     );
   }
-  
+
   if (!article) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center h-40">
-          <p className="text-muted-foreground">Article not found</p>
-        </CardContent>
-      </Card>
+      <div className="container py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Article not found</h1>
+          <p className="text-muted-foreground mb-6">
+            The article you're looking for might have been removed or doesn't exist.
+          </p>
+          <Button asChild>
+            <Link to="/articles">Return to Articles</Link>
+          </Button>
+        </div>
+      </div>
     );
   }
-  
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="container py-8">
+      <div className="mb-6">
+        <Button variant="outline" asChild className="mb-4">
+          <Link to="/articles">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back to Articles
+          </Link>
+        </Button>
+      </div>
+      
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">{article.title}</CardTitle>
-          <CardDescription>
-            {article.meta_description || 'No description available'}
-          </CardDescription>
+          <div className="space-y-2">
+            <CardTitle className="text-3xl">{article.title}</CardTitle>
+            
+            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+              <div className="flex items-center">
+                <Calendar className="mr-1 h-4 w-4" />
+                {formatDate(article.created_at)}
+              </div>
+              
+              <div className="flex items-center">
+                <User className="mr-1 h-4 w-4" />
+                {article.author || 'Unknown'}
+              </div>
+              
+              {article.category && (
+                <div className="flex items-center">
+                  <Tag className="mr-1 h-4 w-4" />
+                  {article.category}
+                </div>
+              )}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex space-x-2 mb-6">
-            {article.voice_url && (
+        
+        <CardContent className="space-y-6">
+          {article.excerpt && (
+            <div>
+              <p className="text-lg font-medium italic">{article.excerpt}</p>
+              <Separator className="my-4" />
+            </div>
+          )}
+          
+          {article.voice_url && (
+            <div className="flex items-center gap-2 p-4 bg-secondary/20 rounded-md">
               <Button 
                 variant="outline" 
-                size="sm" 
-                onClick={toggleAudio}
-                className="flex items-center space-x-2"
+                size="icon" 
+                onClick={togglePlayPause}
               >
-                {audioPlaying ? <Pause size={16} /> : <Play size={16} />}
-                <span>{audioPlaying ? 'Pause Audio' : 'Play Audio'}</span>
+                <Volume2 className="h-4 w-4" />
               </Button>
-            )}
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={downloadText}
-              className="flex items-center space-x-2"
-            >
-              <Download size={16} />
-              <span>Download Text</span>
-            </Button>
+              <span className="text-sm">
+                {isPlaying ? 'Playing audio...' : 'Listen to this article'}
+              </span>
+            </div>
+          )}
+          
+          <div className="prose dark:prose-invert max-w-none">
+            {article.content?.split('\n').map((paragraph, index) => (
+              paragraph ? <p key={index}>{paragraph}</p> : <br key={index} />
+            ))}
           </div>
           
-          <Tabs defaultValue="content">
-            <TabsList>
-              <TabsTrigger value="content">
-                <FileText size={16} className="mr-2" />
-                Content
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="content" className="mt-4">
-              <div className="prose dark:prose-invert max-w-none">
-                {article.content.split('\n').map((paragraph, idx) => (
-                  paragraph ? <p key={idx}>{paragraph}</p> : <br key={idx} />
-                ))}
+          {article.seo_keywords && article.seo_keywords.length > 0 && (
+            <div className="pt-4">
+              <h3 className="text-sm font-semibold mb-2">Keywords</h3>
+              <div className="flex flex-wrap gap-2">
+                {Array.isArray(article.seo_keywords) ? article.seo_keywords.map((keyword, index) => (
+                  <span 
+                    key={index} 
+                    className="px-2 py-1 bg-secondary/20 rounded text-sm"
+                  >
+                    {keyword}
+                  </span>
+                )) : null}
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </CardContent>
       </Card>
-      
-      {article.featured_image && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Featured Image</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <img 
-              src={article.featured_image} 
-              alt={article.title} 
-              className="w-full h-auto max-h-96 object-contain rounded-md"
-            />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

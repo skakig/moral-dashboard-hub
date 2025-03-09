@@ -1,76 +1,77 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Video } from "lucide-react";
-import { AIVideo } from "@/types/content";
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { PlayCircle, Download, Trash2 } from "lucide-react";
+
+interface VideoItem {
+  id: string;
+  title: string;
+  duration: string;
+  thumbnailUrl: string;
+  createdAt: string;
+}
+
+// Mock data for demonstration
+const mockVideos: VideoItem[] = [
+  {
+    id: "1",
+    title: "AI Introduction to Ethics",
+    duration: "00:30",
+    thumbnailUrl: "https://via.placeholder.com/120x68/1f2937/ffffff?text=Video+1",
+    createdAt: "2023-03-09T12:00:00Z"
+  },
+  {
+    id: "2",
+    title: "Moral Hierarchy Explained",
+    duration: "01:15",
+    thumbnailUrl: "https://via.placeholder.com/120x68/1f2937/ffffff?text=Video+2",
+    createdAt: "2023-03-08T10:30:00Z"
+  }
+];
 
 export function VideosList() {
-  const { data: videos, isLoading } = useQuery({
-    queryKey: ['videos'],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('ai_videos')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
-        
-        if (error) {
-          console.error("Error fetching videos:", error);
-          return [] as AIVideo[];
-        }
-        
-        return data as AIVideo[];
-      } catch (err) {
-        console.error("Failed to fetch videos:", err);
-        return [] as AIVideo[];
-      }
-    },
-  });
-
-  if (isLoading) {
+  if (mockVideos.length === 0) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="p-4">
-            <Skeleton className="h-[120px] w-full mb-4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-2/3 mt-2" />
-          </Card>
-        ))}
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No videos generated yet</p>
       </div>
     );
   }
 
-  if (!videos || videos.length === 0) {
-    return <p className="text-muted-foreground">No videos created yet.</p>;
-  }
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {videos && videos.map((video) => (
-        <Card key={video.id} className="overflow-hidden">
-          <div className="bg-slate-800 h-32 flex items-center justify-center text-white">
-            <Video size={24} className="mr-2" />
-            <span>Video Preview</span>
-          </div>
-          <div className="p-3">
-            <p className="text-sm font-medium line-clamp-2">{video.script_text}</p>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {Array.isArray(video.platform_targeting) && video.platform_targeting.map((platform) => (
-                <Badge key={platform} variant="outline" className="text-xs">
-                  {platform}
-                </Badge>
-              ))}
-              <Badge variant="secondary">
-                {video.voice_style}
-              </Badge>
+    <div className="space-y-4">
+      {mockVideos.map((video) => (
+        <div key={video.id} className="flex flex-col sm:flex-row gap-3 p-2 rounded-lg hover:bg-accent/10">
+          <div className="relative">
+            <img
+              src={video.thumbnailUrl}
+              alt={video.title}
+              className="w-full sm:w-[120px] h-auto rounded object-cover"
+            />
+            <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 rounded">
+              {video.duration}
             </div>
           </div>
-        </Card>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{video.title}</p>
+            <p className="text-xs text-muted-foreground">
+              {new Date(video.createdAt).toLocaleDateString()}
+            </p>
+            <div className="flex mt-2 space-x-2">
+              <Button variant="outline" size="sm" className="h-7 px-2">
+                <PlayCircle className="h-3 w-3 mr-1" />
+                Play
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 px-2">
+                <Download className="h-3 w-3 mr-1" />
+                Download
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 px-2 text-destructive hover:text-destructive">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </div>
       ))}
     </div>
   );

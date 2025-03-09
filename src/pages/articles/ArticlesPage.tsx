@@ -83,11 +83,13 @@ export default function ArticlesPage() {
           id: currentArticle.id,
           ...formattedData
         });
+        toast.success("Article updated successfully");
       } else {
         await createArticle.mutateAsync({
           ...formattedData,
           category: "general" // Add a default category for new articles
         });
+        toast.success("Article created successfully");
       }
       setArticleFormDialogOpen(false);
     } catch (error) {
@@ -111,8 +113,10 @@ export default function ArticlesPage() {
           id: currentTheme.id,
           ...formattedData
         });
+        toast.success("Theme updated successfully");
       } else {
         await createTheme.mutateAsync(formattedData);
+        toast.success("Theme created successfully");
       }
       setThemeFormDialogOpen(false);
     } catch (error) {

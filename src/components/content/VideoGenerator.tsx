@@ -1,289 +1,114 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Loader2, Film } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
+import React, { useState } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Wand2, Loader2 } from "lucide-react";
 import { VideosList } from "./VideosList";
-import { AIVideo } from "@/types/content";
-
-const videoFormSchema = z.object({
-  scriptText: z.string().min(20, { message: "Script must be at least 20 characters" }),
-  platform: z.string().min(1),
-  voiceStyle: z.string().min(1),
-  duration: z.number().min(10).max(60),
-  moralLevel: z.number().min(1).max(9),
-});
-
-type VideoFormValues = z.infer<typeof videoFormSchema>;
 
 export function VideoGenerator() {
-  const [loading, setLoading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState("");
+  const [duration, setDuration] = useState(15);
+  const [style, setStyle] = useState("realistic");
+  const [isGenerating, setIsGenerating] = useState(false);
   
-  const form = useForm<VideoFormValues>({
-    resolver: zodResolver(videoFormSchema),
-    defaultValues: {
-      scriptText: "",
-      platform: "TikTok",
-      voiceStyle: "Authoritative",
-      duration: 30,
-      moralLevel: 5,
-    },
-  });
-
-  const onSubmit = async (values: VideoFormValues) => {
-    setLoading(true);
-    try {
-      toast.info("Generating video with AI...");
-      
-      const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { 
-          contentType: "video", 
-          text: values.scriptText,
-          moralLevel: values.moralLevel,
-          platform: values.platform,
-          voiceStyle: values.voiceStyle,
-          duration: values.duration
-        }
-      });
-      
-      if (error) throw error;
-      
-      const mockVideoUrl = "https://example.com/sample-video.mp4";
-      setPreviewUrl(mockVideoUrl);
-      
-      toast.success("Video generated successfully!");
-    } catch (error) {
-      console.error("Error generating video:", error);
-      toast.error("Failed to generate video");
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const saveVideo = async () => {
-    if (!previewUrl) return;
+  const handleGenerate = async () => {
+    if (!prompt) return;
     
-    try {
-      toast.info("Saving video to database...");
-      
-      const videoData = {
-        script_text: form.getValues("scriptText"),
-        video_url: previewUrl,
-        voice_style: form.getValues("voiceStyle"),
-        platform_targeting: [form.getValues("platform")],
-      };
-      
-      const { data, error } = await supabase
-        .from('ai_videos')
-        .insert(videoData as any)
-        .select();
-      
-      if (error) throw error;
-      
-      toast.success("Video saved to database!");
-      form.reset();
-      setPreviewUrl(null);
-    } catch (error) {
-      console.error("Error saving video:", error);
-      toast.error("Failed to save video");
-    }
+    setIsGenerating(true);
+    
+    // Simulate API call to generate video
+    setTimeout(() => {
+      setIsGenerating(false);
+      // Video generation success would happen here
+    }, 2000);
   };
-
-  const platformOptions = [
-    { value: "TikTok", label: "TikTok" },
-    { value: "Instagram", label: "Instagram Reels" },
-    { value: "YouTube", label: "YouTube Shorts" },
-    { value: "Facebook", label: "Facebook" },
-  ];
-  
-  const voiceOptions = [
-    { value: "Authoritative", label: "Authoritative" },
-    { value: "Friendly", label: "Friendly & Approachable" },
-    { value: "Inspirational", label: "Inspirational" },
-    { value: "Educational", label: "Educational" },
-    { value: "Dramatic", label: "Dramatic" },
-  ];
 
   return (
-    <div className="space-y-6">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="scriptText"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Video Script</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Write a script for your short-form video... e.g., 'Have you ever noticed how people at different moral levels respond to challenges?'" 
-                    className="min-h-[120px]"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormDescription>
-                  This text will be converted to speech and used to generate a video.
-                </FormDescription>
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="platform"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Target Platform</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select platform" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {platformOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Generate AI Video</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="prompt">Video Description</Label>
+            <Textarea
+              id="prompt"
+              placeholder="Describe the video you want to generate in detail..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="min-h-[120px]"
             />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="style">Visual Style</Label>
+              <Select value={style} onValueChange={setStyle}>
+                <SelectTrigger id="style">
+                  <SelectValue placeholder="Select a style" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="realistic">Realistic</SelectItem>
+                  <SelectItem value="cartoon">Cartoon</SelectItem>
+                  <SelectItem value="3d">3D Animation</SelectItem>
+                  <SelectItem value="cinematic">Cinematic</SelectItem>
+                  <SelectItem value="abstract">Abstract</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             
-            <FormField
-              control={form.control}
-              name="voiceStyle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Voice Style</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select voice style" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {voiceOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <Label>Duration: {duration} seconds</Label>
+              <Slider
+                defaultValue={[15]}
+                min={5}
+                max={60}
+                step={5}
+                onValueChange={(values) => setDuration(values[0])}
+              />
+            </div>
           </div>
           
-          <FormField
-            control={form.control}
-            name="duration"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Target Duration (seconds): {field.value}</FormLabel>
-                <FormControl>
-                  <Slider
-                    min={10}
-                    max={60}
-                    step={5}
-                    value={[field.value]}
-                    onValueChange={(values) => field.onChange(values[0])}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Shorter videos (15-30s) perform best on TikTok and Reels
-                </FormDescription>
-              </FormItem>
+          <div className="pt-4">
+            <div className="bg-muted/30 rounded-lg h-[240px] flex items-center justify-center">
+              <p className="text-muted-foreground">Video preview will appear here</p>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" onClick={() => setPrompt("")}>
+            Reset
+          </Button>
+          <Button onClick={handleGenerate} disabled={isGenerating || !prompt}>
+            {isGenerating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Generate Video
+              </>
             )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="moralLevel"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Target Moral Level</FormLabel>
-                <Select 
-                  onValueChange={(value) => field.onChange(parseInt(value))}
-                  defaultValue={field.value.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select level" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Array.from({ length: 9 }, (_, i) => i + 1).map((level) => (
-                      <SelectItem key={level} value={level.toString()}>
-                        Level {level}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Which moral level should this video target?
-                </FormDescription>
-              </FormItem>
-            )}
-          />
-          
-          <div className="flex justify-between mt-6">
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Film className="mr-2 h-4 w-4" />
-                  Generate Video
-                </>
-              )}
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={saveVideo} 
-              disabled={!previewUrl}
-            >
-              Save Video
-            </Button>
-          </div>
-        </form>
-      </Form>
+          </Button>
+        </CardFooter>
+      </Card>
       
-      {previewUrl && (
-        <div className="mt-6">
-          <h3 className="text-lg font-medium mb-2">Preview</h3>
-          <div className="aspect-video bg-slate-800 rounded-md flex items-center justify-center text-white">
-            <p>Video Preview (Mock)</p>
-            {/* In a real implementation, this would be a video player */}
-          </div>
-        </div>
-      )}
-      
-      <div className="mt-8">
-        <h3 className="text-lg font-medium mb-4">Recent Videos</h3>
-        <VideosList />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Videos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <VideosList />
+        </CardContent>
+      </Card>
     </div>
   );
 }

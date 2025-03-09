@@ -1,4 +1,5 @@
 
+// Frontend representation of a meme
 export interface Meme {
   id: string;
   prompt: string;
@@ -12,6 +13,7 @@ export interface Meme {
   user_id?: string;
 }
 
+// Form data for creating/editing a meme
 export interface MemeFormData {
   prompt: string;
   topText: string;
@@ -21,8 +23,47 @@ export interface MemeFormData {
   hashtags?: string[];
 }
 
+// Database representation of a meme
+export interface DbMeme {
+  id: string;
+  prompt: string;
+  image_url: string;
+  top_text: string;
+  bottom_text: string;
+  platform?: string;
+  hashtags?: string[];
+  created_at: string;
+  updated_at?: string;
+  user_id?: string;
+}
+
+// For social media sharing
 export interface SharingOptions {
   redirectUrl?: string;
   additionalTags?: string[];
   message?: string;
 }
+
+// Mappers to convert between DB and frontend formats
+export const toMeme = (dbMeme: DbMeme): Meme => ({
+  id: dbMeme.id,
+  prompt: dbMeme.prompt,
+  imageUrl: dbMeme.image_url,
+  topText: dbMeme.top_text,
+  bottomText: dbMeme.bottom_text,
+  platform: dbMeme.platform,
+  hashtags: dbMeme.hashtags,
+  created_at: dbMeme.created_at,
+  updated_at: dbMeme.updated_at,
+  user_id: dbMeme.user_id
+});
+
+export const toDbMeme = (meme: Omit<Meme, 'id' | 'created_at' | 'updated_at'>): Omit<DbMeme, 'id' | 'created_at' | 'updated_at'> => ({
+  prompt: meme.prompt,
+  image_url: meme.imageUrl,
+  top_text: meme.topText,
+  bottom_text: meme.bottomText,
+  platform: meme.platform,
+  hashtags: meme.hashtags,
+  user_id: meme.user_id
+});

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { EdgeFunctionService } from '@/services/api/edgeFunctions';
-import { Meme, MemeFormData } from '@/types/meme';
+import { Meme, MemeFormData, DbMeme, toMeme, toDbMeme } from '@/types/meme';
 import { generateRandomId } from '@/lib/utils';
 
 export function useMemeOperations() {
@@ -73,28 +73,35 @@ export function useMemeOperations() {
     setIsSaving(true);
     
     try {
-      const newMeme: Omit<Meme, 'id' | 'created_at'> = {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      
+      // Convert to database format
+      const dbMeme = {
         prompt: memeData.prompt,
-        imageUrl: memeData.imageUrl,
-        topText: memeData.topText,
-        bottomText: memeData.bottomText,
+        image_url: memeData.imageUrl,
+        top_text: memeData.topText,
+        bottom_text: memeData.bottomText,
         platform: memeData.platform,
         hashtags: memeData.hashtags || [],
-        user_id: (await supabase.auth.getUser()).data.user?.id
+        user_id: userId
       };
       
+      // Insert into database
       const { data, error } = await supabase
         .from('memes')
-        .insert(newMeme)
+        .insert(dbMeme)
         .select()
         .single();
       
       if (error) throw error;
       
+      // Convert DB response to frontend format
+      const savedMeme = toMeme(data as DbMeme);
+      
       toast.success('Meme saved successfully!');
       fetchMemes(); // Refresh the list
-      return data as Meme;
-    } catch (error) {
+      return savedMeme;
+    } catch (error: any) {
       console.error('Error saving meme:', error);
       toast.error('Failed to save meme. Please try again.');
       return null;
@@ -121,7 +128,9 @@ export function useMemeOperations() {
       
       if (error) throw error;
       
-      setSavedMemes(data as Meme[]);
+      // Convert DB data to frontend format
+      const memes = (data as DbMeme[]).map(dbMeme => toMeme(dbMeme));
+      setSavedMemes(memes);
     } catch (error) {
       console.error('Error fetching memes:', error);
       toast.error('Failed to load saved memes');
@@ -246,13 +255,43 @@ export function useMemeOperations() {
   };
 
   // Share meme on social media
-  const shareMeme = (platform: string, imageUrl: string, text: string, options?: { redirectUrl?: string, tags?: string[] }) => {
-    const sharingUrl = generateSharingUrl(imageUrl, text, platform, options);
-    
-    if (sharingUrl) {
-      window.open(sharingUrl, '_blank', 'width=600,height=400');
-    } else {
-      toast.error(`Sharing on ${platform} is not supported yet`);
+  const shareMeme = async (platform: string, imageUrl: string, text: string, options?: { redirectUrl?: string, tags?: string[] }) => {
+    try {
+      // Fetch sharing options from Supabase Edge Function
+      const { data: sharingOptions, error } = await supabase.functions.invoke('get-sharing-options', {
+        body: { platform: platform.toLowerCase() }
+      });
+      
+      if (error) {
+        console.error('Error fetching sharing options:', error);
+        // Continue with default options
+      }
+      
+      // Merge default options with any from the database
+      const redirectUrl = sharingOptions?.redirectUrl || options?.redirectUrl || 'https://themh.io';
+      const tags = sharingOptions?.additionalTags || options?.tags || ['TheMoralHierarchy', 'TMH'];
+      const message = sharingOptions?.message ? `${sharingOptions.message} ${text}` : text;
+      
+      // Generate sharing URL
+      const sharingUrl = generateSharingUrl(imageUrl, message, platform, { 
+        redirectUrl, 
+        tags 
+      });
+      
+      if (sharingUrl) {
+        window.open(sharingUrl, '_blank', 'width=600,height=400');
+      } else {
+        toast.error(`Sharing on ${platform} is not supported yet`);
+      }
+    } catch (error) {
+      console.error('Error sharing meme:', error);
+      toast.error('Failed to share meme');
+      
+      // Fallback to default sharing
+      const sharingUrl = generateSharingUrl(imageUrl, text, platform, options);
+      if (sharingUrl) {
+        window.open(sharingUrl, '_blank', 'width=600,height=400');
+      }
     }
   };
 

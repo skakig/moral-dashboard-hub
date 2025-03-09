@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Toaster } from "./components/ui/toaster";
@@ -29,8 +29,8 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <Router>
           <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<Index />} />
+            <Route path="/" element={<AppLayout><Outlet /></AppLayout>}>
+              <Route index element={<Index />} />
               <Route path="/assessments" element={<Assessments />} />
               <Route path="/demographics" element={<Demographics />} />
               <Route path="/content" element={<AIContent />} />

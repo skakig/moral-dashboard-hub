@@ -2,8 +2,8 @@
 import React from "react";
 import { UseFormReturn } from "react-hook-form";
 import { ThemeField } from "../../../components/ThemeField";
-import { ArticleFormValues } from "../types";
-import { AutoGenerateOptions } from "../hooks/useAutoGenerateOptions";
+import { ArticleFormValues } from "../../step-form/types";
+import { AutoGenerateOptions } from "../../step-form/hooks/useAutoGenerateOptions";
 
 interface ThemeStepProps {
   form: UseFormReturn<ArticleFormValues>;
@@ -47,6 +47,7 @@ export function ThemeStep({
               id="autoGenerateVoice"
               checked={autoGenerateOptions.voice}
               onChange={(e) => setAutoGenerateOptions({
+                ...autoGenerateOptions,
                 voice: e.target.checked
               })}
               className="rounded border-gray-300 text-primary focus:ring-primary"
@@ -62,6 +63,7 @@ export function ThemeStep({
               id="autoGenerateImage"
               checked={autoGenerateOptions.image}
               onChange={(e) => setAutoGenerateOptions({
+                ...autoGenerateOptions,
                 image: e.target.checked
               })}
               className="rounded border-gray-300 text-primary focus:ring-primary"

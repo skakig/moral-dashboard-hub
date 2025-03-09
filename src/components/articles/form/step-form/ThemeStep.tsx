@@ -1,21 +1,17 @@
 
 import React from "react";
 import { UseFormReturn } from "react-hook-form";
-import { ThemeField } from "../../components/ThemeField";
-import { ArticleFormValues } from "../../StepByStepArticleForm";
-import { FormField, FormItem, FormLabel, FormDescription, FormControl } from "@/components/ui/form";
-import { Switch } from "@/components/ui/switch";
+import { ThemeField } from "../components/ThemeField";
+import { ArticleFormValues } from "./types";
+import { AutoGenerateOptions } from "./hooks/useAutoGenerateOptions";
 
 interface ThemeStepProps {
   form: UseFormReturn<ArticleFormValues>;
   onGenerate: () => Promise<void>;
   autoGenerate: boolean;
   setAutoGenerate: (value: boolean) => void;
-  autoGenerateOptions?: {
-    voice?: boolean;
-    image?: boolean;
-  };
-  setAutoGenerateOptions?: (options: any) => void;
+  autoGenerateOptions?: AutoGenerateOptions;
+  setAutoGenerateOptions?: (options: Partial<AutoGenerateOptions>) => void;
 }
 
 export function ThemeStep({ 
@@ -23,85 +19,61 @@ export function ThemeStep({
   onGenerate, 
   autoGenerate, 
   setAutoGenerate,
-  autoGenerateOptions = { voice: false, image: false },
-  setAutoGenerateOptions = () => {}
+  autoGenerateOptions,
+  setAutoGenerateOptions
 }: ThemeStepProps) {
   return (
     <div className="space-y-4">
       <ThemeField form={form} onGenerate={onGenerate} autoGenerate={autoGenerate} />
       
-      <div className="space-y-3 pt-2 border-t">
-        <FormField
-          control={form.control}
-          name="autoGenerateContent"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <div className="space-y-0.5">
-                <FormLabel>Auto-generate content</FormLabel>
-                <FormDescription>
-                  Automatically generate content when you finish typing
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={autoGenerate}
-                  onCheckedChange={setAutoGenerate}
-                />
-              </FormControl>
-            </FormItem>
-          )}
+      <div className="flex items-center space-x-2 mt-4">
+        <input
+          type="checkbox"
+          id="autoGenerate"
+          checked={autoGenerate}
+          onChange={(e) => setAutoGenerate(e.target.checked)}
+          className="rounded border-gray-300 text-primary focus:ring-primary"
         />
-
-        {autoGenerate && (
-          <>
-            <FormField
-              control={form.control}
-              name="autoGenerateVoice"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                    <FormLabel>Auto-generate voice</FormLabel>
-                    <FormDescription>
-                      Also generate voice content automatically
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={autoGenerateOptions.voice}
-                      onCheckedChange={(checked) => 
-                        setAutoGenerateOptions({...autoGenerateOptions, voice: checked})
-                      }
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="autoGenerateImage"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                    <FormLabel>Auto-generate image</FormLabel>
-                    <FormDescription>
-                      Also generate featured image automatically
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={autoGenerateOptions.image}
-                      onCheckedChange={(checked) => 
-                        setAutoGenerateOptions({...autoGenerateOptions, image: checked})
-                      }
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </>
-        )}
+        <label htmlFor="autoGenerate" className="text-sm">
+          Auto-generate content when I finish typing
+        </label>
       </div>
+
+      {autoGenerateOptions && setAutoGenerateOptions && autoGenerate && (
+        <div className="space-y-2 pl-6 mt-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="autoGenerateVoice"
+              checked={autoGenerateOptions.voice}
+              onChange={(e) => setAutoGenerateOptions({
+                ...autoGenerateOptions,
+                voice: e.target.checked
+              })}
+              className="rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="autoGenerateVoice" className="text-sm">
+              Also generate voice content
+            </label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="autoGenerateImage"
+              checked={autoGenerateOptions.image}
+              onChange={(e) => setAutoGenerateOptions({
+                ...autoGenerateOptions,
+                image: e.target.checked
+              })}
+              className="rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="autoGenerateImage" className="text-sm">
+              Also generate featured image
+            </label>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

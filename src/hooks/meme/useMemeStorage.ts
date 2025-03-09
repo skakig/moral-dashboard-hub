@@ -94,8 +94,8 @@ export function useMemeStorage() {
       
       if (error) throw error;
       
-      // Create a type for the raw data to avoid deep type inference
-      type RawDbMeme = {
+      // Explicitly define the raw data structure to prevent deep type inference
+      interface DbMemeRecord {
         id: string;
         image_url: string;
         meme_text: string;
@@ -105,11 +105,11 @@ export function useMemeStorage() {
         updated_at?: string;
         user_id?: string;
         engagement_score?: number;
-      };
+      }
       
-      // Use explicit typing with the new RawDbMeme type
-      const memes = data 
-        ? (data as RawDbMeme[]).map(item => toMeme(item as DbMeme))
+      // Convert the raw data to our frontend format, with explicit typing
+      const memes: Meme[] = data 
+        ? (data as DbMemeRecord[]).map(item => toMeme(item as DbMeme))
         : [];
       
       setSavedMemes(memes);

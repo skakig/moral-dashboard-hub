@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Meme, MemeFormData, toMeme } from '@/types/meme';
+import { Meme, MemeFormData } from '@/types/meme';
 import { toast } from 'sonner';
 import { MemeDbResponse } from './types';
 

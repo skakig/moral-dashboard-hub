@@ -8,8 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Wand2, RefreshCw, Download, Share2, Loader2, Save } from "lucide-react";
 import { MemePreview } from "./MemePreview";
 import { MemesList } from "./MemesList";
-// Updated import path
-import { useMemeOperations } from "@/hooks/memes";
+// Importing the new modular hooks approach
+import { useMemeStorage, useMemeGeneration, useMemeActions } from "@/hooks/memes";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MemeFormData } from "@/types/meme";
 import { toast } from "sonner";
@@ -24,18 +24,10 @@ export function MemeGenerator() {
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   
-  const { 
-    isGenerating, 
-    isSaving,
-    savedMemes,
-    isLoading,
-    generateMemeImage, 
-    saveMeme,
-    fetchMemes,
-    deleteMeme,
-    downloadMeme,
-    shareMeme
-  } = useMemeOperations();
+  // Using modular hooks instead of the monolithic useMemeOperations
+  const { isGenerating, generateMemeImage } = useMemeGeneration();
+  const { isSaving, savedMemes, isLoading, saveMeme, fetchMemes, deleteMeme } = useMemeStorage();
+  const { downloadMeme, shareMeme } = useMemeActions();
 
   useEffect(() => {
     fetchMemes();
@@ -275,7 +267,18 @@ export function MemeGenerator() {
             isLoading={isLoading} 
             onEdit={handleEditMeme} 
             onDelete={deleteMeme} 
-            onShare={shareMeme}
+            onShare={(meme) => {
+              const text = `${meme.topText} ${meme.bottomText}`.trim();
+              shareMeme(
+                meme.platform || 'twitter', 
+                meme.imageUrl, 
+                text, 
+                {
+                  redirectUrl: "https://themh.io",
+                  tags: ["TheMoralHierarchy", "TMH", meme.platform]
+                }
+              );
+            }}
           />
         </CardContent>
       </Card>

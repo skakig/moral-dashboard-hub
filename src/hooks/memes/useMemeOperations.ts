@@ -1,12 +1,13 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStatus } from './useAuthStatus';
-import { useMemeDatabase } from './useMemeDatabase';
+import { useMemeStorage } from './useMemeStorage';
+import { useMemeGeneration } from './useMemeGeneration';
+import { useMemeActions } from './useMemeActions';
 import { MemeFormData, Meme } from '@/types/meme';
-import { generateMemeImage, downloadMeme, shareMeme } from './memeUtils';
-import { UseMemeOperationsReturn } from './types';
 
-export function useMemeOperations(): UseMemeOperationsReturn {
+// This is now a lightweight orchestration hook that combines the other specialized hooks
+export function useMemeOperations() {
   const { isAuthenticated } = useAuthStatus();
   const { 
     savedMemes, 
@@ -16,18 +17,17 @@ export function useMemeOperations(): UseMemeOperationsReturn {
     saveMeme, 
     fetchMemes, 
     deleteMeme 
-  } = useMemeDatabase();
-  const [isGenerating, setIsGenerating] = useState(false);
+  } = useMemeStorage();
+  
+  const { isGenerating, generateMemeImage } = useMemeGeneration();
+  const { downloadMeme, shareMeme } = useMemeActions();
 
-  // Generate meme image function wrapper
-  const generateMemeImageWrapper = async (prompt: string, platform?: string): Promise<string | null> => {
-    try {
-      setIsGenerating(true);
-      return await generateMemeImage(prompt, platform);
-    } finally {
-      setIsGenerating(false);
+  // Fetch memes on initialization if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMemes();
     }
-  };
+  }, [isAuthenticated]);
   
   return {
     savedMemes,
@@ -39,7 +39,7 @@ export function useMemeOperations(): UseMemeOperationsReturn {
     saveMeme,
     fetchMemes,
     deleteMeme,
-    generateMemeImage: generateMemeImageWrapper,
+    generateMemeImage,
     downloadMeme,
     shareMeme
   };

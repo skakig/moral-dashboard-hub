@@ -1,18 +1,19 @@
 
 import { Meme, MemeFormData } from '@/types/meme';
 
-// Define structure for database response to avoid type confusion and infinite type recursion
+// Simplified interface for database response to avoid type recursion issues
 export interface MemeDbResponse {
   id: string;
   prompt: string;
   image_url: string;
-  meme_text: string; // Contains JSON with topText and bottomText
+  meme_text: string;
   platform_tags?: string[];
   created_at: string;
   user_id?: string;
   engagement_score?: number;
 }
 
+// Type for useMemeOperations return value
 export interface UseMemeOperationsReturn {
   savedMemes: Meme[];
   isLoading: boolean;

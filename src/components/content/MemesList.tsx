@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ExternalLink, Share2, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Share2 } from "lucide-react";
 import { Meme } from "@/types/meme";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
@@ -22,7 +22,7 @@ interface MemesListProps {
   isLoading: boolean;
   onEdit: (meme: Meme) => void;
   onDelete: (id: string) => void;
-  onShare: (platform: string, imageUrl: string, text: string, options?: any) => void;
+  onShare: (meme: Meme) => void;
 }
 
 export function MemesList({ memes, isLoading, onEdit, onDelete, onShare }: MemesListProps) {
@@ -58,14 +58,6 @@ export function MemesList({ memes, isLoading, onEdit, onDelete, onShare }: Memes
     );
   }
 
-  const handleShare = (meme: Meme) => {
-    const text = `${meme.topText} ${meme.bottomText}`.trim();
-    onShare(meme.platform || 'twitter', meme.imageUrl, text, {
-      redirectUrl: "https://themh.io",
-      tags: ["TheMoralHierarchy", "TMH", meme.platform]
-    });
-  };
-
   return (
     <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
       {memes.map((meme) => (
@@ -99,7 +91,7 @@ export function MemesList({ memes, isLoading, onEdit, onDelete, onShare }: Memes
               variant="ghost" 
               size="icon" 
               className="h-8 w-8"
-              onClick={() => handleShare(meme)}
+              onClick={() => onShare(meme)}
             >
               <Share2 className="h-4 w-4" />
             </Button>

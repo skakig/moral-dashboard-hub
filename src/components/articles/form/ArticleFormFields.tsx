@@ -17,6 +17,7 @@ export function ArticleFormFields({ form }) {
   const [contentType, setContentType] = useState(form.watch("contentType") || "");
   const [platform, setPlatform] = useState(form.watch("platform") || "");
   const [contentLength, setContentLength] = useState(form.watch("contentLength") || "medium");
+  const [moralLevel, setMoralLevel] = useState(form.watch("moralLevel") || 5);
   const { generateVoiceContent } = useVoiceGeneration(form);
   const voiceGenerated = form.watch("voiceGenerated") || false;
 
@@ -26,6 +27,7 @@ export function ArticleFormFields({ form }) {
       if (name === "contentType") setContentType(value.contentType);
       if (name === "platform") setPlatform(value.platform);
       if (name === "contentLength") setContentLength(value.contentLength);
+      if (name === "moralLevel") setMoralLevel(value.moralLevel);
     });
     
     return () => subscription.unsubscribe();

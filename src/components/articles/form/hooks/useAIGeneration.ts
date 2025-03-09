@@ -23,7 +23,7 @@ export function useAIGeneration() {
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
 
   const generateContent = async (params: GenerationParams) => {
-    if (!params.theme && !params.keywords.length) {
+    if (!params.theme && (!params.keywords || !params.keywords.length)) {
       toast.error('Please enter a theme or keywords');
       return null;
     }
@@ -32,14 +32,23 @@ export function useAIGeneration() {
     try {
       toast.info(`Generating ${params.contentType} with AI...`);
 
+      console.log("Calling generate-article with params:", params);
+
       // Call the generate-article edge function
       const { data, error } = await supabase.functions.invoke('generate-article', {
         body: params
       });
 
       if (error) {
-        throw new Error(error.message);
+        console.error("Error from Supabase function:", error);
+        throw new Error(error.message || 'Failed to generate content');
       }
+
+      if (!data) {
+        throw new Error('No data returned from content generation');
+      }
+
+      console.log("Generated content response:", data);
 
       // Set the generated content in the state
       const content = {
@@ -49,11 +58,10 @@ export function useAIGeneration() {
       };
       
       setGeneratedContent(content);
-      toast.success('Content generated successfully!');
       return content;
     } catch (error) {
       console.error('Error generating content:', error);
-      toast.error(`Failed to generate content: ${error.message}`);
+      toast.error(`Failed to generate content: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     } finally {
       setLoading(false);

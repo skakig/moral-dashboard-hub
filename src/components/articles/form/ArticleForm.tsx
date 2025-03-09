@@ -7,9 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { ArticleFormFields } from "./ArticleFormFields";
-import { AIGenerationDialog } from "./AIGenerationDialog";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 // Article form schema
 const articleFormSchema = z.object({
@@ -24,6 +22,7 @@ const articleFormSchema = z.object({
   seoKeywords: z.string().optional(),
   voiceUrl: z.string().optional(),
   voiceGenerated: z.boolean().optional().default(false),
+  moralLevel: z.string().or(z.number()).optional().default(5),
 });
 
 export type ArticleFormValues = z.infer<typeof articleFormSchema>;
@@ -34,7 +33,6 @@ interface ArticleFormProps {
   submitLabel?: string;
   onCancel?: () => void;
   isLoading?: boolean;
-  generateArticle?: (params: any) => Promise<any>;
 }
 
 export function ArticleForm({
@@ -43,11 +41,7 @@ export function ArticleForm({
   submitLabel = "Create",
   onCancel,
   isLoading = false,
-  generateArticle,
 }: ArticleFormProps) {
-  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
     defaultValues: {
@@ -57,11 +51,12 @@ export function ArticleForm({
       featuredImage: "",
       contentType: "",
       platform: "",
-      contentLength: "",
+      contentLength: "medium",
       metaDescription: "",
       seoKeywords: "",
       voiceUrl: "",
       voiceGenerated: false,
+      moralLevel: 5,
       ...initialData,
     },
   });
@@ -77,61 +72,6 @@ export function ArticleForm({
     }
   }
 
-  // Handle AI content generation
-  const handleGenerateContent = async (generationParams: any) => {
-    try {
-      setIsGenerating(true);
-      // Call the Supabase function to generate content
-      const { data, error } = await supabase.functions.invoke(
-        "generate-article",
-        {
-          body: {
-            type: generationParams.contentType,
-            platform: generationParams.platform,
-            topic: generationParams.topic,
-            tone: generationParams.tone,
-            length: generationParams.contentLength,
-          },
-        }
-      );
-
-      if (error) {
-        console.error("Generation error:", error);
-        toast.error("Failed to generate content");
-        return;
-      }
-
-      if (data?.content) {
-        // Update the form with the generated content
-        form.setValue("content", data.content);
-        form.setValue("title", data.title || generationParams.topic);
-        
-        if (data.excerpt) {
-          form.setValue("excerpt", data.excerpt);
-        }
-        
-        toast.success("Content generated successfully");
-        
-        // Close the dialog
-        setIsAIDialogOpen(false);
-      }
-    } catch (err) {
-      console.error("Error generating content:", err);
-      toast.error("Failed to generate content");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // This handles the actual content generation when submitted
-  const onContentGenerated = (generatedContent: any) => {
-    if (generatedContent) {
-      form.setValue("content", generatedContent.content);
-      form.setValue("title", generatedContent.title || "");
-      form.setValue("excerpt", generatedContent.excerpt || "");
-    }
-  };
-
   return (
     <div className="space-y-8">
       <Form {...form}>
@@ -144,25 +84,12 @@ export function ArticleForm({
                 Cancel
               </Button>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsAIDialogOpen(true)}
-            >
-              Generate with AI
-            </Button>
-            <Button type="submit" disabled={isGenerating || isLoading}>
+            <Button type="submit" disabled={isLoading}>
               {submitLabel}
             </Button>
           </div>
         </form>
       </Form>
-
-      <AIGenerationDialog
-        open={isAIDialogOpen}
-        onOpenChange={setIsAIDialogOpen}
-        onContentGenerated={onContentGenerated}
-      />
     </div>
   );
 }

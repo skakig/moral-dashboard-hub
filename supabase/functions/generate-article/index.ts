@@ -2,7 +2,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+// Get the API key from environment variables
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY') || Deno.env.get('OPEN_AI_TMH') || "";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,25 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Received request to generate-article function");
+    
+    if (!openAIApiKey) {
+      console.error("OpenAI API key is missing");
+      return new Response(
+        JSON.stringify({ 
+          error: 'Configuration error', 
+          details: 'OpenAI API key is not configured' 
+        }), 
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const { theme, keywords, contentType, moralLevel, platform = "general", contentLength = "medium" } = await req.json();
+    
+    console.log("Request parameters:", { theme, contentType, moralLevel, platform, contentLength });
 
     // Construct the prompt based on TMH knowledge
     const tmhContext = `The Moral Hierarchy (TMH) is a framework with 9 levels of moral development:
@@ -57,7 +76,7 @@ serve(async (req) => {
       4. References moral hierarchy concepts in an accessible way
       5. Includes suggestions for visuals or graphics to accompany the post
       `;
-    } else if (contentType.includes("youtube")) {
+    } else if (contentType.includes("youtube") || contentType === "script") {
       contentSpecificInstructions = `
       Create a YouTube ${contentType.includes("shorts") ? "Shorts" : "script"} that:
       1. Has a strong hook in the first ${contentType.includes("shorts") ? "3" : "15"} seconds
@@ -120,7 +139,7 @@ serve(async (req) => {
 
     If you encounter any challenges creating this content, focus on quality over keywords or length.`;
 
-    console.log("Sending request to OpenAI with prompt:", systemPrompt);
+    console.log("Sending request to OpenAI");
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -191,6 +210,8 @@ serve(async (req) => {
 
     const titleData = await titleResponse.json();
     const title = titleData.choices[0].message.content;
+
+    console.log("Successfully generated content");
 
     return new Response(JSON.stringify({ 
       content: generatedContent,

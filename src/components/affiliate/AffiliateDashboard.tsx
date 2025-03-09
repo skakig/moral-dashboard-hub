@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAffiliateProfile, useReferrals, useCommissions, usePayoutRequests, usePromoCodes } from '@/hooks/useAffiliateSystem';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -75,9 +74,15 @@ export const AffiliateDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <AffiliateProfileForm userId={userId} onSuccess={() => {
-              toast.success('Affiliate application submitted successfully');
-            }} />
+            <AffiliateProfileForm 
+              userId={userId} 
+              onSuccess={() => {
+                toast.success('Affiliate application submitted successfully');
+              }} 
+              onCancel={() => {
+                // No-op, user can't cancel from this view
+              }}
+            />
           </CardContent>
         </Card>
       </div>

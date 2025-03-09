@@ -47,9 +47,24 @@ export const useCreateAffiliateProfile = () => {
         profile.referral_code = codeData;
       }
       
+      // Ensure required fields are present
+      if (!profile.email || !profile.name) {
+        throw new Error('Email and name are required fields');
+      }
+      
       const { data, error } = await supabase
         .from('affiliate_profiles')
-        .insert(profile)
+        .insert({
+          email: profile.email,
+          name: profile.name,
+          user_id: profile.user_id,
+          referral_code: profile.referral_code,
+          status: profile.status || 'pending',
+          commission_rate: profile.commission_rate || 10.0,
+          preferred_payout_method: profile.preferred_payout_method || 'stripe',
+          payout_details: profile.payout_details || {},
+          social_profiles: profile.social_profiles || {}
+        })
         .select()
         .single();
       
@@ -156,9 +171,21 @@ export const useCreatePayoutRequest = () => {
   
   return useMutation({
     mutationFn: async (request: Partial<PayoutRequest>) => {
+      // Ensure required fields are present
+      if (!request.amount || !request.payout_method || !request.affiliate_id) {
+        throw new Error('Amount, payout method, and affiliate ID are required');
+      }
+      
       const { data, error } = await supabase
         .from('payout_requests')
-        .insert(request)
+        .insert({
+          affiliate_id: request.affiliate_id,
+          amount: request.amount,
+          payout_method: request.payout_method,
+          payout_details: request.payout_details || {},
+          status: request.status || 'pending',
+          notes: request.notes
+        })
         .select()
         .single();
       
@@ -200,9 +227,24 @@ export const useCreatePromoCode = () => {
   
   return useMutation({
     mutationFn: async (promoCode: Partial<PromoCode>) => {
+      // Ensure required fields are present
+      if (!promoCode.code || !promoCode.affiliate_id) {
+        throw new Error('Code and affiliate ID are required');
+      }
+      
       const { data, error } = await supabase
         .from('promo_codes')
-        .insert(promoCode)
+        .insert({
+          affiliate_id: promoCode.affiliate_id,
+          code: promoCode.code,
+          discount_percent: promoCode.discount_percent,
+          discount_fixed: promoCode.discount_fixed,
+          is_active: promoCode.is_active !== undefined ? promoCode.is_active : true,
+          valid_from: promoCode.valid_from || new Date().toISOString(),
+          valid_until: promoCode.valid_until,
+          usage_limit: promoCode.usage_limit,
+          usage_count: promoCode.usage_count || 0
+        })
         .select()
         .single();
       

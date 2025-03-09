@@ -3,26 +3,29 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
-    // Create a specific handler for password fields to allow pasting
-    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-      if (type === 'password' && props.onPaste) {
-        props.onPaste(e);
-      }
-    };
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
+  error?: string;
+}
 
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, error, ...props }, ref) => {
     return (
-      <input
-        type={type}
-        className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-          className
+      <div className="relative">
+        <input
+          type={type}
+          className={cn(
+            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            error && "border-destructive focus-visible:ring-destructive",
+            className
+          )}
+          ref={ref}
+          {...props}
+        />
+        {error && (
+          <p className="text-destructive text-sm mt-1">{error}</p>
         )}
-        ref={ref}
-        onPaste={handlePaste}
-        {...props}
-      />
+      </div>
     )
   }
 )

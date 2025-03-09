@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Meme, MemeFormData, DbMeme, toMeme } from '@/types/meme';
+import { Meme, MemeFormData } from '@/types/meme';
 
 // Simple interface representing exactly what we expect from the database
 interface DbMemeRecord {
@@ -21,6 +21,41 @@ export function useMemeStorage() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedMemes, setSavedMemes] = useState<Meme[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Convert DB record to frontend Meme format
+  const toMeme = (dbMeme: DbMemeRecord): Meme => {
+    // Parse meme_text if it's JSON (containing topText and bottomText)
+    let topText = '';
+    let bottomText = '';
+    
+    try {
+      if (dbMeme.meme_text && dbMeme.meme_text.startsWith('{')) {
+        const parsedText = JSON.parse(dbMeme.meme_text) as { topText?: string; bottomText?: string };
+        topText = parsedText.topText || '';
+        bottomText = parsedText.bottomText || '';
+      } else {
+        // If not JSON, use the whole text as topText
+        topText = dbMeme.meme_text || '';
+      }
+    } catch (e) {
+      // If parsing fails, use the text as is
+      topText = dbMeme.meme_text || '';
+    }
+    
+    return {
+      id: dbMeme.id,
+      prompt: dbMeme.prompt || '',
+      imageUrl: dbMeme.image_url,
+      topText: topText,
+      bottomText: bottomText,
+      platform: dbMeme.platform_tags && dbMeme.platform_tags.length > 0 ? dbMeme.platform_tags[0] : undefined,
+      hashtags: dbMeme.platform_tags ? dbMeme.platform_tags.slice(1) : [],
+      created_at: dbMeme.created_at,
+      updated_at: dbMeme.updated_at,
+      user_id: dbMeme.user_id,
+      engagement_score: dbMeme.engagement_score
+    };
+  };
 
   // Save meme to database
   const saveMeme = async (memeData: MemeFormData): Promise<Meme | null> => {

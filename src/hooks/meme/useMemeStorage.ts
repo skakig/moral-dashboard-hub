@@ -50,7 +50,7 @@ export function useMemeStorage() {
       if (error) throw error;
       
       // Convert DB response to frontend format
-      const savedMeme = toMeme(data as any);
+      const savedMeme = toMeme(data as DbMeme);
       
       toast.success('Meme saved successfully!');
       fetchMemes(); // Refresh the list
@@ -87,8 +87,12 @@ export function useMemeStorage() {
       
       if (error) throw error;
       
-      // Fix: Fix the type instantiation issue by using a proper type assertion
-      const memes = (data || []).map((dbMeme: any) => toMeme(dbMeme));
+      // Explicitly type the data and handle null case
+      type RawDbMeme = Record<string, any>;
+      const memes = data 
+        ? (data as RawDbMeme[]).map(dbMeme => toMeme(dbMeme as DbMeme))
+        : [];
+      
       setSavedMemes(memes);
     } catch (error) {
       console.error('Error fetching memes:', error);

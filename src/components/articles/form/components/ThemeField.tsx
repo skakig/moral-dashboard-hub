@@ -49,6 +49,9 @@ export function ThemeField({ form, onGenerate }: ThemeFieldProps) {
               {...field}
             />
           </FormControl>
+          <div className="text-xs text-muted-foreground mt-1">
+            Press Enter to generate content or use the Generate button
+          </div>
           <FormMessage />
         </FormItem>
       )}

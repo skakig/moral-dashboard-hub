@@ -14,6 +14,7 @@ import { FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Mic, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Main ArticleFormFields component now acts as a coordinator
 export function ArticleFormFields({ form }) {
@@ -24,6 +25,7 @@ export function ArticleFormFields({ form }) {
   const { generateVoiceContent } = useVoiceGeneration(form);
   const { loading, generateContent } = useAIGeneration();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const voiceGenerated = form.watch("voiceGenerated") || false;
 
   // Preserve form values when selections change
@@ -41,6 +43,7 @@ export function ArticleFormFields({ form }) {
   const handleGenerateContent = async () => {
     try {
       setIsGenerating(true);
+      setError(null);
       
       // Get the current form values to use as input parameters
       const theme = form.getValues("theme") || ""; 
@@ -107,9 +110,10 @@ export function ArticleFormFields({ form }) {
         
         toast.success("Content generated successfully!");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating content:", error);
-      toast.error("Failed to generate content: " + (error instanceof Error ? error.message : "Unknown error"));
+      setError(error.message || "Failed to generate content");
+      toast.error(`Failed to generate content: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsGenerating(false);
     }
@@ -137,6 +141,15 @@ export function ArticleFormFields({ form }) {
           Enter your article content below or use AI to generate content based on your settings.
           The content should align with The Moral Hierarchy principles at level {form.watch("moralLevel") || "5"}.
         </p>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Separator className="mb-4" />
         
         {/* Add the ThemeField component before ContentField with the generate handler */}

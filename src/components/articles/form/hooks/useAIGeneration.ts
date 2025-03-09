@@ -51,6 +51,11 @@ export function useAIGeneration() {
         throw new Error('No data returned from content generation');
       }
 
+      if (data.error) {
+        console.error("Error in response data:", data.error);
+        throw new Error(data.error.details || data.error);
+      }
+
       console.log("Generated content response:", data);
 
       // Set the generated content in the state

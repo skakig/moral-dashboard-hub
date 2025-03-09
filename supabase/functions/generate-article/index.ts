@@ -146,80 +146,8 @@ serve(async (req) => {
 
     console.log("Sending request to OpenAI");
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Create ${contentType} content for ${platform} about ${theme || keywords?.join(', ')} that would resonate with people interested in moral development. Use a ${tone} tone.` }
-        ],
-        temperature: 0.7,
-      }),
-    });
-
-    const data = await response.json();
-    
-    if (!data.choices || data.choices.length === 0) {
-      console.error('Invalid OpenAI response:', data);
-      return new Response(JSON.stringify({ error: 'Failed to generate content', details: data }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    const generatedContent = data.choices[0].message.content;
-
-    // Generate a meta description
-    const metaResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'Create a concise, SEO-friendly meta description (max 160 characters) that summarizes the content and includes key keywords.' },
-          { role: 'user', content: generatedContent }
-        ],
-        temperature: 0.5,
-        max_tokens: 100,
-      }),
-    });
-
-    const metaData = await metaResponse.json();
-    const metaDescription = metaData.choices[0].message.content;
-
-    // Generate a title
-    const titleResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'Create a compelling, SEO-friendly title (max 70 characters) for this content that includes key keywords.' },
-          { role: 'user', content: generatedContent }
-        ],
-        temperature: 0.7,
-        max_tokens: 50,
-      }),
-    });
-
-    const titleData = await titleResponse.json();
-    const title = titleData.choices[0].message.content;
-
-    // Generate platform-specific keywords if none were provided
-    let keywordsToUse = keywords;
-    if (!keywords || keywords.length === 0) {
-      const keywordsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${openAIApiKey}`,
@@ -228,10 +156,54 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { 
-              role: 'system', 
-              content: `Generate 5-10 platform-specific keywords or hashtags for ${platform} content about ${theme}. Return only the keywords as a comma-separated list without any other text.` 
-            },
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Create ${contentType} content for ${platform} about ${theme || keywords?.join(', ')} that would resonate with people interested in moral development. Use a ${tone} tone.` }
+          ],
+          temperature: 0.7,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`OpenAI API error: ${response.status} ${errorText}`);
+        return new Response(
+          JSON.stringify({ 
+            error: 'OpenAI API error', 
+            details: `Status ${response.status}: ${errorText}` 
+          }), 
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+
+      const data = await response.json();
+      
+      if (!data.choices || data.choices.length === 0) {
+        console.error('Invalid OpenAI response:', data);
+        return new Response(
+          JSON.stringify({ error: 'Failed to generate content', details: data }), 
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      
+      const generatedContent = data.choices[0].message.content;
+
+      // Generate a meta description
+      const metaResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'Create a concise, SEO-friendly meta description (max 160 characters) that summarizes the content and includes key keywords.' },
             { role: 'user', content: generatedContent }
           ],
           temperature: 0.5,
@@ -239,27 +211,167 @@ serve(async (req) => {
         }),
       });
 
-      const keywordsData = await keywordsResponse.json();
-      const keywordsText = keywordsData.choices[0].message.content;
-      // Parse the comma-separated list
-      keywordsToUse = keywordsText.split(',').map((k: string) => k.trim());
+      if (!metaResponse.ok) {
+        console.error(`Meta description generation failed: ${metaResponse.status}`);
+        // Continue with the process, using a fallback meta description
+        const metaDescription = `Content about ${theme || keywords?.join(', ')} related to moral development and the TMH framework.`;
+        
+        // Generate title even if meta description fails
+        const titleResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'Create a compelling, SEO-friendly title (max 70 characters) for this content that includes key keywords.' },
+              { role: 'user', content: generatedContent }
+            ],
+            temperature: 0.7,
+            max_tokens: 50,
+          }),
+        });
+
+        if (!titleResponse.ok) {
+          console.error(`Title generation failed: ${titleResponse.status}`);
+          // Use a fallback title
+          const title = `${theme || keywords?.[0] || 'TMH Content'} | The Moral Hierarchy`;
+          
+          return new Response(JSON.stringify({ 
+            content: generatedContent,
+            metaDescription,
+            title,
+            keywords: keywords || []
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const titleData = await titleResponse.json();
+        const title = titleData.choices[0].message.content;
+
+        return new Response(JSON.stringify({ 
+          content: generatedContent,
+          metaDescription,
+          title,
+          keywords: keywords || []
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const metaData = await metaResponse.json();
+      const metaDescription = metaData.choices[0].message.content;
+
+      // Generate a title
+      const titleResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'Create a compelling, SEO-friendly title (max 70 characters) for this content that includes key keywords.' },
+            { role: 'user', content: generatedContent }
+          ],
+          temperature: 0.7,
+          max_tokens: 50,
+        }),
+      });
+
+      if (!titleResponse.ok) {
+        console.error(`Title generation failed: ${titleResponse.status}`);
+        // Use a fallback title
+        const title = `${theme || keywords?.[0] || 'TMH Content'} | The Moral Hierarchy`;
+        
+        return new Response(JSON.stringify({ 
+          content: generatedContent,
+          metaDescription,
+          title,
+          keywords: keywords || []
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const titleData = await titleResponse.json();
+      const title = titleData.choices[0].message.content;
+
+      // Generate platform-specific keywords if none were provided
+      let keywordsToUse = keywords;
+      if (!keywords || keywords.length === 0) {
+        try {
+          const keywordsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openAIApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { 
+                  role: 'system', 
+                  content: `Generate 5-10 platform-specific keywords or hashtags for ${platform} content about ${theme}. Return only the keywords as a comma-separated list without any other text.` 
+                },
+                { role: 'user', content: generatedContent }
+              ],
+              temperature: 0.5,
+              max_tokens: 100,
+            }),
+          });
+
+          if (keywordsResponse.ok) {
+            const keywordsData = await keywordsResponse.json();
+            const keywordsText = keywordsData.choices[0].message.content;
+            // Parse the comma-separated list
+            keywordsToUse = keywordsText.split(',').map((k: string) => k.trim());
+          } else {
+            // If keywords generation fails, use a default set based on the theme
+            keywordsToUse = [theme, 'moral hierarchy', 'ethics', 'personal growth', 'TMH'];
+          }
+        } catch (error) {
+          console.error('Error generating keywords:', error);
+          // Fallback to basic keywords
+          keywordsToUse = [theme, 'moral hierarchy', 'ethics', 'personal growth', 'TMH'];
+        }
+      }
+
+      console.log("Successfully generated content");
+
+      return new Response(JSON.stringify({ 
+        content: generatedContent,
+        metaDescription,
+        title,
+        keywords: keywordsToUse
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'OpenAI API error', 
+          details: error.message || 'Unknown error calling OpenAI API' 
+        }), 
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
-
-    console.log("Successfully generated content");
-
-    return new Response(JSON.stringify({ 
-      content: generatedContent,
-      metaDescription,
-      title,
-      keywords: keywordsToUse
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     console.error('Error generating article:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message || 'Unknown error' }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });

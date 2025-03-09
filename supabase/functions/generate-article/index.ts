@@ -85,40 +85,91 @@ serve(async (req) => {
       }
     }
 
-    // Determine the content type instruction
+    // Map content length to specific word counts for better control
+    let wordCountTarget;
+    switch (contentLength) {
+      case "short":
+        wordCountTarget = "300-500";
+        break;
+      case "medium":
+        wordCountTarget = "800-1200";
+        break;
+      case "long":
+        wordCountTarget = "1500-2000";
+        break;
+      default:
+        wordCountTarget = "800-1200"; // Default to medium
+    }
+
+    // Content type specific instructions
     let contentInstruction = "";
+    let formatInstructions = "";
+
     if (contentType === "article") {
-      contentInstruction = "a comprehensive article";
+      contentInstruction = `a comprehensive article (${wordCountTarget} words)`;
+      formatInstructions = "Use proper article formatting with headings, subheadings, and paragraphs.";
     } else if (contentType === "blog_post") {
-      contentInstruction = "an engaging blog post";
+      contentInstruction = `an engaging blog post (${wordCountTarget} words)`;
+      formatInstructions = "Format with a catchy introduction, clear sections, and a conclusion with a call-to-action.";
     } else if (contentType === "social_media") {
       contentInstruction = `a social media post for ${platform}`;
+      
+      // Platform-specific formatting
+      if (platform === "Instagram") {
+        formatInstructions = "Keep it visually descriptive, include relevant hashtags, and write in a way that encourages engagement.";
+      } else if (platform === "Twitter") {
+        formatInstructions = "Keep it concise (under 280 characters), impactful, and include relevant hashtags.";
+      } else if (platform === "Facebook") {
+        formatInstructions = "Write in a conversational tone, aim for 1-2 paragraphs, and include a question or call-to-action to encourage engagement.";
+      } else if (platform === "TikTok") {
+        formatInstructions = "Create trendy, attention-grabbing content that hooks viewers in the first 3 seconds. Include suggested visuals.";
+      }
     } else if (contentType === "youtube_script") {
-      contentInstruction = "a YouTube video script with intro, main sections, and outro";
+      contentInstruction = `a YouTube video script with intro, main sections, and outro (${wordCountTarget} words)`;
+      formatInstructions = "Format as a script with [INTRO], [SECTION 1], etc. Include both spoken lines and brief staging/visual directions in [brackets].";
     } else if (contentType === "youtube_shorts") {
       contentInstruction = "a short YouTube script (30-60 seconds)";
+      formatInstructions = "Make it quick, engaging, and straight to the point. Include both script and visual directions.";
     } else if (contentType === "youtube_description") {
       contentInstruction = "a YouTube video description with tags";
+      formatInstructions = "Include a compelling first 2-3 sentences, timestamps if relevant, links, and a set of 10-15 SEO-friendly tags at the end.";
     } else if (contentType === "tweet_thread") {
       contentInstruction = "a Twitter thread (5-7 tweets)";
+      formatInstructions = "Format as Tweet 1/7, Tweet 2/7, etc. Keep each tweet under 280 characters and make sure they flow logically.";
     } else if (contentType === "carousel") {
       contentInstruction = "an Instagram carousel post with 5-7 slides";
+      formatInstructions = "Format as [Slide 1], [Slide 2], etc. Each slide should be concise with a clear visual description.";
     } else if (contentType === "reels_script") {
       contentInstruction = "an Instagram Reels script";
+      formatInstructions = "Write a 15-30 second script with both spoken lines and visual directions. Focus on high engagement in the first 3 seconds.";
     } else if (contentType === "script") {
-      contentInstruction = `a script for ${platform}`;
+      contentInstruction = `a script for ${platform} (${wordCountTarget} words)`;
+      formatInstructions = "Format with clear sections, spoken lines, and brief directions for visuals or actions.";
     } else {
-      contentInstruction = `content for ${platform}`;
+      contentInstruction = `content for ${platform} (${wordCountTarget} words)`;
+      formatInstructions = "Format appropriately for the platform and ensure it's engaging for the target audience.";
     }
+
+    // Get detailed moral level information
+    const moralLevelDetails = getMoralLevelDescription(moralLevel);
 
     // Prepare the prompt for OpenAI
     const systemPrompt = `You are an expert content creator with deep knowledge of The Moral Hierarchy (TMH) framework.
 Your task is to create ${contentInstruction} about the following theme: "${theme}".
-The content should align with moral level ${moralLevel} of TMH, which corresponds to ${getMoralLevelDescription(moralLevel)}.
-The content length should be ${contentLength} and the tone should be ${tone || 'informative'}.
-${keywords && keywords.length > 0 ? `Try to incorporate these keywords: ${keywords.join(', ')}.` : ''}
-Format the content appropriately for ${platform}, including appropriate formatting, structure, and style for that platform.
-Include a compelling title and, if appropriate for the platform, a meta description or summary.`;
+
+Content Requirements:
+- The content should align with moral level ${moralLevel} of TMH, which corresponds to ${moralLevelDetails}.
+- Length should be appropriate for ${contentLength} content (${wordCountTarget} words where applicable).
+- The tone should be ${tone || 'informative'}.
+${keywords && keywords.length > 0 ? `- Incorporate these keywords where natural: ${keywords.join(', ')}.` : ''}
+- Content must be well-structured and tailored specifically for ${platform}.
+
+Format and Technical Requirements:
+${formatInstructions}
+- Include a compelling title.
+- Include a meta description or summary, appropriate for SEO.
+
+IMPORTANT: Ensure the content genuinely represents moral level ${moralLevel} thinking and values. The content should exemplify this level of moral reasoning both in its examples and overall approach.`;
 
     const userPrompt = `Please create ${contentInstruction} about: ${theme}`;
 
@@ -159,13 +210,33 @@ Include a compelling title and, if appropriate for the platform, a meta descript
     
     // Try to extract title from the first line
     const lines = generatedContent.split('\n');
-    if (lines.length > 0 && (lines[0].startsWith('#') || lines[0].startsWith('Title:') || lines[0].length < 100)) {
-      title = lines[0].replace(/^#\s*|Title:\s*/i, '');
-      content = lines.slice(1).join('\n').trim();
+    if (lines.length > 0) {
+      // Check for various title formats
+      const firstLine = lines[0].trim();
+      if (firstLine.startsWith('#') || 
+          firstLine.startsWith('Title:') || 
+          firstLine.length < 100 ||
+          firstLine.endsWith(':') ||
+          /^".*"$/.test(firstLine) // Quoted title
+      ) {
+        title = firstLine.replace(/^#\s*|Title:\s*|"|:$/g, '');
+        content = lines.slice(1).join('\n').trim();
+      }
     }
 
     // Generate a meta description (shorter version of the content)
-    const metaDescription = content.substring(0, 150) + (content.length > 150 ? '...' : '');
+    let metaDescription = "";
+    // Try to extract from content if there's a line starting with "Meta Description:" or similar
+    const metaMatch = content.match(/meta\s*description:?\s*(.*?)(?:\n\n|\n$|$)/i);
+    if (metaMatch && metaMatch[1]) {
+      metaDescription = metaMatch[1].trim();
+      // Remove the meta description line from content
+      content = content.replace(/meta\s*description:?\s*(.*?)(?:\n\n|\n$|$)/i, '');
+    } else {
+      // Generate from content
+      const plainText = content.replace(/\[.*?\]|\*\*|#/g, '').trim(); // Remove markdown formatting
+      metaDescription = plainText.substring(0, 150) + (plainText.length > 150 ? '...' : '');
+    }
 
     // Return the generated content
     return new Response(
@@ -186,18 +257,26 @@ Include a compelling title and, if appropriate for the platform, a meta descript
   }
 });
 
-// Helper function to get moral level description
+// Helper function to get detailed moral level description
 function getMoralLevelDescription(level: number): string {
   const levels = {
-    1: "Survival Morality (focused on self-preservation and basic needs)",
-    2: "Self-Interest (pragmatic morality focused on personal gain)",
-    3: "Social Contract (cooperative morality based on mutual agreements)",
-    4: "Fairness (justice-oriented morality centered on rights and balance)",
-    5: "Empathy (relational morality driven by understanding others)",
-    6: "Altruism (sacrificial morality prioritizing others' needs)",
-    7: "Integrity (principled morality upholding personal values)",
-    8: "Virtue (aspiring morality embodying excellence)",
-    9: "Self-Actualization (transcendent morality aligned with higher purpose)"
+    1: "Survival Morality (focused on self-preservation and basic needs). This level is characterized by decisions based on immediate survival, safety, and security needs. Content should reflect protective instincts, crisis management, or basic need fulfillment.",
+    
+    2: "Self-Interest (pragmatic morality focused on personal gain). This level is characterized by strategic thinking for personal advantage, comfort, and achievement. Content should reflect ambition, practical decision-making, and rational self-advantage.",
+    
+    3: "Social Contract (cooperative morality based on mutual agreements). This level centers on belonging, cooperation, and maintaining social harmony. Content should reflect teamwork, community standards, and the value of clear agreements and expectations.",
+    
+    4: "Fairness (justice-oriented morality centered on rights and balance). This level emphasizes equality, justice, and following principles. Content should reflect fairness, impartiality, and systematic approaches to ethical decisions.",
+    
+    5: "Empathy (relational morality driven by understanding others). This level focuses on emotional connection, understanding different perspectives, and compassion. Content should reflect genuine care for others' well-being and emotional depth.",
+    
+    6: "Altruism (sacrificial morality prioritizing others' needs). This level is characterized by selfless giving, often at personal cost. Content should reflect genuine sacrifice, service without expectation of return, and putting others' needs first.",
+    
+    7: "Integrity (principled morality upholding personal values). This level involves unwavering commitment to moral principles regardless of consequences. Content should reflect moral courage, consistent values across all situations, and truth-telling even when costly.",
+    
+    8: "Virtue (aspiring morality embodying excellence). This level involves cultivating character qualities like wisdom, courage, and temperance. Content should reflect the pursuit of moral excellence as a way of life, not just a series of decisions.",
+    
+    9: "Self-Actualization (transcendent morality aligned with higher purpose). The highest level focuses on alignment with universal principles and spiritual truth. Content should reflect wisdom, profound love for humanity, selfless purpose, and a legacy that transcends the individual."
   };
   
   return levels[level as keyof typeof levels] || "balanced moral understanding";

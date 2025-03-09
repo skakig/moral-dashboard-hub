@@ -11,7 +11,7 @@ import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { useAIGeneration } from "./hooks/useAIGeneration";
 import { Button } from "@/components/ui/button";
 import { FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Mic, Loader2, Download } from "lucide-react";
+import { Mic, Loader2, Download, Play, Pause } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -22,7 +22,14 @@ export function ArticleFormFields({ form }) {
   const [platform, setPlatform] = useState(form.watch("platform") || "");
   const [contentLength, setContentLength] = useState(form.watch("contentLength") || "medium");
   const [moralLevel, setMoralLevel] = useState(form.watch("moralLevel") || 5);
-  const { generateVoiceContent, isGenerating: isGeneratingVoice } = useVoiceGeneration(form);
+  const { 
+    generateVoiceContent, 
+    isGenerating: isGeneratingVoice, 
+    audioUrl, 
+    isPlaying,
+    togglePlayPause,
+    downloadAudio 
+  } = useVoiceGeneration(form);
   const { loading: isGeneratingContent, generateContent } = useAIGeneration();
   const [error, setError] = useState<string | null>(null);
   const voiceGenerated = form.watch("voiceGenerated") || false;
@@ -111,23 +118,6 @@ export function ArticleFormFields({ form }) {
     }
   };
 
-  const handleDownloadVoice = () => {
-    if (!voiceUrl) {
-      toast.error("No voice content available to download");
-      return;
-    }
-
-    // Create a temporary link element and trigger download
-    const link = document.createElement('a');
-    link.href = voiceUrl;
-    link.download = `voice-content-${Date.now()}.mp3`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success("Voice content download started");
-  };
-
   return (
     <div className="space-y-4">
       <BasicInfoFields form={form} />
@@ -176,31 +166,56 @@ export function ArticleFormFields({ form }) {
           render={() => (
             <FormItem>
               <FormLabel>Voice Content</FormLabel>
-              <div className="flex items-center space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={generateVoiceContent}
-                  disabled={isGeneratingVoice}
-                  className="flex items-center gap-2"
-                >
-                  {isGeneratingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-                  {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
-                </Button>
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={generateVoiceContent}
+                    disabled={isGeneratingVoice}
+                    className="flex items-center gap-2"
+                  >
+                    {isGeneratingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                    {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
+                  </Button>
+                  
+                  {voiceGenerated && (
+                    <>
+                      <span className="text-sm text-green-600">Voice content generated!</span>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={togglePlayPause}
+                        className="flex items-center gap-2"
+                      >
+                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                        {isPlaying ? "Pause" : "Play"}
+                      </Button>
+                      
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={downloadAudio}
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </Button>
+                    </>
+                  )}
+                </div>
                 
-                {voiceGenerated && (
-                  <>
-                    <span className="text-sm text-green-600">Voice content generated!</span>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={handleDownloadVoice}
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download Voice
-                    </Button>
-                  </>
+                {voiceGenerated && audioUrl && (
+                  <div className="mt-2 p-2 border rounded bg-muted/50">
+                    <audio 
+                      controls 
+                      src={audioUrl} 
+                      className="w-full" 
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                      onEnded={() => setIsPlaying(false)}
+                    />
+                  </div>
                 )}
               </div>
             </FormItem>

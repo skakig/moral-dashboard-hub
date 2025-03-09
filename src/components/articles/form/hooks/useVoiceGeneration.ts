@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { UseFormReturn } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 export function useVoiceGeneration(form: UseFormReturn<any>) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const generateVoiceContent = async () => {
     try {
@@ -60,10 +62,22 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
           const url = URL.createObjectURL(audioBlob);
           setAudioUrl(url);
           
+          // Create audio element for playback
+          if (audioRef.current) {
+            audioRef.current.src = url;
+            audioRef.current.load();
+          } else {
+            audioRef.current = new Audio(url);
+            audioRef.current.addEventListener('ended', () => {
+              setIsPlaying(false);
+            });
+          }
+          
           // Update the form with the voice URL and metadata
           form.setValue("voiceUrl", url);
           form.setValue("voiceGenerated", true);
           form.setValue("voiceFileName", voiceData.fileName || `${title.replace(/\s+/g, '-').toLowerCase()}.mp3`);
+          form.setValue("voiceBase64", voiceData.audioBase64); // Store base64 for future use
         }
         
         toast.success("Voice content generated successfully!");
@@ -103,14 +117,29 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
       
       console.log("Voice generation successful:", data);
       
-      // In a real implementation with ElevenLabs, we would get a URL or binary audio data
-      // For now, we'll simulate success with a timestamp-based URL
-      const dummyVoiceUrl = `https://example.com/voice/${Date.now()}.mp3`;
-      
-      // Update the form with the voice URL
-      form.setValue("voiceUrl", dummyVoiceUrl);
-      form.setValue("voiceGenerated", true);
-      form.setValue("voiceFileName", `${title.replace(/\s+/g, '-').toLowerCase()}.mp3`);
+      if (data.audioBase64) {
+        // Create a playable audio URL from the base64 audio data
+        const audioBlob = base64ToBlob(data.audioBase64, 'audio/mpeg');
+        const url = URL.createObjectURL(audioBlob);
+        setAudioUrl(url);
+        
+        // Create audio element for playback
+        if (audioRef.current) {
+          audioRef.current.src = url;
+          audioRef.current.load();
+        } else {
+          audioRef.current = new Audio(url);
+          audioRef.current.addEventListener('ended', () => {
+            setIsPlaying(false);
+          });
+        }
+        
+        // Update the form with the voice URL and metadata
+        form.setValue("voiceUrl", url);
+        form.setValue("voiceGenerated", true);
+        form.setValue("voiceFileName", data.fileName || `${title.replace(/\s+/g, '-').toLowerCase()}.mp3`);
+        form.setValue("voiceBase64", data.audioBase64); // Store base64 for future use
+      }
       
       toast.success("Voice content generated successfully!");
     } catch (error) {
@@ -118,6 +147,31 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
       toast.error(`Failed to generate voice content: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+  
+  // Play/pause the audio
+  const togglePlayPause = () => {
+    if (!audioRef.current) {
+      if (audioUrl) {
+        audioRef.current = new Audio(audioUrl);
+        audioRef.current.addEventListener('ended', () => {
+          setIsPlaying(false);
+        });
+      } else {
+        return;
+      }
+    }
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(e => {
+        console.error("Error playing audio:", e);
+        toast.error("Failed to play audio");
+      });
+      setIsPlaying(true);
     }
   };
   
@@ -144,12 +198,16 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    toast.success("Voice download started");
   };
 
   return { 
     generateVoiceContent, 
     isGenerating, 
     audioUrl,
+    isPlaying,
+    togglePlayPause,
     downloadAudio
   };
 }

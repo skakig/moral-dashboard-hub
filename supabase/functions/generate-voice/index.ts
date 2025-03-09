@@ -34,32 +34,63 @@ serve(async (req) => {
     console.log(`Generating voice for text (${text.length} chars) using voice ID: ${selectedVoiceId}`);
     
     // For longer text, we might need to truncate or split it
-    const processedText = text.length > 5000 ? text.substring(0, 4997) + "..." : text;
+    const maxCharLimit = 5000; // ElevenLabs limit
+    const processedText = text.length > maxCharLimit ? 
+      text.substring(0, maxCharLimit - 3) + "..." : 
+      text;
     
-    // Call the ElevenLabs Text-to-Speech API
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}`, {
-      method: "POST",
-      headers: {
-        "xi-api-key": elevenlabsApiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: processedText,
-        model_id: "eleven_multilingual_v2",
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5,
+    // Implement retry logic with exponential backoff
+    let response = null;
+    let retries = 3;
+    let delay = 1000; // Start with 1 second delay
+    
+    while (retries > 0) {
+      try {
+        // Call the ElevenLabs Text-to-Speech API
+        response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}`, {
+          method: "POST",
+          headers: {
+            "xi-api-key": elevenlabsApiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: processedText,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.5,
+            }
+          }),
+        });
+        
+        // If successful or response is not a rate limit error, break the loop
+        if (response.ok || (response.status !== 429 && response.status !== 503)) {
+          break;
         }
-      }),
-    });
+        
+        // Handle rate limit or server errors
+        console.log(`ElevenLabs API returned status ${response.status}. Retrying in ${delay/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+        retries--;
+      } catch (e) {
+        console.error("Error calling ElevenLabs:", e);
+        retries--;
+        
+        if (retries === 0) throw e;
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+      }
+    }
     
-    if (!response.ok) {
+    if (!response || !response.ok) {
       let errorText;
       try {
-        const errorData = await response.json();
-        errorText = errorData.detail || response.statusText;
+        const errorData = await response?.json();
+        errorText = errorData?.detail || response?.statusText || "Unknown error";
       } catch (e) {
-        errorText = response.statusText;
+        errorText = response?.statusText || "Failed to generate voice content";
       }
       
       console.error("ElevenLabs API error:", errorText);

@@ -8,6 +8,11 @@ import ArticlesPage from "./pages/articles/ArticlesPage";
 import ArticleViewPage from "./pages/articles/ArticleViewPage";
 import Demographics from "./pages/Demographics";
 import Affiliates from "./pages/Affiliates";
+import Users from "./pages/Users";
+import Assessments from "./pages/Assessments";
+import Trends from "./pages/Trends";
+import AIContent from "./pages/AIContent";
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -21,6 +26,11 @@ function App() {
         <Route path="/articles/:id" element={<ArticleViewPage />} />
         <Route path="/demographics" element={<Demographics />} />
         <Route path="/affiliates" element={<Affiliates />} />
+        <Route path="/users" element={<Users />} />
+        <Route path="/assessments" element={<Assessments />} />
+        <Route path="/trends" element={<Trends />} />
+        <Route path="/content" element={<AIContent />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

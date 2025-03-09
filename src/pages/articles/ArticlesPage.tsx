@@ -162,7 +162,7 @@ export default function ArticlesPage() {
         </Tabs>
         
         {/* Form Dialogs */}
-        {renderArticleFormDialog(isSubmitting)}
+        {renderArticleFormDialog()}
         {renderThemeFormDialog(isSubmitting)}
       </div>
     </AppLayout>

@@ -33,6 +33,7 @@ export function useArticleMutations() {
       voice_generated: articleData.voice_generated || articleData.voiceGenerated || false,
       voice_file_name: articleData.voice_file_name || articleData.voiceFileName || '',
       voice_base64: articleData.voice_base64 || articleData.voiceBase64 || '',
+      voice_segments: articleData.voice_segments || articleData.voiceSegments || '',
       category: articleData.category || 'general',
       status: articleData.status || 'draft',
       excerpt: articleData.excerpt || '',

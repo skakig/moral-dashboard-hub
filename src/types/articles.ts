@@ -18,6 +18,7 @@ export interface Article {
   voice_generated?: boolean;
   voice_file_name?: string;
   voice_base64?: string;
+  voice_segments?: string; // Added for storing multiple audio segments as a JSON string
   moral_level?: number;
   author_id?: string;
 }
@@ -65,6 +66,7 @@ export interface ArticleUpdateInput {
   voice_generated?: boolean;
   voice_file_name?: string;
   voice_base64?: string;
+  voice_segments?: string; // Added for storing multiple audio segments
   moral_level?: number | string;
   status?: "draft" | "scheduled" | "published";
   publish_date?: string | null;
@@ -77,6 +79,7 @@ export interface ArticleUpdateInput {
   voiceGenerated?: boolean;
   voiceFileName?: string;
   voiceBase64?: string;
+  voiceSegments?: string; // Added for storing multiple audio segments
   moralLevel?: number | string;
   
   // Allow category for create operation

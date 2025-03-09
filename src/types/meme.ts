@@ -21,6 +21,8 @@ export interface MemeFormData {
   imageUrl?: string;
   platform?: string;
   hashtags?: string[];
+  user_id?: string;
+  engagement_score?: number;
 }
 
 // Database representation of a meme
@@ -35,6 +37,18 @@ export interface DbMeme {
   created_at: string;
   updated_at?: string;
   user_id?: string;
+}
+
+// Simplified database record structure to prevent deep type instantiation
+export interface DbMemeRecord {
+  id: string;
+  prompt: string;
+  image_url: string;
+  meme_text: string; // Contains JSON with topText and bottomText
+  platform_tags?: string[];
+  created_at: string;
+  user_id?: string;
+  engagement_score?: number;
 }
 
 // For social media sharing

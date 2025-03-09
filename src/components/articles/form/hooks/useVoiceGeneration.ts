@@ -46,6 +46,7 @@ export function useVoiceGeneration(form: any) {
       form.setValue('voiceUrl', '', { shouldDirty: true });
       form.setValue('voiceFileName', '', { shouldDirty: true });
       form.setValue('voiceBase64', '', { shouldDirty: true });
+      form.setValue('voiceSegments', '', { shouldDirty: true });
       
       toast.info('Generating voice content...');
 
@@ -106,10 +107,17 @@ export function useVoiceGeneration(form: any) {
       form.setValue('voiceUrl', audioSegments.current[0].audioUrl, { shouldDirty: true });
       form.setValue('voiceFileName', audioSegments.current[0].fileName, { shouldDirty: true });
       
+      // Get the base64 data from the data URL
+      if (audioSegments.current[0].audioUrl.startsWith('data:')) {
+        const base64Data = audioSegments.current[0].audioUrl.split(',')[1];
+        form.setValue('voiceBase64', base64Data, { shouldDirty: true });
+      }
+      
       // Mark the form as dirty to ensure the updated values are saved
       form.trigger('voiceGenerated');
       form.trigger('voiceUrl');
       form.trigger('voiceFileName');
+      form.trigger('voiceBase64');
       form.trigger('voiceSegments');
       
       setProgress(100);
@@ -193,6 +201,17 @@ export function useVoiceGeneration(form: any) {
           audioElement.play();
         }
         setIsPlaying(!isPlaying);
+      } else {
+        // Create a new audio element if one doesn't exist
+        const newAudio = new Audio(audioUrl);
+        newAudio.onplay = () => setIsPlaying(true);
+        newAudio.onpause = () => setIsPlaying(false);
+        newAudio.onended = () => setIsPlaying(false);
+        newAudio.play().catch(e => {
+          console.error("Error playing audio:", e);
+          toast.error("Failed to play audio");
+        });
+        combinedAudioRef.current = newAudio;
       }
     } catch (error) {
       console.error('Error toggling play/pause:', error);

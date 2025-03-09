@@ -681,6 +681,48 @@ export type Database = {
           },
         ]
       }
+      branding_settings: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          facebook_page: string | null
+          id: string
+          instagram_handle: string | null
+          tagline: string | null
+          tiktok_handle: string | null
+          twitter_handle: string | null
+          updated_at: string | null
+          website_url: string | null
+          youtube_channel: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          facebook_page?: string | null
+          id?: string
+          instagram_handle?: string | null
+          tagline?: string | null
+          tiktok_handle?: string | null
+          twitter_handle?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+          youtube_channel?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          facebook_page?: string | null
+          id?: string
+          instagram_handle?: string | null
+          tagline?: string | null
+          tiktok_handle?: string | null
+          twitter_handle?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+          youtube_channel?: string | null
+        }
+        Relationships: []
+      }
       commission_tiers: {
         Row: {
           commission_rate: number

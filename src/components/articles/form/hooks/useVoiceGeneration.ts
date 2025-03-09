@@ -207,6 +207,7 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
     isGenerating, 
     audioUrl,
     isPlaying,
+    setIsPlaying,  // Make sure setIsPlaying is exposed
     togglePlayPause,
     downloadAudio
   };

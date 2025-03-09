@@ -28,7 +28,8 @@ export function ArticleFormFields({ form }) {
     audioUrl, 
     isPlaying,
     togglePlayPause,
-    downloadAudio 
+    downloadAudio,
+    setIsPlaying
   } = useVoiceGeneration(form);
   const { loading: isGeneratingContent, generateContent } = useAIGeneration();
   const [error, setError] = useState<string | null>(null);

@@ -4,6 +4,19 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Meme, MemeFormData, DbMeme, toMeme, toDbMeme } from '@/types/meme';
 
+// Simple interface representing exactly what we expect from the database
+interface DbMemeRecord {
+  id: string;
+  image_url: string;
+  meme_text: string;
+  platform_tags?: string[];
+  prompt?: string;
+  created_at: string;
+  updated_at?: string;
+  user_id?: string;
+  engagement_score?: number;
+}
+
 export function useMemeStorage() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedMemes, setSavedMemes] = useState<Meme[]>([]);
@@ -26,35 +39,33 @@ export function useMemeStorage() {
         return null;
       }
       
-      // Prepare Meme object to convert to DB format
-      const memeToSave: Partial<Meme> = {
-        prompt: memeData.prompt,
-        imageUrl: memeData.imageUrl,
-        topText: memeData.topText,
-        bottomText: memeData.bottomText,
-        platform: memeData.platform,
-        hashtags: memeData.hashtags || [],
+      // Format the data for the database - ensuring required fields are present
+      const dbMemeData = {
+        image_url: memeData.imageUrl || '',
+        meme_text: JSON.stringify({
+          topText: memeData.topText || '',
+          bottomText: memeData.bottomText || ''
+        }),
+        platform_tags: memeData.platform ? 
+          [memeData.platform, ...(memeData.hashtags || [])] : 
+          memeData.hashtags || [],
+        prompt: memeData.prompt || '',
         user_id: userId
       };
       
-      // Convert to database format - ensures all required fields are present
-      const dbMeme = toDbMeme(memeToSave);
+      console.log("Saving meme with data:", dbMemeData);
       
-      // Insert into database
-      // Make sure we're passing an object with the required fields, not a Partial<DbMeme>
+      // Insert into database with explicit field structure
       const { data, error } = await supabase
         .from('memes')
-        .insert({
-          image_url: dbMeme.image_url || '',  // Ensure these required fields exist
-          meme_text: dbMeme.meme_text || '',
-          platform_tags: dbMeme.platform_tags,
-          prompt: dbMeme.prompt,
-          user_id: dbMeme.user_id
-        })
+        .insert(dbMemeData)
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving meme:', error);
+        throw error;
+      }
       
       // Convert DB response to frontend format
       const savedMeme = toMeme(data as DbMeme);
@@ -94,23 +105,14 @@ export function useMemeStorage() {
       
       if (error) throw error;
       
-      // Explicitly define the raw data structure to prevent deep type inference
-      interface DbMemeRecord {
-        id: string;
-        image_url: string;
-        meme_text: string;
-        platform_tags?: string[];
-        prompt?: string;
-        created_at: string;
-        updated_at?: string;
-        user_id?: string;
-        engagement_score?: number;
-      }
+      // Convert data to frontend format using explicit typing
+      const memes: Meme[] = [];
       
-      // Convert the raw data to our frontend format, with explicit typing
-      const memes: Meme[] = data 
-        ? (data as DbMemeRecord[]).map(item => toMeme(item as DbMeme))
-        : [];
+      if (data && Array.isArray(data)) {
+        for (const item of data) {
+          memes.push(toMeme(item as DbMeme));
+        }
+      }
       
       setSavedMemes(memes);
     } catch (error) {

@@ -1,7 +1,7 @@
 
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { EdgeFunctionService } from '@/services/api/edgeFunctions';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useVoiceGeneration(form: any) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -65,12 +65,16 @@ export function useVoiceGeneration(form: any) {
         setProgress(Math.floor((i / totalSegments) * 50)); // First half of progress for processing
         
         // Generate voice for this segment
-        const result = await EdgeFunctionService.generateVoice({
-          text: textSegments[i],
-          voiceId,
-          segmentIndex: i,
-          totalSegments
+        const result = await supabase.functions.invoke('generate-voice', {
+          body: {
+            text: textSegments[i],
+            voiceId,
+            segmentIndex: i,
+            totalSegments
+          }
         });
+        
+        console.log(`Voice generation result for segment ${i+1}/${totalSegments}:`, result);
         
         if (!result || result.error) {
           throw new Error(result?.error || "Voice generation failed");
@@ -78,8 +82,8 @@ export function useVoiceGeneration(form: any) {
         
         // Store this segment
         audioSegments.current.push({
-          audioUrl: result.audioUrl,
-          fileName: result.fileName
+          audioUrl: result.data.audioUrl,
+          fileName: result.data.fileName
         });
         
         setProgress(50 + Math.floor((i / totalSegments) * 50)); // Second half is for combining
@@ -96,6 +100,7 @@ export function useVoiceGeneration(form: any) {
         
         // Store all segments info in a hidden field for future reference
         form.setValue('voiceSegments', JSON.stringify(audioSegments.current), { shouldDirty: true });
+        console.log('Stored multiple voice segments:', audioSegments.current);
       } else if (totalSegments === 1) {
         // Single segment, simple case
         setAudioUrl(audioSegments.current[0].audioUrl);
@@ -106,10 +111,17 @@ export function useVoiceGeneration(form: any) {
       form.setValue('voiceUrl', audioSegments.current[0].audioUrl, { shouldDirty: true });
       form.setValue('voiceFileName', audioSegments.current[0].fileName, { shouldDirty: true });
       
+      // If we have base64 data in the response, store it
+      if (audioSegments.current[0].audioUrl.includes('base64')) {
+        const base64Data = audioSegments.current[0].audioUrl.split('base64,')[1];
+        form.setValue('voiceBase64', base64Data || '', { shouldDirty: true });
+      }
+      
       // Mark the form as dirty to ensure the updated values are saved
       form.trigger('voiceGenerated');
       form.trigger('voiceUrl');
       form.trigger('voiceFileName');
+      form.trigger('voiceBase64');
       form.trigger('voiceSegments');
       
       setProgress(100);

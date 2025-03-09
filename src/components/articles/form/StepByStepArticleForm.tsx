@@ -293,6 +293,46 @@ export function StepByStepArticleForm({
       isRequired: true,
     },
     {
+      id: 'metadata',
+      title: 'SEO & Metadata',
+      description: 'Add metadata for better visibility',
+      component: (
+        <div className="space-y-4">
+          <MetaDescriptionField form={form} />
+          
+          <FormField
+            control={form.control}
+            name="seoKeywords"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex justify-between items-center">
+                  <FormLabel>Keywords (comma separated)</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 px-2 text-xs flex items-center gap-1"
+                    onClick={() => handleCopyField("seoKeywords", 'Keywords copied to clipboard')}
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copy
+                  </Button>
+                </div>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter SEO keywords, separated by commas"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      ),
+      isRequired: false,
+    },
+    {
       id: 'voice',
       title: 'Voice Content',
       description: 'Generate voice content from your text',
@@ -382,42 +422,11 @@ export function StepByStepArticleForm({
       isRequired: false,
     },
     {
-      id: 'metadata',
-      title: 'SEO & Featured Image',
-      description: 'Add metadata and featured image for better visibility',
+      id: 'featured-image',
+      title: 'Featured Image',
+      description: 'Add a featured image for your content',
       component: (
         <div className="space-y-4">
-          <MetaDescriptionField form={form} />
-          
-          <FormField
-            control={form.control}
-            name="seoKeywords"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex justify-between items-center">
-                  <FormLabel>Keywords (comma separated)</FormLabel>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 px-2 text-xs flex items-center gap-1"
-                    onClick={() => handleCopyField("seoKeywords", 'Keywords copied to clipboard')}
-                  >
-                    <Copy className="h-3 w-3" />
-                    Copy
-                  </Button>
-                </div>
-                <FormControl>
-                  <Textarea
-                    placeholder="Enter SEO keywords, separated by commas"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
           <FeaturedImageField form={form} />
         </div>
       ),

@@ -16,6 +16,8 @@ export interface Article {
   excerpt?: string;
   voice_url?: string;
   voice_generated?: boolean;
+  voice_file_name?: string;
+  voice_base64?: string;
   moral_level?: number;
 }
 

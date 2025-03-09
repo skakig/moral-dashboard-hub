@@ -59,7 +59,10 @@ export function useArticles() {
       category: formValues.platform || 'General', // Use platform as category
       voice_url: formValues.voiceUrl || null,
       voice_generated: formValues.voiceGenerated || false,
+      voice_file_name: formValues.voiceFileName || null,
+      voice_base64: formValues.voiceBase64 || null,
       moral_level: formValues.moralLevel ? Number(formValues.moralLevel) : 5,
+      excerpt: formValues.excerpt || null
     };
   };
 

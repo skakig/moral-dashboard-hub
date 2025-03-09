@@ -36,6 +36,8 @@ export function useArticleFormDialog({
       // Add voice fields with safe fallbacks
       voiceUrl: article.voice_url || '',
       voiceGenerated: article.voice_generated || false,
+      voiceFileName: article.voice_file_name || '',
+      voiceBase64: article.voice_base64 || '',
       moralLevel: article.moral_level || 5,
     };
     
@@ -78,6 +80,8 @@ export function useArticleFormDialog({
                 seoKeywords: Array.isArray(currentArticle.seo_keywords) ? currentArticle.seo_keywords.join(', ') : '',
                 voiceUrl: currentArticle.voice_url || '',
                 voiceGenerated: currentArticle.voice_generated || false,
+                voiceFileName: currentArticle.voice_file_name || '',
+                voiceBase64: currentArticle.voice_base64 || '',
                 moralLevel: currentArticle.moral_level || 5,
               } : undefined}
               onSubmit={handleFormSubmit}

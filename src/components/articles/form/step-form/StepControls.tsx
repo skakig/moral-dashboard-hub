@@ -15,7 +15,6 @@ interface StepControlsProps {
   isGeneratingContent?: boolean;
   submitLabel?: string;
   canAutoGenerate?: boolean;
-  // Adding the onBack property to the type definition
   onBack?: () => void;
 }
 

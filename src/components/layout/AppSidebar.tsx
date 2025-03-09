@@ -37,7 +37,7 @@ export default function AppSidebar() {
         <nav className="grid gap-1">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild active={location.pathname === "/"}>
+              <SidebarMenuButton asChild isActive={location.pathname === "/"}>
                 <Link to="/">
                   <LayoutDashboard className="h-4 w-4" />
                   <span>Dashboard</span>
@@ -46,7 +46,7 @@ export default function AppSidebar() {
             </SidebarMenuItem>
             
             <SidebarMenuItem>
-              <SidebarMenuButton asChild active={location.pathname === "/users"}>
+              <SidebarMenuButton asChild isActive={location.pathname === "/users"}>
                 <Link to="/users">
                   <Users className="h-4 w-4" />
                   <span>Users</span>
@@ -55,7 +55,7 @@ export default function AppSidebar() {
             </SidebarMenuItem>
             
             <SidebarMenuItem>
-              <SidebarMenuButton asChild active={location.pathname === "/assessments"}>
+              <SidebarMenuButton asChild isActive={location.pathname === "/assessments"}>
                 <Link to="/assessments">
                   <FileText className="h-4 w-4" />
                   <span>Assessments</span>
@@ -64,7 +64,7 @@ export default function AppSidebar() {
             </SidebarMenuItem>
             
             <SidebarMenuItem>
-              <SidebarMenuButton asChild active={location.pathname === "/affiliates"}>
+              <SidebarMenuButton asChild isActive={location.pathname === "/affiliates"}>
                 <Link to="/affiliates">
                   <Send className="h-4 w-4" />
                   <span>Affiliates</span>
@@ -73,7 +73,7 @@ export default function AppSidebar() {
             </SidebarMenuItem>
             
             <SidebarMenuItem>
-              <SidebarMenuButton asChild active={location.pathname === "/demographics"}>
+              <SidebarMenuButton asChild isActive={location.pathname === "/demographics"}>
                 <Link to="/demographics">
                   <BarChart3 className="h-4 w-4" />
                   <span>Demographics</span>
@@ -82,7 +82,7 @@ export default function AppSidebar() {
             </SidebarMenuItem>
             
             <SidebarMenuItem>
-              <SidebarMenuButton asChild active={location.pathname === "/trends"}>
+              <SidebarMenuButton asChild isActive={location.pathname === "/trends"}>
                 <Link to="/trends">
                   <TrendingUp className="h-4 w-4" />
                   <span>Trends</span>
@@ -97,7 +97,7 @@ export default function AppSidebar() {
           <nav className="grid gap-1 pt-2">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild active={location.pathname.startsWith("/articles")}>
+                <SidebarMenuButton asChild isActive={location.pathname.startsWith("/articles")}>
                   <Link to="/articles">
                     <FileStack className="h-4 w-4" />
                     <span>Articles</span>
@@ -106,7 +106,7 @@ export default function AppSidebar() {
               </SidebarMenuItem>
               
               <SidebarMenuItem>
-                <SidebarMenuButton asChild active={location.pathname === "/content"}>
+                <SidebarMenuButton asChild isActive={location.pathname === "/content"}>
                   <Link to="/content">
                     <Command className="h-4 w-4" />
                     <span>AI Content</span>

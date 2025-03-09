@@ -74,6 +74,8 @@ export function useAPIData() {
         return;
       }
       
+      console.log('API data received:', data);
+      
       // Use data directly as it's already formatted by the edge function
       setApiData({
         apiKeysByCategory: data.apiKeysByCategory || {},

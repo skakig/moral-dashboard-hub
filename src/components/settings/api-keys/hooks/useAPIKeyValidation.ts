@@ -50,6 +50,7 @@ export function useAPIKeyValidation({
       if (error) {
         console.error('Error validating API key:', error);
         setError(`Failed to validate ${values.serviceName || serviceName} API key: ${error.message}`);
+        toast.error(`Failed to validate ${values.serviceName || serviceName} API key`);
         return false;
       }
       
@@ -57,6 +58,7 @@ export function useAPIKeyValidation({
         const errorMsg = data?.error || `Failed to validate ${values.serviceName || serviceName} API key`;
         console.error('Validation failed:', errorMsg);
         setError(errorMsg);
+        toast.error(errorMsg);
         return false;
       }
       
@@ -65,13 +67,17 @@ export function useAPIKeyValidation({
       toast.success(`${values.serviceName || serviceName} API key validated and saved successfully`);
       
       if (onSuccess) {
-        onSuccess();
+        // Add a slight delay to ensure the database has time to update
+        setTimeout(() => {
+          onSuccess();
+        }, 500);
       }
       
       return true;
     } catch (err: any) {
       console.error('Exception during validation:', err);
       setError(`Failed to validate ${values.serviceName || serviceName} API key: ${err.message}`);
+      toast.error(`Failed to validate ${values.serviceName || serviceName} API key: ${err.message}`);
       return false;
     } finally {
       if (setLoading) setLoading(false);

@@ -33,7 +33,7 @@ export function formatApiKeys(apiKeys) {
         serviceName: key.service_name,
         baseUrl: key.base_url,
         isConfigured: true,
-        isActive: key.status === 'active',
+        isActive: key.is_active || false,
         isPrimary: key.is_primary || false,
         lastValidated: key.last_validated,
         createdAt: key.created_at,
@@ -41,6 +41,11 @@ export function formatApiKeys(apiKeys) {
         validationErrors: key.validation_errors || []
       });
     });
+  }
+  
+  console.log("Formatted API keys by category:", Object.keys(apiKeysByCategory));
+  if (Object.keys(apiKeysByCategory).length > 0) {
+    console.log("First category contains:", apiKeysByCategory[Object.keys(apiKeysByCategory)[0]].length, "keys");
   }
   
   return apiKeysByCategory;

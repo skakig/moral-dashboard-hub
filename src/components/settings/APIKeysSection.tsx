@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function APIKeysSection() {
-  const { apiKeysLoading, loadError, apiData, reloadApiData } = useAPIData();
+  const { apiKeysLoading, loadError, apiData, hasKeys, reloadApiData } = useAPIData();
   const [initializingDb, setInitializingDb] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
@@ -203,6 +203,17 @@ export function APIKeysSection() {
               apiKeysByCategory={apiData?.apiKeysByCategory || {}}
               onRefresh={reloadApiData}
             />
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={reloadApiData} 
+                className="mt-2"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh API Keys
+              </Button>
+            </div>
           </TabsContent>
           
           <TabsContent value="mappings">

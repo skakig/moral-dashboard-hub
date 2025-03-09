@@ -67,7 +67,7 @@ export async function updateApiKey(
     baseUrl: string,
     isPrimary: boolean
   }
-): Promise<{error: any}> {
+): Promise<{data: any, error: any}> {
   console.log(`Updating existing API key ID: ${id}`);
   
   try {
@@ -82,12 +82,13 @@ export async function updateApiKey(
         status: 'active',
         is_active: true
       })
-      .eq("id", id);
+      .eq("id", id)
+      .select();
     
-    return { error: result.error };
+    return result;
   } catch (error) {
     console.error("Error updating API key:", error);
-    return { error };
+    return { data: null, error };
   }
 }
 
@@ -106,7 +107,7 @@ export async function insertApiKey(
     baseUrl: string,
     isPrimary: boolean
   }
-): Promise<{error: any}> {
+): Promise<{data: any, error: any}> {
   console.log(`Inserting new API key for service: ${data.serviceName}`);
   
   try {
@@ -121,12 +122,13 @@ export async function insertApiKey(
         last_validated: new Date().toISOString(),
         status: 'active',
         is_active: true
-      });
+      })
+      .select();
     
-    return { error: result.error };
+    return result;
   } catch (error) {
     console.error("Error inserting API key:", error);
-    return { error };
+    return { data: null, error };
   }
 }
 

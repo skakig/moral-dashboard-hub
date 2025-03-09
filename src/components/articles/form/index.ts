@@ -1,4 +1,4 @@
 
-export * from './ArticleForm';
-export * from './ArticleFormFields';
-export * from './AIGenerationDialog';
+import { ArticleFormFields } from './ArticleFormFields';
+
+export { ArticleFormFields };

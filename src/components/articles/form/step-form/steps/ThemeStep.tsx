@@ -1,7 +1,7 @@
 
 import React from "react";
 import { UseFormReturn } from "react-hook-form";
-import { ThemeField } from "../../components/ThemeField";
+import { ThemeField } from "../../../components/ThemeField";
 import { ArticleFormValues } from "../../step-form/types";
 
 interface ThemeStepProps {

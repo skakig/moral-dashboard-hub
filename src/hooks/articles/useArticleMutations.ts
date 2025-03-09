@@ -9,13 +9,15 @@ export function useArticleMutations() {
   
   // Create a new article
   const createArticle = useMutation({
-    mutationFn: async (article: Partial<ArticleUpdateInput>) => {
+    mutationFn: async (article: Partial<ArticleUpdateInput> & { category?: string }) => {
       // Prepare the data for the database
       const { id, ...articleData } = article;
       
-      // Map form fields to DB fields if necessary
+      // Set a default category if not provided
       const formattedData = {
         ...articleData,
+        category: articleData.category || 'general', // Default category
+        content: articleData.content || '', // Ensure content is never undefined/null
         // Any necessary transformations
       };
       

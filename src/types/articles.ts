@@ -13,6 +13,11 @@ export interface Article {
   updated_at: string;
   view_count: number;
   engagement_score: number;
+  // Add the missing fields
+  excerpt?: string;
+  voice_url?: string;
+  voice_generated?: boolean;
+  moral_level?: number;
 }
 
 export interface ArticleSocialPost {

@@ -10,12 +10,13 @@ import { ThemeField } from "./components/ThemeField";
 import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { useAIGeneration } from "./hooks/useAIGeneration";
 import { Button } from "@/components/ui/button";
-import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { Mic, Loader2, Download, Play, Pause } from "lucide-react";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Mic, Loader2, Download, Play, Pause, Copy } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 // Voice options with IDs from ElevenLabs
 const voiceOptions = [
@@ -136,10 +137,44 @@ export function ArticleFormFields({ form }) {
   const handleGenerateVoice = async () => {
     await generateVoiceContent(selectedVoice);
   };
+  
+  // Copy function for each field
+  const handleCopyField = (fieldName: string, successMessage: string) => {
+    const value = form.getValues(fieldName);
+    if (value) {
+      navigator.clipboard.writeText(String(value));
+      toast.success(successMessage);
+    } else {
+      toast.error(`No ${fieldName} to copy`);
+    }
+  };
 
   return (
     <div className="space-y-4">
       <BasicInfoFields form={form} />
+      
+      <div className="flex justify-end space-x-2">
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm"
+          onClick={() => handleCopyField('title', 'Title copied to clipboard')}
+          className="flex items-center gap-1"
+        >
+          <Copy className="h-3.5 w-3.5" />
+          Copy Title
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm"
+          onClick={() => handleCopyField('excerpt', 'Excerpt copied to clipboard')}
+          className="flex items-center gap-1"
+        >
+          <Copy className="h-3.5 w-3.5" />
+          Copy Excerpt
+        </Button>
+      </div>
       
       <ContentTypeFields 
         form={form} 
@@ -265,7 +300,38 @@ export function ArticleFormFields({ form }) {
         </div>
       )}
       
-      <MetaDescriptionField form={form} />
+      <div className="space-y-4">
+        <MetaDescriptionField form={form} />
+        
+        <FormField
+          control={form.control}
+          name="seoKeywords"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex justify-between items-center">
+                <FormLabel>Keywords (comma separated)</FormLabel>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs flex items-center gap-1"
+                  onClick={() => handleCopyField('seoKeywords', 'Keywords copied to clipboard')}
+                >
+                  <Copy className="h-3 w-3" />
+                  Copy
+                </Button>
+              </div>
+              <FormControl>
+                <Textarea
+                  placeholder="Enter SEO keywords, separated by commas"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
       
       <FeaturedImageField form={form} />
     </div>

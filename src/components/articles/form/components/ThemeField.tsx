@@ -4,16 +4,28 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
 import { Textarea } from "@/components/ui/textarea";
 import { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Wand2 } from "lucide-react";
+import { Wand2, Copy, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 interface ThemeFieldProps {
   form: UseFormReturn<any>;
   onGenerate?: () => void;
+  autoGenerate?: boolean;
 }
 
-export function ThemeField({ form, onGenerate }: ThemeFieldProps) {
+export function ThemeField({ form, onGenerate, autoGenerate = false }: ThemeFieldProps) {
   const [placeholder, setPlaceholder] = useState("e.g., Create a YouTube script comparing Calvin & Hobbes to The Far Side and explain where each falls in TMH");
   
+  const handleCopy = () => {
+    const theme = form.getValues('theme');
+    if (theme) {
+      navigator.clipboard.writeText(theme);
+      toast.success("Theme copied to clipboard");
+    } else {
+      toast.error("No theme to copy");
+    }
+  };
+
   // Update the placeholder based on platform and content type selections
   useEffect(() => {
     const platform = form.watch("platform");
@@ -74,6 +86,24 @@ export function ThemeField({ form, onGenerate }: ThemeFieldProps) {
     }
   }, [form.watch("platform"), form.watch("contentType"), form.watch("moralLevel"), form.watch("tone")]);
   
+  // Auto-generate content when user changes the theme and autoGenerate is enabled
+  useEffect(() => {
+    if (autoGenerate && onGenerate) {
+      const subscription = form.watch((value, { name }) => {
+        if (name === "theme" && value.theme && value.theme.length > 20) {
+          // Add a small delay to avoid generating on every keystroke
+          const timer = setTimeout(() => {
+            onGenerate();
+          }, 1500); // 1.5 second delay
+          
+          return () => clearTimeout(timer);
+        }
+      });
+      
+      return () => subscription.unsubscribe();
+    }
+  }, [autoGenerate, onGenerate, form]);
+  
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // If Enter is pressed without Shift key (for new line), generate content
     if (e.key === 'Enter' && !e.shiftKey && onGenerate) {
@@ -90,18 +120,42 @@ export function ThemeField({ form, onGenerate }: ThemeFieldProps) {
         <FormItem>
           <div className="flex items-center justify-between mb-2">
             <FormLabel>Describe what you want to generate</FormLabel>
-            {onGenerate && (
+            <div className="flex space-x-2">
               <Button 
                 type="button" 
                 variant="outline" 
-                size="sm"
-                onClick={onGenerate}
-                className="flex items-center gap-2"
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={handleCopy}
               >
-                <Wand2 className="h-4 w-4" />
-                Generate
+                <Copy className="h-3.5 w-3.5" />
+                Copy
               </Button>
-            )}
+              {onGenerate && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={onGenerate}
+                  className="flex items-center gap-2"
+                >
+                  <Wand2 className="h-4 w-4" />
+                  Generate
+                </Button>
+              )}
+              {form.getValues("content") && onGenerate && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={onGenerate}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Revise
+                </Button>
+              )}
+            </div>
           </div>
           <FormControl>
             <Textarea

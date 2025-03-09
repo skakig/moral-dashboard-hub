@@ -28,14 +28,15 @@ export function useArticleFormDialog({
       id: article.id,
       title: article.title,
       content: article.content,
+      // These fields might not exist in the Article type, but we handle them safely
       excerpt: article.excerpt || '',
       metaDescription: article.meta_description || '',
       featuredImage: article.featured_image || '',
       seoKeywords: Array.isArray(article.seo_keywords) ? article.seo_keywords.join(', ') : '',
+      // Add voice fields with safe fallbacks
       voiceUrl: article.voice_url || '',
       voiceGenerated: article.voice_generated || false,
       moralLevel: article.moral_level || 5,
-      // Add any other fields that might be needed
     };
     
     setCurrentArticle(article);
@@ -70,6 +71,7 @@ export function useArticleFormDialog({
               initialData={currentArticle ? {
                 title: currentArticle.title,
                 content: currentArticle.content,
+                // Again, handle properties that might not exist in the Article type
                 excerpt: currentArticle.excerpt || '',
                 metaDescription: currentArticle.meta_description || '',
                 featuredImage: currentArticle.featured_image || '',

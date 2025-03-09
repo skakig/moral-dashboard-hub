@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, ChevronRight, Wand2, Mic, Play, Pause, Download, Save, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wand2, Mic, Play, Pause, Download, Save, Loader2, Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
@@ -84,6 +84,7 @@ export function StepByStepArticleForm({
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState("21m00Tcm4TlvDq8ikWAM"); // Default to Rachel
+  const [autoGenerateContent, setAutoGenerateContent] = useState(true);
   
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
@@ -196,6 +197,17 @@ export function StepByStepArticleForm({
     await generateVoiceContent(selectedVoice);
   };
 
+  // Copy function for each field
+  const handleCopyField = (fieldName: string, successMessage: string) => {
+    const value = form.getValues(fieldName);
+    if (value) {
+      navigator.clipboard.writeText(String(value));
+      toast.success(successMessage);
+    } else {
+      toast.error(`No ${fieldName} to copy`);
+    }
+  };
+
   // Define steps
   const steps: Step[] = [
     {
@@ -204,7 +216,20 @@ export function StepByStepArticleForm({
       description: 'What would you like to write about?',
       component: (
         <div className="space-y-4">
-          <ThemeField form={form} onGenerate={handleGenerateContent} />
+          <ThemeField form={form} onGenerate={handleGenerateContent} autoGenerate={autoGenerateContent} />
+          
+          <div className="flex items-center space-x-2 mt-4">
+            <input
+              type="checkbox"
+              id="autoGenerate"
+              checked={autoGenerateContent}
+              onChange={(e) => setAutoGenerateContent(e.target.checked)}
+              className="rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="autoGenerate" className="text-sm">
+              Auto-generate content when I finish typing
+            </label>
+          </div>
         </div>
       ),
       isRequired: true,
@@ -250,6 +275,18 @@ export function StepByStepArticleForm({
             isGenerating={isGeneratingContent} 
             onGenerate={handleGenerateContent} 
           />
+          <div className="flex justify-end">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleGenerateContent()}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Revise Content
+            </Button>
+          </div>
         </div>
       ),
       isRequired: true,
@@ -350,6 +387,36 @@ export function StepByStepArticleForm({
       component: (
         <div className="space-y-4">
           <MetaDescriptionField form={form} />
+          
+          <FormField
+            control={form.control}
+            name="seoKeywords"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex justify-between items-center">
+                  <FormLabel>Keywords (comma separated)</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 px-2 text-xs flex items-center gap-1"
+                    onClick={() => handleCopyField('seoKeywords', 'Keywords copied to clipboard')}
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copy
+                  </Button>
+                </div>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter SEO keywords, separated by commas"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
           <FeaturedImageField form={form} />
         </div>
       ),
@@ -362,6 +429,29 @@ export function StepByStepArticleForm({
       component: (
         <div className="space-y-4">
           <BasicInfoFields form={form} />
+          
+          <div className="flex justify-end space-x-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleCopyField('title', 'Title copied to clipboard')}
+              className="flex items-center gap-1"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy Title
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleCopyField('excerpt', 'Excerpt copied to clipboard')}
+              className="flex items-center gap-1"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy Excerpt
+            </Button>
+          </div>
         </div>
       ),
       isRequired: true,

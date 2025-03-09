@@ -93,8 +93,8 @@ serve(async (req) => {
         errorText = response?.statusText || "Failed to generate voice content";
       }
       
-      console.error("ElevenLabs API error:", errorText);
-      throw new Error(`Failed to generate voice: ${errorText}`);
+      console.error("ElevenLabs API error:", errorText, "Status:", response?.status);
+      throw new Error(`Failed to generate voice: ${errorText} (Status: ${response?.status})`);
     }
     
     // Convert the audio response to base64

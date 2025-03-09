@@ -48,11 +48,10 @@ export function useArticles() {
       ? formValues.seoKeywords.split(',').map(k => k.trim()).filter(Boolean)
       : [];
       
-    // Map the form fields to database fields
+    // Map the form fields to database fields - only include fields that exist in the DB schema
     return {
       title: formValues.title,
       content: formValues.content || '',
-      excerpt: formValues.excerpt || '',
       meta_description: formValues.metaDescription || null,
       featured_image: formValues.featuredImage || null,
       seo_keywords: seoKeywords,
@@ -61,8 +60,6 @@ export function useArticles() {
       voice_url: formValues.voiceUrl || null,
       voice_generated: formValues.voiceGenerated || false,
       moral_level: formValues.moralLevel ? Number(formValues.moralLevel) : 5,
-      // Note: not trying to send fields that aren't in the DB schema
-      // contentLength, platform, contentType, etc. are not DB fields
     };
   };
 

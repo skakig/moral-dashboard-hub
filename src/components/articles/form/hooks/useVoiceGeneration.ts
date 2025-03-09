@@ -34,85 +34,22 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
         ? content.substring(0, 4997) + '...' 
         : content;
       
-      // First, try to use the dedicated voice generation function
-      try {
-        const { data: voiceData, error: voiceError } = await supabase.functions.invoke('generate-voice', {
-          body: {
-            text: textToConvert,
-            title: title,
-            voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM" // Default ElevenLabs voice ID (Rachel)
-          }
-        });
-        
-        if (voiceError) {
-          console.error("Error with generate-voice function:", voiceError);
-          throw new Error(voiceError.message);
-        }
-        
-        if (!voiceData || !voiceData.success) {
-          throw new Error(voiceData?.error || "Failed to generate voice");
-        }
-        
-        // If we get here, we've successfully used the dedicated voice function
-        console.log("Voice generation successful with dedicated function:", voiceData);
-        
-        // Create a playable audio URL from the base64 audio data
-        if (voiceData.audioBase64) {
-          const audioBlob = base64ToBlob(voiceData.audioBase64, 'audio/mpeg');
-          const url = URL.createObjectURL(audioBlob);
-          setAudioUrl(url);
-          
-          // Create audio element for playback
-          if (audioRef.current) {
-            audioRef.current.src = url;
-            audioRef.current.load();
-          } else {
-            audioRef.current = new Audio(url);
-            audioRef.current.addEventListener('ended', () => {
-              setIsPlaying(false);
-            });
-          }
-          
-          // Update the form with the voice URL and metadata
-          form.setValue("voiceUrl", url);
-          form.setValue("voiceGenerated", true);
-          form.setValue("voiceFileName", voiceData.fileName || `${title.replace(/\s+/g, '-').toLowerCase()}.mp3`);
-          form.setValue("voiceBase64", voiceData.audioBase64); // Store base64 for future use
-        }
-        
-        toast.success("Voice content generated successfully!");
-        return;
-      } catch (directError) {
-        console.warn("Direct voice generation failed, falling back to execute-api-call:", directError);
-        // Fall back to the execute-api-call method below
-      }
-      
-      // Call the Supabase Edge Function to generate voice using ElevenLabs API
-      const { data, error } = await supabase.functions.invoke('execute-api-call', {
+      // Directly call the generate-voice function
+      const { data, error } = await supabase.functions.invoke('generate-voice', {
         body: {
-          functionName: "Voice Generation",
-          payload: {
-            text: textToConvert,
-            options: {
-              title: title,
-              voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM", // Default ElevenLabs voice ID (Rachel)
-              modelId: "eleven_multilingual_v2" // Use the high-quality model
-            }
-          }
+          text: textToConvert,
+          title: title,
+          voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM" // Default ElevenLabs voice ID (Rachel)
         }
       });
       
       if (error) {
         console.error("Error generating voice content:", error);
-        toast.error("Failed to generate voice content: " + error.message);
-        return;
+        throw new Error(`Failed to generate voice: ${error.message}`);
       }
       
       if (!data || !data.success) {
-        const errorMsg = data?.error || "Unknown error generating voice content";
-        console.error(errorMsg);
-        toast.error(errorMsg);
-        return;
+        throw new Error(data?.error || "Failed to generate voice");
       }
       
       console.log("Voice generation successful:", data);

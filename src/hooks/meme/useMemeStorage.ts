@@ -94,9 +94,22 @@ export function useMemeStorage() {
       
       if (error) throw error;
       
-      // Use explicit typing to avoid deep type inference
+      // Create a type for the raw data to avoid deep type inference
+      type RawDbMeme = {
+        id: string;
+        image_url: string;
+        meme_text: string;
+        platform_tags?: string[];
+        prompt?: string;
+        created_at: string;
+        updated_at?: string;
+        user_id?: string;
+        engagement_score?: number;
+      };
+      
+      // Use explicit typing with the new RawDbMeme type
       const memes = data 
-        ? (data as any[]).map(item => toMeme(item as DbMeme)) 
+        ? (data as RawDbMeme[]).map(item => toMeme(item as DbMeme))
         : [];
       
       setSavedMemes(memes);

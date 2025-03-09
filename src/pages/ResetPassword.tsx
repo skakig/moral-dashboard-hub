@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -53,8 +52,7 @@ export default function ResetPassword() {
         setError(error.message);
       } else {
         setSuccess(true);
-        toast({
-          title: "Password updated successfully",
+        toast("Password updated successfully", {
           description: "You can now log in with your new password",
         });
       }

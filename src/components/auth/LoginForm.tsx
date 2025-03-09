@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -33,8 +32,7 @@ export function LoginForm() {
       if (error) {
         setError(error.message);
       } else if (data.user) {
-        toast({
-          title: "Login successful",
+        toast("Login successful", {
           description: "Welcome to TMH Admin Dashboard",
         });
         navigate("/");
@@ -67,8 +65,7 @@ export function LoginForm() {
         setError(error.message);
       } else {
         setResetSent(true);
-        toast({
-          title: "Password reset email sent",
+        toast("Password reset email sent", {
           description: "Check your inbox for instructions to reset your password",
         });
       }

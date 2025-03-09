@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { EdgeFunctionService } from '@/services/api/edgeFunctions';
 import { Meme, MemeFormData, DbMeme, toMeme, toDbMeme } from '@/types/meme';
-import { generateRandomId } from '@/lib/utils';
+import { generateRandomId, dataURLtoBlob } from '@/lib/utils';
 
 export function useMemeOperations() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -47,7 +47,10 @@ export function useMemeOperations() {
         }
       }
       
-      const result = await EdgeFunctionService.generateImage(prompt, platform, width, height);
+      // Enhance the prompt for better AI generation
+      const enhancedPrompt = `Create a high-quality meme image for: ${prompt}. Make it look realistic, detailed, and suitable for a meme.`;
+      
+      const result = await EdgeFunctionService.generateImage(enhancedPrompt, platform, width, height);
       
       if (!result || !result.image) {
         throw new Error('No image was generated');
@@ -75,8 +78,13 @@ export function useMemeOperations() {
     try {
       const userId = (await supabase.auth.getUser()).data.user?.id;
       
+      if (!userId) {
+        toast.error('You must be logged in to save memes');
+        return null;
+      }
+      
       // Convert to database format
-      const dbMeme = {
+      const dbMeme: Omit<DbMeme, 'id' | 'created_at' | 'updated_at'> = {
         prompt: memeData.prompt,
         image_url: memeData.imageUrl,
         top_text: memeData.topText,
@@ -90,7 +98,7 @@ export function useMemeOperations() {
       const { data, error } = await supabase
         .from('memes')
         .insert(dbMeme)
-        .select()
+        .select('*')
         .single();
       
       if (error) throw error;
@@ -118,6 +126,11 @@ export function useMemeOperations() {
       // Get current user ID
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
+      
+      if (!userId) {
+        toast.error('You must be logged in to view your memes');
+        return;
+      }
       
       // Fetch memes for current user
       const { data, error } = await supabase

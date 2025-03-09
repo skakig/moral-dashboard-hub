@@ -34,7 +34,7 @@ export function MemePreview({ imageUrl, topText, bottomText }: MemePreviewProps)
       
       {topText && (
         <div className="absolute top-4 left-0 right-0 text-center px-4">
-          <p className="text-white text-xl md:text-2xl font-bold uppercase tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
+          <p className="text-white text-2xl md:text-3xl font-bold uppercase tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,1)]" style={{ fontFamily: 'Impact, sans-serif' }}>
             {topText}
           </p>
         </div>
@@ -42,7 +42,7 @@ export function MemePreview({ imageUrl, topText, bottomText }: MemePreviewProps)
       
       {bottomText && (
         <div className="absolute bottom-4 left-0 right-0 text-center px-4">
-          <p className="text-white text-xl md:text-2xl font-bold uppercase tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
+          <p className="text-white text-2xl md:text-3xl font-bold uppercase tracking-wide drop-shadow-[0_2px_2px_rgba(0,0,0,1)]" style={{ fontFamily: 'Impact, sans-serif' }}>
             {bottomText}
           </p>
         </div>

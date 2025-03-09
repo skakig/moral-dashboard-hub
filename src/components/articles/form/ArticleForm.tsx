@@ -9,6 +9,7 @@ import { Form } from "@/components/ui/form";
 import { ArticleFormFields } from "./ArticleFormFields";
 import { AIGenerationDialog } from "./AIGenerationDialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Article form schema
 const articleFormSchema = z.object({
@@ -31,12 +32,18 @@ interface ArticleFormProps {
   initialData?: Partial<ArticleFormValues>;
   onSubmit?: (values: ArticleFormValues) => void;
   submitLabel?: string;
+  onCancel?: () => void;
+  isLoading?: boolean;
+  generateArticle?: (params: any) => Promise<any>;
 }
 
 export function ArticleForm({
   initialData = {},
   onSubmit: onFormSubmit,
   submitLabel = "Create",
+  onCancel,
+  isLoading = false,
+  generateArticle,
 }: ArticleFormProps) {
   const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -132,6 +139,11 @@ export function ArticleForm({
           <ArticleFormFields form={form} />
 
           <div className="flex items-center justify-between">
+            {onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -139,7 +151,7 @@ export function ArticleForm({
             >
               Generate with AI
             </Button>
-            <Button type="submit" disabled={isGenerating}>
+            <Button type="submit" disabled={isGenerating || isLoading}>
               {submitLabel}
             </Button>
           </div>

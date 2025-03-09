@@ -21,12 +21,18 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
         return;
       }
       
+      // For longer articles, we'll use a summary or truncated version
+      // ElevenLabs has a text limit, so we need to ensure we don't exceed it
+      const textToConvert = content.length > 5000 
+        ? content.substring(0, 4997) + '...' 
+        : content;
+      
       // Call the Supabase Edge Function to generate voice using ElevenLabs API
       const { data, error } = await supabase.functions.invoke('execute-api-call', {
         body: {
           functionName: "Voice Generation",
           payload: {
-            text: content,
+            text: textToConvert,
             options: {
               title: title,
               voiceId: "21m00Tcm4TlvDq8ikWAM", // Default ElevenLabs voice ID (Rachel)

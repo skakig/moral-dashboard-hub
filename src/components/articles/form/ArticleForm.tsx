@@ -1,118 +1,156 @@
 
-import React, { useState } from "react";
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Form } from "@/components/ui/form";
+import { z } from "zod";
+
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Wand2 } from "lucide-react";
-import { toast } from "sonner";
-import { Article } from "@/types/articles";
+import { Form } from "@/components/ui/form";
 import { ArticleFormFields } from "./ArticleFormFields";
 import { AIGenerationDialog } from "./AIGenerationDialog";
+import { toast } from "sonner";
+
+// Article form schema
+const articleFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  excerpt: z.string().optional(),
+  content: z.string().optional(),
+  featuredImage: z.string().optional(),
+  contentType: z.string().optional(),
+  platform: z.string().optional(),
+  contentLength: z.string().optional(),
+  metaDescription: z.string().optional(),
+  seoKeywords: z.string().optional(),
+  voiceUrl: z.string().optional(),
+  voiceGenerated: z.boolean().optional().default(false),
+});
+
+export type ArticleFormValues = z.infer<typeof articleFormSchema>;
 
 interface ArticleFormProps {
-  initialData?: Partial<Article>;
-  onSubmit: (data: any) => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  generateArticle?: (params: any) => Promise<any>;
+  initialData?: Partial<ArticleFormValues>;
+  onSubmit?: (values: ArticleFormValues) => void;
+  submitLabel?: string;
 }
 
-export function ArticleForm({ 
-  initialData, 
-  onSubmit, 
-  onCancel, 
-  isLoading = false,
-  generateArticle
+export function ArticleForm({
+  initialData = {},
+  onSubmit: onFormSubmit,
+  submitLabel = "Create",
 }: ArticleFormProps) {
-  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const defaultValues = {
-    title: initialData?.title || "",
-    content: initialData?.content || "",
-    category: initialData?.category || "",
-    status: initialData?.status || "draft",
-    seo_keywords: initialData?.seo_keywords?.join(", ") || "",
-    meta_description: initialData?.meta_description || "",
-    featured_image: initialData?.featured_image || "",
-    publish_date: initialData?.publish_date ? new Date(initialData.publish_date) : undefined,
-  };
+  const form = useForm<ArticleFormValues>({
+    resolver: zodResolver(articleFormSchema),
+    defaultValues: {
+      title: "",
+      excerpt: "",
+      content: "",
+      featuredImage: "",
+      contentType: "",
+      platform: "",
+      contentLength: "",
+      metaDescription: "",
+      seoKeywords: "",
+      voiceUrl: "",
+      voiceGenerated: false,
+      ...initialData,
+    },
+  });
 
-  const form = useForm({ defaultValues });
-
-  const handleGenerateAI = async (generationParams: any) => {
-    if (!generateArticle) {
-      toast.error("AI generation not available");
-      return;
-    }
-
+  async function onSubmit(data: ArticleFormValues) {
     try {
-      const result = await generateArticle(generationParams);
-
-      if (result) {
-        form.setValue("title", result.title);
-        form.setValue("content", result.content);
-        form.setValue("meta_description", result.metaDescription);
-        form.setValue("seo_keywords", result.keywords.join(", "));
-        form.setValue("category", generationParams.theme);
-        setAiDialogOpen(false);
-        toast.success("Content generated successfully");
+      if (onFormSubmit) {
+        onFormSubmit(data);
       }
     } catch (error) {
-      console.error("Error generating content:", error);
+      console.error("Error submitting article form:", error);
+      toast.error("Failed to save article");
+    }
+  }
+
+  // Handle AI content generation
+  const handleGenerateContent = async (generationParams: any) => {
+    try {
+      setIsGenerating(true);
+      // Call the Supabase function to generate content
+      const { data, error } = await supabase.functions.invoke(
+        "generate-article",
+        {
+          body: {
+            type: generationParams.contentType,
+            platform: generationParams.platform,
+            topic: generationParams.topic,
+            tone: generationParams.tone,
+            length: generationParams.contentLength,
+          },
+        }
+      );
+
+      if (error) {
+        console.error("Generation error:", error);
+        toast.error("Failed to generate content");
+        return;
+      }
+
+      if (data?.content) {
+        // Update the form with the generated content
+        form.setValue("content", data.content);
+        form.setValue("title", data.title || generationParams.topic);
+        
+        if (data.excerpt) {
+          form.setValue("excerpt", data.excerpt);
+        }
+        
+        toast.success("Content generated successfully");
+        
+        // Close the dialog
+        setIsAIDialogOpen(false);
+      }
+    } catch (err) {
+      console.error("Error generating content:", err);
       toast.error("Failed to generate content");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // This handles the actual content generation when submitted
+  const onContentGenerated = (generatedContent: any) => {
+    if (generatedContent) {
+      form.setValue("content", generatedContent.content);
+      form.setValue("title", generatedContent.title || "");
+      form.setValue("excerpt", generatedContent.excerpt || "");
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="flex justify-between">
-            <h2 className="text-2xl font-bold">{initialData?.id ? "Edit Article" : "Create Article"}</h2>
-            
-            {generateArticle && (
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setAiDialogOpen(true)}
-              >
-                <Wand2 className="mr-2 h-4 w-4" />
-                Generate with AI
-              </Button>
-            )}
-          </div>
-
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <ArticleFormFields form={form} />
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onCancel}
-              disabled={isLoading}
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsAIDialogOpen(true)}
             >
-              Cancel
+              Generate with AI
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {initialData?.id ? "Update" : "Create"} Article
+            <Button type="submit" disabled={isGenerating}>
+              {submitLabel}
             </Button>
           </div>
         </form>
       </Form>
 
-      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-        <DialogContent className="max-w-4xl">
-          <ScrollArea className="max-h-[80vh]">
-            <AIGenerationDialog 
-              onGenerate={handleGenerateAI} 
-              onCancel={() => setAiDialogOpen(false)}
-            />
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      <AIGenerationDialog
+        open={isAIDialogOpen}
+        onOpenChange={setIsAIDialogOpen}
+        onContentGenerated={onContentGenerated}
+      />
     </div>
   );
 }

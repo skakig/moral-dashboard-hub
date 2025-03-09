@@ -105,11 +105,10 @@ export async function recordResponseTime(userId: string, questionId: string, tim
     return;
   }
 
-  // Update with new response time
-  const responseTimeTracking = {
-    ...(data?.response_time_tracking || {}),
-    [questionId]: timeMs
-  };
+  // Ensure response_time_tracking is an object before spreading
+  const responseTimeTracking = typeof data?.response_time_tracking === 'object' && data?.response_time_tracking !== null
+    ? { ...data.response_time_tracking, [questionId]: timeMs }
+    : { [questionId]: timeMs };
 
   await supabase
     .from('user_morality')

@@ -6,6 +6,7 @@ import { ContentConfigFields } from "./components/ContentConfigFields";
 import { ContentField } from "./components/ContentField";
 import { MetaDescriptionField } from "./components/MetaDescriptionField";
 import { FeaturedImageField } from "./components/FeaturedImageField";
+import { ThemeField } from "./components/ThemeField"; // Import the new ThemeField
 import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { Button } from "@/components/ui/button";
 import { FormField, FormItem, FormLabel } from "@/components/ui/form";
@@ -56,6 +57,12 @@ export function ArticleFormFields({ form }) {
           The content should align with The Moral Hierarchy principles at level {form.watch("moralLevel") || "5"}.
         </p>
         <Separator className="mb-4" />
+        
+        {/* Add the ThemeField component before ContentField */}
+        <div className="mb-4">
+          <ThemeField form={form} />
+        </div>
+        
         <ContentField form={form} />
       </div>
       

@@ -24,6 +24,7 @@ const articleFormSchema = z.object({
   voiceUrl: z.string().optional(),
   voiceGenerated: z.boolean().optional().default(false),
   moralLevel: z.string().or(z.number()).optional().default(5),
+  theme: z.string().optional(),
 });
 
 export type ArticleFormValues = z.infer<typeof articleFormSchema>;
@@ -59,6 +60,7 @@ export function ArticleForm({
       voiceUrl: "",
       voiceGenerated: false,
       moralLevel: 5,
+      theme: "",
       ...initialData,
     },
   });

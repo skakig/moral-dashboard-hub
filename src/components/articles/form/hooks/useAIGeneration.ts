@@ -26,7 +26,7 @@ export function useAIGeneration() {
 
   const generateContent = async (params: GenerationParams) => {
     if (!params.theme) {
-      toast.error('Please enter a theme or topic');
+      toast.error('Please enter a theme or description of what you want to generate');
       return null;
     }
 
@@ -37,17 +37,20 @@ export function useAIGeneration() {
       console.log("Calling generate-article with params:", params);
 
       // Call the generate-article edge function
-      const { data, error } = await supabase.functions.invoke('generate-article', {
+      const { data, error, status } = await supabase.functions.invoke('generate-article', {
         body: params
       });
 
+      console.log("Response status:", status);
+      
       if (error) {
         console.error("Error from Supabase function:", error);
-        throw new Error(error.message || 'Failed to generate content');
+        throw new Error(error.message || `Failed to generate content (Status: ${status})`);
       }
 
       if (!data) {
-        throw new Error('No data returned from content generation');
+        console.error("No data returned, status:", status);
+        throw new Error(`No data returned from content generation (Status: ${status})`);
       }
 
       console.log("Generated content response:", data);

@@ -32,26 +32,33 @@ export function ContentField({ form }: ContentFieldProps) {
         [];
 
       if (!theme) {
-        toast.error("Please enter a theme or topic");
+        toast.error("Please enter a theme or description of what you want to generate");
+        setIsGenerating(false);
         return;
       }
 
       if (!platform) {
         toast.error("Please select a platform");
+        setIsGenerating(false);
         return;
       }
 
       if (!contentType) {
         toast.error("Please select a content type");
+        setIsGenerating(false);
         return;
       }
+
+      console.log("Generating content with params:", { 
+        theme, keywords, contentType, moralLevel, platform, contentLength, tone 
+      });
 
       // Call the AI generation
       const content = await generateContent({
         theme,
         keywords,
         contentType,
-        moralLevel: parseInt(moralLevel, 10),
+        moralLevel: parseInt(String(moralLevel), 10),
         platform,
         contentLength,
         tone
@@ -80,7 +87,7 @@ export function ContentField({ form }: ContentFieldProps) {
       }
     } catch (error) {
       console.error("Error generating content:", error);
-      toast.error("Failed to generate content");
+      toast.error("Failed to generate content: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setIsGenerating(false);
     }

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArticleForm } from "@/components/articles/form";
+import { ArticleForm, ArticleFormValues } from "@/components/articles/form";
 import { Article } from "@/types/articles";
 
 interface UseArticleFormDialogProps {

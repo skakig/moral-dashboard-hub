@@ -53,6 +53,8 @@ export function GeneralSettings() {
       setLoading(true);
       setError(null);
       
+      console.log("Fetching settings...");
+      
       const { data, error } = await supabase
         .from('site_settings')
         .select('*')
@@ -65,6 +67,8 @@ export function GeneralSettings() {
         return;
       }
 
+      console.log("Settings data received:", data);
+      
       if (data && data.length > 0) {
         const siteData = data[0];
         
@@ -150,7 +154,7 @@ export function GeneralSettings() {
       setSaving(true);
       setError(null);
       
-      console.log("Saving settings:", settings);
+      console.log("Saving settings with values:", settings);
       
       if (!settingsId) {
         setError("Settings ID is missing. Please refresh the page.");
@@ -182,22 +186,37 @@ export function GeneralSettings() {
         }
       }
       
-      // Update settings in database
-      const { error: updateError } = await supabase
-        .from('site_settings')
-        .update({
-          site_name: settings.site_name,
-          admin_email: settings.admin_email,
-          timezone: settings.timezone,
-          maintenance_mode: settings.maintenance_mode
-        })
-        .eq('id', settingsId);
+      // Update settings in database using RPC call to update_site_settings
+      // This ensures we're using the server-side function with proper triggers
+      const { error: updateError } = await supabase.rpc('update_site_settings', {
+        p_id: settingsId,
+        p_site_name: settings.site_name,
+        p_admin_email: settings.admin_email,
+        p_timezone: settings.timezone,
+        p_maintenance_mode: settings.maintenance_mode
+      });
 
       if (updateError) {
-        console.error("Error saving settings:", updateError);
-        setError(`Failed to save settings: ${updateError.message}`);
-        toast.error("Failed to save settings: " + updateError.message);
-        return;
+        console.error("Error saving settings with RPC:", updateError);
+        
+        // Fallback to direct update if RPC fails
+        const { error: directUpdateError } = await supabase
+          .from('site_settings')
+          .update({
+            site_name: settings.site_name,
+            admin_email: settings.admin_email,
+            timezone: settings.timezone,
+            maintenance_mode: settings.maintenance_mode,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', settingsId);
+
+        if (directUpdateError) {
+          console.error("Error with direct update:", directUpdateError);
+          setError(`Failed to save settings: ${directUpdateError.message}`);
+          toast.error("Failed to save settings: " + directUpdateError.message);
+          return;
+        }
       }
 
       // Update originalEmail if admin_email changed

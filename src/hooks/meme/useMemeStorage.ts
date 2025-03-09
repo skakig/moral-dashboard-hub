@@ -37,13 +37,20 @@ export function useMemeStorage() {
         user_id: userId
       };
       
-      // Convert to database format
+      // Convert to database format - ensures all required fields are present
       const dbMeme = toDbMeme(memeToSave);
       
       // Insert into database
+      // Make sure we're passing an object with the required fields, not a Partial<DbMeme>
       const { data, error } = await supabase
         .from('memes')
-        .insert(dbMeme)
+        .insert({
+          image_url: dbMeme.image_url || '',  // Ensure these required fields exist
+          meme_text: dbMeme.meme_text || '',
+          platform_tags: dbMeme.platform_tags,
+          prompt: dbMeme.prompt,
+          user_id: dbMeme.user_id
+        })
         .select()
         .single();
       
@@ -87,9 +94,10 @@ export function useMemeStorage() {
       
       if (error) throw error;
       
-      // Use a simple type assertion to avoid deep type inference
-      const dbMemes = data as any[];
-      const memes = dbMemes ? dbMemes.map(item => toMeme(item as DbMeme)) : [];
+      // Use explicit typing to avoid deep type inference
+      const memes = data 
+        ? (data as any[]).map(item => toMeme(item as DbMeme)) 
+        : [];
       
       setSavedMemes(memes);
     } catch (error) {

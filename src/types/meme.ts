@@ -79,7 +79,15 @@ export const toMeme = (dbMeme: DbMeme): Meme => {
   };
 };
 
-export const toDbMeme = (meme: Partial<Meme>): Partial<DbMeme> => {
+// Convert frontend Meme to database format
+export const toDbMeme = (meme: Partial<Meme>): {
+  image_url: string;
+  meme_text: string;
+  platform_tags?: string[];
+  prompt?: string;
+  user_id?: string;
+  engagement_score?: number;
+} => {
   // Combine topText and bottomText into a JSON string
   const memeText = JSON.stringify({
     topText: meme.topText || '',

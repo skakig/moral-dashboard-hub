@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,17 +83,27 @@ export function GeneralSettings() {
           console.warn("No settings found in database");
           toast.warning("Using default settings. Please save to create settings record.");
           
-          const { error: insertError } = await supabase
+          // Create default settings record if none exists
+          const { data: insertData, error: insertError } = await supabase
             .from('site_settings')
             .insert([{
               site_name: "The Moral Hierarchy",
               admin_email: "admin@tmh.com",
               timezone: "utc",
               maintenance_mode: false
-            }]);
+            }])
+            .select();
             
           if (insertError) {
             console.error("Error creating default settings:", insertError);
+            setError(`Failed to create default settings: ${insertError.message}`);
+          } else if (insertData && insertData.length > 0) {
+            // Set the ID from the newly created record
+            setSettings({
+              ...settings,
+              id: insertData[0].id
+            });
+            console.log("Created default settings:", insertData[0]);
           }
         }
       } catch (error: any) {
@@ -109,12 +120,14 @@ export function GeneralSettings() {
 
   const handleSave = async () => {
     try {
+      // Validate email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(settings.admin_email)) {
         toast.error("Please enter a valid email address");
         return;
       }
 
+      // If email is changed, require password confirmation
       if (settings.admin_email !== originalEmail) {
         setShowPasswordConfirm(true);
         return;
@@ -135,7 +148,8 @@ export function GeneralSettings() {
       
       console.log("Saving settings:", settings);
       
-      if (password) {
+      // If email is changed and password is provided, verify the password
+      if (password && settings.admin_email !== originalEmail) {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
@@ -144,6 +158,7 @@ export function GeneralSettings() {
           return;
         }
         
+        // Verify password by attempting to sign in
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: user.email!,
           password: password
@@ -157,14 +172,14 @@ export function GeneralSettings() {
         }
       }
       
+      // Update settings in database
       const { error: updateError } = await supabase
         .from('site_settings')
         .update({
           site_name: settings.site_name,
           admin_email: settings.admin_email,
           timezone: settings.timezone,
-          maintenance_mode: settings.maintenance_mode,
-          updated_at: new Date().toISOString()
+          maintenance_mode: settings.maintenance_mode
         })
         .eq('id', settings.id);
 
@@ -175,6 +190,7 @@ export function GeneralSettings() {
         return;
       }
 
+      // Update originalEmail if admin_email changed
       if (settings.admin_email !== originalEmail) {
         setOriginalEmail(settings.admin_email);
       }
@@ -182,6 +198,7 @@ export function GeneralSettings() {
       toast.success("Settings saved successfully");
       console.log("Settings updated successfully");
       
+      // Close password confirmation dialog and reset form
       setShowPasswordConfirm(false);
       passwordForm.reset();
       

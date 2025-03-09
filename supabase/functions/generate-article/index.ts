@@ -44,39 +44,45 @@ serve(async (req) => {
     if (platform === "LinkedIn") {
       console.log("Redirecting to LinkedIn-specific function");
       
-      // Call the LinkedIn-specific function
-      const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-linkedin-post`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-        },
-        body: JSON.stringify({
-          theme, 
-          keywords, 
-          contentType, 
-          moralLevel, 
-          contentLength, 
-          tone
-        }),
-      });
-      
-      if (!response.ok) {
-        let errorMessage;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || response.statusText;
-        } catch (e) {
-          errorMessage = response.statusText;
+      try {
+        // Call the LinkedIn-specific function
+        const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-linkedin-post`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+          },
+          body: JSON.stringify({
+            theme, 
+            keywords, 
+            contentType, 
+            moralLevel, 
+            contentLength, 
+            tone
+          }),
+        });
+        
+        if (!response.ok) {
+          let errorMessage;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || response.statusText;
+          } catch (e) {
+            errorMessage = response.statusText;
+          }
+          throw new Error(`LinkedIn content generation failed: ${errorMessage}`);
         }
-        throw new Error(`LinkedIn content generation failed: ${errorMessage}`);
+        
+        const linkedInContent = await response.json();
+        return new Response(
+          JSON.stringify(linkedInContent),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (error) {
+        console.error("LinkedIn function error:", error);
+        // If LinkedIn function fails, fallback to regular generation
+        console.log("Falling back to regular content generation");
       }
-      
-      const linkedInContent = await response.json();
-      return new Response(
-        JSON.stringify(linkedInContent),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     // Determine the content type instruction
@@ -99,6 +105,8 @@ serve(async (req) => {
       contentInstruction = "an Instagram carousel post with 5-7 slides";
     } else if (contentType === "reels_script") {
       contentInstruction = "an Instagram Reels script";
+    } else if (contentType === "script") {
+      contentInstruction = `a script for ${platform}`;
     } else {
       contentInstruction = `content for ${platform}`;
     }

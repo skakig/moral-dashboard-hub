@@ -63,7 +63,7 @@ export function useAIGeneration() {
 
       if (data.error) {
         console.error("Error in response data:", data.error);
-        throw new Error(data.error.details || data.error);
+        throw new Error(data.error || 'Failed to generate content');
       }
 
       console.log("Generated content response:", data);
@@ -104,7 +104,12 @@ export function useAIGeneration() {
         return [];
       }
 
-      return data?.keywords || [];
+      if (!data || !Array.isArray(data.keywords)) {
+        console.error("Invalid keywords data:", data);
+        return [];
+      }
+
+      return data.keywords || [];
     } catch (error) {
       console.error("Error generating keywords:", error);
       return [];

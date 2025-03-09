@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export function useVoiceGeneration(form: UseFormReturn<any>) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   const generateVoiceContent = async () => {
     try {
@@ -30,6 +31,47 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
       const textToConvert = content.length > 5000 
         ? content.substring(0, 4997) + '...' 
         : content;
+      
+      // First, try to use the dedicated voice generation function
+      try {
+        const { data: voiceData, error: voiceError } = await supabase.functions.invoke('generate-voice', {
+          body: {
+            text: textToConvert,
+            title: title,
+            voiceId: "21m00Tcm4TlvDq8ikWAM" // Default ElevenLabs voice ID (Rachel)
+          }
+        });
+        
+        if (voiceError) {
+          console.error("Error with generate-voice function:", voiceError);
+          throw new Error(voiceError.message);
+        }
+        
+        if (!voiceData || !voiceData.success) {
+          throw new Error(voiceData?.error || "Failed to generate voice");
+        }
+        
+        // If we get here, we've successfully used the dedicated voice function
+        console.log("Voice generation successful with dedicated function:", voiceData);
+        
+        // Create a playable audio URL from the base64 audio data
+        if (voiceData.audioBase64) {
+          const audioBlob = base64ToBlob(voiceData.audioBase64, 'audio/mpeg');
+          const url = URL.createObjectURL(audioBlob);
+          setAudioUrl(url);
+          
+          // Update the form with the voice URL and metadata
+          form.setValue("voiceUrl", url);
+          form.setValue("voiceGenerated", true);
+          form.setValue("voiceFileName", voiceData.fileName || `${title.replace(/\s+/g, '-').toLowerCase()}.mp3`);
+        }
+        
+        toast.success("Voice content generated successfully!");
+        return;
+      } catch (directError) {
+        console.warn("Direct voice generation failed, falling back to execute-api-call:", directError);
+        // Fall back to the execute-api-call method below
+      }
       
       // Call the Supabase Edge Function to generate voice using ElevenLabs API
       const { data, error } = await supabase.functions.invoke('execute-api-call', {
@@ -68,6 +110,7 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
       // Update the form with the voice URL
       form.setValue("voiceUrl", dummyVoiceUrl);
       form.setValue("voiceGenerated", true);
+      form.setValue("voiceFileName", `${title.replace(/\s+/g, '-').toLowerCase()}.mp3`);
       
       toast.success("Voice content generated successfully!");
     } catch (error) {
@@ -77,6 +120,36 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
       setIsGenerating(false);
     }
   };
+  
+  // Helper function to convert base64 to a Blob
+  const base64ToBlob = (base64: string, mimeType: string): Blob => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
+  };
+  
+  // Function to download the generated audio
+  const downloadAudio = () => {
+    if (!audioUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = audioUrl;
+    link.download = form.getValues().voiceFileName || 'voice-content.mp3';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-  return { generateVoiceContent, isGenerating };
+  return { 
+    generateVoiceContent, 
+    isGenerating, 
+    audioUrl,
+    downloadAudio
+  };
 }

@@ -1,23 +1,36 @@
 
 // Fetch API keys from database
 export async function fetchApiKeys(supabase) {
-  console.log("Fetching API keys...");
-  const { data, error } = await supabase
-    .from("api_keys")
-    .select("*")
-    .order("service_name");
+  console.log("Fetching API keys from database...");
+  try {
+    const { data, error } = await supabase
+      .from("api_keys")
+      .select("*")
+      .order("service_name");
+      
+    if (error) {
+      console.error("Error fetching API keys:", error);
+      throw new Error(`Failed to fetch API keys: ${error.message}`);
+    }
     
-  if (error) {
-    console.error("Error fetching API keys:", error);
-    throw new Error(`Failed to fetch API keys: ${error.message}`);
+    console.log(`Retrieved ${data?.length || 0} API keys with these IDs:`, 
+      data?.map(key => `${key.id} (${key.service_name})`).join(', ') || 'none');
+    
+    if (!data || data.length === 0) {
+      console.log("No API keys found in the database");
+    }
+    
+    return data || [];
+  } catch (err) {
+    console.error("Exception in fetchApiKeys:", err);
+    return [];
   }
-  
-  console.log(`Retrieved ${data?.length || 0} API keys`);
-  return data || [];
 }
 
 // Format API keys for frontend consumption
 export function formatApiKeys(apiKeys) {
+  console.log(`Formatting ${apiKeys?.length || 0} API keys for frontend`);
+  
   // Organize API keys by category
   const apiKeysByCategory = {};
   
@@ -31,7 +44,7 @@ export function formatApiKeys(apiKeys) {
       apiKeysByCategory[category].push({
         id: key.id,
         serviceName: key.service_name,
-        baseUrl: key.base_url,
+        baseUrl: key.base_url || '',
         isConfigured: true,
         isActive: key.is_active || false,
         isPrimary: key.is_primary || false,
@@ -44,8 +57,9 @@ export function formatApiKeys(apiKeys) {
   }
   
   console.log("Formatted API keys by category:", Object.keys(apiKeysByCategory));
-  if (Object.keys(apiKeysByCategory).length > 0) {
-    console.log("First category contains:", apiKeysByCategory[Object.keys(apiKeysByCategory)[0]].length, "keys");
+  for (const category in apiKeysByCategory) {
+    const services = apiKeysByCategory[category].map(k => k.serviceName).join(', ');
+    console.log(`- ${category}: ${apiKeysByCategory[category].length} keys (${services})`);
   }
   
   return apiKeysByCategory;

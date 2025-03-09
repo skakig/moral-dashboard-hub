@@ -60,6 +60,7 @@ export function useAPIData() {
     setLoadError(null);
     
     try {
+      console.log("Calling get-api-keys-status edge function...");
       // Call the Supabase edge function to get API key status
       const { data, error } = await supabase.functions.invoke('get-api-keys-status');
       
@@ -76,13 +77,28 @@ export function useAPIData() {
       
       console.log('API data received:', data);
       
-      // Use data directly as it's already formatted by the edge function
-      setApiData({
-        apiKeysByCategory: data.apiKeysByCategory || {},
-        functionMappings: data.functionMappings || [],
-        rateLimits: data.rateLimits || [],
-        usageStats: data.usageStats || { byService: {}, byCategory: {} }
-      });
+      // Check if data has the expected structure
+      if (!data.apiKeysByCategory && data.success) {
+        // Handle the case where data is nested under a success property
+        console.log('Data is nested under success property, extracting...');
+        setApiData({
+          apiKeysByCategory: data.apiKeysByCategory || {},
+          functionMappings: data.functionMappings || [],
+          rateLimits: data.rateLimits || [],
+          usageStats: data.usageStats || { byService: {}, byCategory: {} }
+        });
+      } else {
+        // Use data directly
+        setApiData({
+          apiKeysByCategory: data.apiKeysByCategory || {},
+          functionMappings: data.functionMappings || [],
+          rateLimits: data.rateLimits || [],
+          usageStats: data.usageStats || { byService: {}, byCategory: {} }
+        });
+      }
+
+      console.log("Data processed successfully:", 
+        Object.keys(data.apiKeysByCategory || {}).length, "categories");
     } catch (err: any) {
       console.error('Exception fetching API data:', err);
       setLoadError(`Error loading API keys: ${err.message}`);

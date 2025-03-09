@@ -16,6 +16,8 @@ async function handleRequest(req) {
 
     // 1. Fetch all required data
     const apiKeys = await fetchApiKeys(supabaseAdmin);
+    console.log(`Retrieved ${apiKeys?.length || 0} API keys from database`);
+    
     const functionMappings = await fetchFunctionMappings(supabaseAdmin);
     const usageData = await fetchUsageStats(supabaseAdmin);
     const rateLimits = await fetchRateLimits(supabaseAdmin);
@@ -25,16 +27,20 @@ async function handleRequest(req) {
     const formattedMappings = formatFunctionMappings(functionMappings);
     const usageStats = processUsageStats(usageData, apiKeys);
 
+    // Log the structured data for debugging
+    console.log("API Keys by category:", Object.keys(apiKeysByCategory));
+    for (const category in apiKeysByCategory) {
+      console.log(`- ${category}: ${apiKeysByCategory[category].length} keys`);
+    }
+
     // 3. Return the complete API status data
     return new Response(
       JSON.stringify({
         success: true,
-        data: {
-          apiKeysByCategory,
-          functionMappings: formattedMappings,
-          usageStats,
-          rateLimits: rateLimits || []
-        }
+        apiKeysByCategory,
+        functionMappings: formattedMappings,
+        usageStats,
+        rateLimits: rateLimits || []
       }),
       { 
         headers: { 

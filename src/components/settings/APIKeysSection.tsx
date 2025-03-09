@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Gauge, AlertCircle, RefreshCw, InfoIcon, Key, GitBranch } from "lucide-react";
 import { APIFunctionMapping } from "@/components/settings/api-keys/APIFunctionMapping";
@@ -106,10 +105,25 @@ export function APIKeysSection() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Add another effect to periodically refresh data
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      console.log("Auto-refreshing API keys data...");
+      reloadApiData();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(refreshInterval);
+  }, []);
+
   const isEmptyData = !apiData || 
     (Object.keys(apiData.apiKeysByCategory).length === 0 && 
      apiData.functionMappings.length === 0 &&
      apiData.rateLimits.length === 0);
+
+  const handleManualRefresh = () => {
+    toast.info("Refreshing API keys data...");
+    reloadApiData();
+  };
 
   return (
     <>
@@ -165,9 +179,22 @@ export function APIKeysSection() {
         </Alert>
       )}
 
+      <div className="flex justify-end mb-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleManualRefresh}
+          disabled={apiKeysLoading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${apiKeysLoading ? 'animate-spin' : ''}`} />
+          Refresh API Keys Data
+        </Button>
+      </div>
+
       {apiKeysLoading || initializingDb ? (
         <div className="flex items-center justify-center p-8">
           <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Loading API keys data...</span>
         </div>
       ) : (
         <Tabs defaultValue="keys" className="w-full">
@@ -203,17 +230,6 @@ export function APIKeysSection() {
               apiKeysByCategory={apiData?.apiKeysByCategory || {}}
               onRefresh={reloadApiData}
             />
-            <div className="flex justify-end">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={reloadApiData} 
-                className="mt-2"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh API Keys
-              </Button>
-            </div>
           </TabsContent>
           
           <TabsContent value="mappings">

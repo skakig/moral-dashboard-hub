@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, ExternalLink, Share2, Loader2 } from "lucide-react";
@@ -16,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useUser } from "@/hooks/useUser";
 
 interface MemesListProps {
   memes: Meme[];
@@ -26,6 +26,8 @@ interface MemesListProps {
 }
 
 export function MemesList({ memes, isLoading, onEdit, onDelete, onShare }: MemesListProps) {
+  const { user } = useUser();
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -43,6 +45,17 @@ export function MemesList({ memes, isLoading, onEdit, onDelete, onShare }: Memes
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">You need to be logged in to save and view memes</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Please log in to access your saved memes
+        </p>
       </div>
     );
   }

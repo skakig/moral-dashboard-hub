@@ -32,7 +32,8 @@ export function useMemeStorage() {
     setIsSaving(true);
     
     try {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
       
       if (!userId) {
         toast.error('You must be logged in to save memes');
@@ -59,7 +60,7 @@ export function useMemeStorage() {
       const { data, error } = await supabase
         .from('memes')
         .insert(dbMemeData)
-        .select()
+        .select('*')
         .single();
       
       if (error) {
@@ -67,8 +68,8 @@ export function useMemeStorage() {
         throw error;
       }
       
-      // Convert DB response to frontend format
-      const savedMeme = toMeme(data as DbMeme);
+      // Convert DB response to frontend format using explicit typing
+      const savedMeme = toMeme(data as DbMemeRecord);
       
       toast.success('Meme saved successfully!');
       fetchMemes(); // Refresh the list
@@ -91,8 +92,11 @@ export function useMemeStorage() {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       
+      // If user is not logged in, don't show error, just return empty array
       if (!userId) {
-        toast.error('You must be logged in to view your memes');
+        console.log('Not logged in, no memes to fetch');
+        setSavedMemes([]);
+        setIsLoading(false);
         return;
       }
       
@@ -105,19 +109,20 @@ export function useMemeStorage() {
       
       if (error) throw error;
       
-      // Convert data to frontend format using explicit typing
+      // Convert data to frontend format with explicit typing to avoid deep type issues
       const memes: Meme[] = [];
       
       if (data && Array.isArray(data)) {
         for (const item of data) {
-          memes.push(toMeme(item as DbMeme));
+          memes.push(toMeme(item as DbMemeRecord));
         }
       }
       
       setSavedMemes(memes);
     } catch (error) {
       console.error('Error fetching memes:', error);
-      toast.error('Failed to load saved memes');
+      // Use a more user-friendly message that doesn't imply an error if not logged in
+      toast.error('Could not load saved memes');
     } finally {
       setIsLoading(false);
     }

@@ -115,7 +115,7 @@ export function StepByStepArticleForm({
         theme,
         keywords,
         contentType,
-        moralLevel: parseInt(String(moralLevel), 10),
+        moralLevel: typeof moralLevel === 'string' ? parseInt(moralLevel, 10) : moralLevel,
         platform,
         contentLength,
         tone
@@ -313,7 +313,7 @@ export function StepByStepArticleForm({
   };
 
   // Check if we can auto-generate content (when theme, platform, and contentType are filled)
-  const canAutoGenerate = form.watch("theme") && form.watch("platform") && form.watch("contentType");
+  const canAutoGenerate = Boolean(form.watch("theme") && form.watch("platform") && form.watch("contentType"));
 
   return (
     <div className="space-y-8">

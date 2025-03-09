@@ -25,6 +25,8 @@ const articleFormSchema = z.object({
   seoKeywords: z.string().optional(),
   voiceUrl: z.string().optional(),
   voiceGenerated: z.boolean().optional().default(false),
+  voiceFileName: z.string().optional(),
+  voiceBase64: z.string().optional(),
   moralLevel: z.string().or(z.number()).optional().default(5),
   theme: z.string().optional(),
 });

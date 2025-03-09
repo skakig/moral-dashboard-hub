@@ -16,29 +16,50 @@ export function useArticleFetch() {
   const { data: articles, isLoading, error } = useQuery({
     queryKey: ['articles', searchTerm, statusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from('articles')
-        .select('*');
+      try {
+        let query = supabase
+          .from('articles')
+          .select('*');
 
-      // Apply search filter if provided
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`);
-      }
+        // Apply search filter if provided
+        if (searchTerm) {
+          query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`);
+        }
 
-      // Apply status filter if provided
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
+        // Apply status filter if provided
+        if (statusFilter !== 'all') {
+          query = query.eq('status', statusFilter);
+        }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+        const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching articles:", error);
+        if (error) {
+          console.error("Error fetching articles:", error);
+          toast.error("Failed to load articles");
+          return [];
+        }
+
+        // Validate and format each article to ensure it matches our type
+        const formattedArticles = data.map((article: any) => {
+          // Ensure status is one of the expected values
+          const validStatus = ["draft", "scheduled", "published"].includes(article.status)
+            ? article.status
+            : "draft";
+            
+          return {
+            ...article,
+            status: validStatus,
+            // Ensure arrays are properly handled
+            seo_keywords: Array.isArray(article.seo_keywords) ? article.seo_keywords : [],
+          };
+        });
+
+        return formattedArticles as Article[];
+      } catch (e) {
+        console.error("Unexpected error fetching articles:", e);
         toast.error("Failed to load articles");
         return [];
       }
-
-      return data as Article[];
     },
   });
 

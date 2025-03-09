@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -12,9 +12,41 @@ import { useContentThemes } from "@/hooks/useContentThemes";
 import { Article } from "@/types/articles";
 import { useArticleOperations } from "./hooks/useArticleOperations";
 import { ArticleFormDialog } from "./components/ArticleFormDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+
+  // Debug check for Supabase connection
+  useEffect(() => {
+    async function checkArticlesTable() {
+      try {
+        const { data, error, count } = await supabase
+          .from('articles')
+          .select('*', { count: 'exact' })
+          .limit(1);
+        
+        setDebugInfo({ 
+          hasData: Boolean(data?.length), 
+          count,
+          error: error ? error.message : null,
+          sample: data?.[0] || null
+        });
+        
+        if (error) {
+          console.error("Supabase connection error:", error);
+        } else {
+          console.log("Supabase articles table accessible, count:", count);
+        }
+      } catch (err) {
+        console.error("Failed to check articles table:", err);
+        setDebugInfo({ error: String(err) });
+      }
+    }
+    
+    checkArticlesTable();
+  }, []);
 
   // Fetch articles and themes
   const { 
@@ -73,6 +105,8 @@ export default function ArticlesPage() {
   async function handleArticleSubmit(data: any) {
     setIsSubmitting(true);
     try {
+      console.log("Submitting article data:", data);
+      
       const formattedData = {
         ...data,
         seo_keywords: data.seoKeywords ? data.seoKeywords.split(',').map((k: string) => k.trim()) : []
@@ -136,6 +170,13 @@ export default function ArticlesPage() {
             Manage content, monitor performance, and schedule publications
           </p>
         </div>
+        
+        {debugInfo && debugInfo.error && (
+          <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md">
+            <h3 className="font-semibold">Database Connection Error:</h3>
+            <p>{debugInfo.error}</p>
+          </div>
+        )}
         
         <Tabs defaultValue="articles">
           <TabsList>

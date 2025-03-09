@@ -13,7 +13,6 @@ export function useArticleOperations() {
   } = useArticles();
 
   const handleViewArticle = (article: Article) => {
-    toast.info(`Viewing article: ${article.title}`);
     window.open(`/articles/${article.id}`, '_blank');
   };
 
@@ -22,9 +21,11 @@ export function useArticleOperations() {
       await updateArticle.mutateAsync({
         id: article.id,
         seo_keywords: Array.isArray(article.seo_keywords) ? article.seo_keywords : [],
-        meta_description: "Article published on " + new Date().toLocaleDateString(),
+        meta_description: article.meta_description || "Article published on " + new Date().toLocaleDateString(),
         title: article.title,
         content: article.content,
+        // Explicitly set status to "published"
+        status: "published" as const
       });
       toast.success(`Article "${article.title}" has been published`);
     } catch (error) {

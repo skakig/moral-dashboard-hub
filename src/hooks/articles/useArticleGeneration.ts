@@ -1,58 +1,64 @@
 
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { EdgeFunctionService } from "@/services/api/edgeFunctions";
+import { supabase } from "@/integrations/supabase/client";
 
-interface GenerateArticleParams {
-  theme: string;
-  keywords: string[];
-  contentType: string;
-  moralLevel: number;
-  platform?: string;
-  contentLength?: string;
-  tone?: string;
-}
-
-/**
- * Hook for AI article generation
- */
 export function useArticleGeneration() {
-  const [loading, setLoading] = useState(false);
-  
-  // Generate article using AI
-  const generateArticle = async (params: GenerateArticleParams) => {
-    try {
-      setLoading(true);
-      toast.info(`Generating content for ${params.contentType}...`);
-      
-      // Use the existing generateContent function
-      const response = await EdgeFunctionService.generateContent({
-        prompt: params.theme,
-        content_type: params.contentType,
-        moral_level: params.moralLevel,
-        platform: params.platform,
-        length: params.contentLength,
-        tone: params.tone,
-        keywords: params.keywords
-      });
-      
-      if (!response) {
-        return null;
+  // Generate article mutation
+  const generateArticle = useMutation({
+    mutationFn: async (input: {
+      title?: string;
+      theme?: string;
+      contentType?: string;
+      platform?: string;
+      contentLength?: string;
+      tone?: string;
+      keywords?: string;
+      moralLevel?: number;
+    }) => {
+      try {
+        // Call the edge function or directly generate an article draft
+        const { data, error } = await supabase.functions.invoke('generate-article', {
+          body: input
+        });
+        
+        if (error) throw error;
+        
+        if (!data) {
+          throw new Error('No data returned from article generation');
+        }
+        
+        // If successful, create a new article with the generated content
+        const { data: article, error: insertError } = await supabase
+          .from('articles')
+          .insert({
+            title: input.title || data.title || 'Untitled Article',
+            content: data.content || '',
+            meta_description: data.meta_description || '',
+            seo_keywords: data.keywords ? data.keywords.split(',').map((k: string) => k.trim()) : [],
+            category: input.platform || 'general',
+            status: 'draft'
+          })
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        return article;
+      } catch (error) {
+        console.error("Error generating article:", error);
+        throw error;
       }
-
-      toast.success("Content generated successfully");
-      return response;
-    } catch (error) {
+    },
+    onSuccess: () => {
+      toast.success("Article generated successfully");
+    },
+    onError: (error) => {
       console.error("Error generating article:", error);
-      // The error is already handled by the service
-      return null;
-    } finally {
-      setLoading(false);
+      toast.error("Failed to generate article");
     }
-  };
-
+  });
+  
   return {
-    generateArticle,
-    loading
+    generateArticle
   };
 }

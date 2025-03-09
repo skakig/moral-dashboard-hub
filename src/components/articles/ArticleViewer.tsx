@@ -39,10 +39,13 @@ export function ArticleViewer() {
           ? data.status as "draft" | "scheduled" | "published" 
           : "draft";
         
-        setArticle({
+        // Create a valid Article object
+        const articleData: Article = {
           ...data,
           status: validStatus
-        } as Article);
+        };
+        
+        setArticle(articleData);
       } catch (error) {
         console.error('Error fetching article:', error);
         toast.error('Failed to load article');

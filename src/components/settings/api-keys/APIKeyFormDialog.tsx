@@ -227,7 +227,7 @@ export function APIKeyFormDialog({
         
         {error && <APIKeyErrorDisplay error={error} />}
         
-        {loading && <APIKeyValidationProgress progress={validationProgress} />}
+        {loading && <APIKeyValidationProgress loading={loading} progress={validationProgress} />}
         
         <div className="flex justify-between pt-4">
           <Button

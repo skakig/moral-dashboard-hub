@@ -1,7 +1,7 @@
 
 import { Progress } from "@/components/ui/progress";
 
-interface APIKeyValidationProgressProps {
+export interface APIKeyValidationProgressProps {
   loading: boolean;
   progress: number;
 }

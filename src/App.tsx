@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter as Router,
   Route,
@@ -18,24 +17,28 @@ import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 import AIContent from "@/pages/AIContent";
 import Articles from "@/pages/Articles";
+import Demographics from "./pages/Demographics";
+import UserProfile from "./pages/UserProfile";
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="tmh-ui-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="tmh-theme">
       <QueryClientProvider client={queryClient}>
         <Router>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/assessments" element={<Assessments />} />
             <Route path="/users" element={<Users />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/ai-insights" element={<AIInsights />} />
+            <Route path="/assessments" element={<Assessments />} />
             <Route path="/ai-content" element={<AIContent />} />
+            <Route path="/ai-insights" element={<AIInsights />} />
             <Route path="/articles" element={<Articles />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/demographics" element={<Demographics />} />
+            <Route path="/profile" element={<UserProfile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>

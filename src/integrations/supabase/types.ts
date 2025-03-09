@@ -917,6 +917,129 @@ export type Database = {
         }
         Relationships: []
       }
+      user_advertising_data: {
+        Row: {
+          affiliate_sales_performance: Json | null
+          conversion_rate: number | null
+          created_at: string | null
+          global_coordinates: unknown | null
+          id: string
+          interest_based_segmentation: Json | null
+          most_viewed_tmh_content: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          affiliate_sales_performance?: Json | null
+          conversion_rate?: number | null
+          created_at?: string | null
+          global_coordinates?: unknown | null
+          id?: string
+          interest_based_segmentation?: Json | null
+          most_viewed_tmh_content?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          affiliate_sales_performance?: Json | null
+          conversion_rate?: number | null
+          created_at?: string | null
+          global_coordinates?: unknown | null
+          id?: string
+          interest_based_segmentation?: Json | null
+          most_viewed_tmh_content?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_demographics: {
+        Row: {
+          age_range: string | null
+          country: string | null
+          created_at: string | null
+          device_type: string | null
+          gender: string | null
+          id: string
+          primary_language: string | null
+          region: string | null
+          timezone: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          country?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          gender?: string | null
+          id?: string
+          primary_language?: string | null
+          region?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          country?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          gender?: string | null
+          id?: string
+          primary_language?: string | null
+          region?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_engagement: {
+        Row: {
+          ai_content_interaction: Json | null
+          average_scores: Json | null
+          created_at: string | null
+          id: string
+          influencer_status: boolean | null
+          platform_engagement_score: number | null
+          preferred_assessment_category: string | null
+          referral_source: string | null
+          shared_content: Json | null
+          total_assessments_taken: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ai_content_interaction?: Json | null
+          average_scores?: Json | null
+          created_at?: string | null
+          id?: string
+          influencer_status?: boolean | null
+          platform_engagement_score?: number | null
+          preferred_assessment_category?: string | null
+          referral_source?: string | null
+          shared_content?: Json | null
+          total_assessments_taken?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ai_content_interaction?: Json | null
+          average_scores?: Json | null
+          created_at?: string | null
+          id?: string
+          influencer_status?: boolean | null
+          platform_engagement_score?: number | null
+          preferred_assessment_category?: string | null
+          referral_source?: string | null
+          shared_content?: Json | null
+          total_assessments_taken?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_moral_level_progress: {
         Row: {
           ai_feedback: string | null
@@ -958,11 +1081,89 @@ export type Database = {
           },
         ]
       }
+      user_morality: {
+        Row: {
+          contradictions_detected: boolean | null
+          created_at: string | null
+          emotional_response_patterns: Json | null
+          id: string
+          moral_level: number | null
+          moral_progression_history: Json | null
+          predicted_moral_level: number | null
+          response_time_tracking: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contradictions_detected?: boolean | null
+          created_at?: string | null
+          emotional_response_patterns?: Json | null
+          id?: string
+          moral_level?: number | null
+          moral_progression_history?: Json | null
+          predicted_moral_level?: number | null
+          response_time_tracking?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contradictions_detected?: boolean | null
+          created_at?: string | null
+          emotional_response_patterns?: Json | null
+          id?: string
+          moral_level?: number | null
+          moral_progression_history?: Json | null
+          predicted_moral_level?: number | null
+          response_time_tracking?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      admin_analytics_summary: {
+        Row: {
+          average_conversion_rate: number | null
+          average_engagement: number | null
+          average_moral_level: number | null
+          total_influencers: number | null
+          total_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_age_range_distribution: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          age_range: string
+          user_count: number
+        }[]
+      }
+      get_country_moral_distribution: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          country: string
+          avg_moral_level: number
+          user_count: number
+        }[]
+      }
+      get_gender_moral_distribution: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          gender: string
+          moral_level: number
+          user_count: number
+        }[]
+      }
+      get_moral_level_distribution: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          moral_level: number
+          user_count: number
+        }[]
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean

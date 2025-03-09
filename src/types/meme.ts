@@ -52,7 +52,7 @@ export const toMeme = (dbMeme: DbMeme): Meme => {
   
   try {
     if (dbMeme.meme_text && dbMeme.meme_text.startsWith('{')) {
-      const parsedText = JSON.parse(dbMeme.meme_text);
+      const parsedText = JSON.parse(dbMeme.meme_text) as { topText?: string; bottomText?: string };
       topText = parsedText.topText || '';
       bottomText = parsedText.bottomText || '';
     } else {
@@ -79,21 +79,21 @@ export const toMeme = (dbMeme: DbMeme): Meme => {
   };
 };
 
-export const toDbMeme = (meme: Omit<Meme, 'id' | 'created_at' | 'updated_at'>): Omit<DbMeme, 'id' | 'created_at' | 'updated_at'> => {
+export const toDbMeme = (meme: Partial<Meme>): Partial<DbMeme> => {
   // Combine topText and bottomText into a JSON string
   const memeText = JSON.stringify({
-    topText: meme.topText,
-    bottomText: meme.bottomText
+    topText: meme.topText || '',
+    bottomText: meme.bottomText || ''
   });
   
   // Combine platform and hashtags into platform_tags
   const platformTags = meme.platform ? [meme.platform, ...(meme.hashtags || [])] : meme.hashtags || [];
   
   return {
-    image_url: meme.imageUrl,
+    image_url: meme.imageUrl || '',
     meme_text: memeText,
     platform_tags: platformTags,
-    prompt: meme.prompt,
+    prompt: meme.prompt || '',
     user_id: meme.user_id,
     engagement_score: meme.engagement_score
   };

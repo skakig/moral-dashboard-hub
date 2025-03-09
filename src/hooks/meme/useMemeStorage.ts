@@ -27,7 +27,7 @@ export function useMemeStorage() {
       }
       
       // Prepare Meme object to convert to DB format
-      const memeToSave: Omit<Meme, 'id' | 'created_at' | 'updated_at'> = {
+      const memeToSave: Partial<Meme> = {
         prompt: memeData.prompt,
         imageUrl: memeData.imageUrl,
         topText: memeData.topText,
@@ -87,11 +87,9 @@ export function useMemeStorage() {
       
       if (error) throw error;
       
-      // Explicitly type the data and handle null case
-      type RawDbMeme = Record<string, any>;
-      const memes = data 
-        ? (data as RawDbMeme[]).map(dbMeme => toMeme(dbMeme as DbMeme))
-        : [];
+      // Use a simple type assertion to avoid deep type inference
+      const dbMemes = data as any[];
+      const memes = dbMemes ? dbMemes.map(item => toMeme(item as DbMeme)) : [];
       
       setSavedMemes(memes);
     } catch (error) {

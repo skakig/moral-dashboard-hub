@@ -13,7 +13,7 @@ interface MemeDbResponse {
   id: string;
   prompt: string;
   image_url: string;
-  meme_text: string;
+  meme_text: string; // Contains JSON with topText and bottomText
   platform_tags?: string[];
   created_at: string;
   user_id?: string;
@@ -120,8 +120,8 @@ export function useMemeOperations() {
       }
       
       // Convert response back to frontend format
-      // Fix: Use an explicit cast to the expected type to avoid deep instantiation
-      const dbResponse = data as MemeDbResponse;
+      // Fix: Use an explicit type assertion to avoid deep instantiation
+      const dbResponse = data as unknown as MemeDbResponse;
       const newMeme = toMeme(dbResponse);
       
       // Add to local state
@@ -167,12 +167,26 @@ export function useMemeOperations() {
         throw error;
       }
       
-      // Cast data to proper type to avoid infinite type instantiation
-      const memeRecords = data as MemeDbResponse[];
+      if (!data || data.length === 0) {
+        setSavedMemes([]);
+        return;
+      }
       
-      // Convert each record to frontend format and set state
-      // Fix: Map directly with explicit type assertion
-      const formattedMemes = memeRecords.map((item: MemeDbResponse) => toMeme(item));
+      // Cast data to proper type to avoid infinite type instantiation
+      // Using a more direct approach without complex type assertions
+      const formattedMemes = data.map(item => {
+        // Manually map the database record to a Meme object using the toMeme function
+        return toMeme({
+          id: item.id,
+          prompt: item.prompt,
+          image_url: item.image_url,
+          meme_text: item.meme_text,
+          platform_tags: item.platform_tags,
+          created_at: item.created_at,
+          user_id: item.user_id,
+          engagement_score: item.engagement_score
+        });
+      });
       
       setSavedMemes(formattedMemes);
       

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Get distribution of moral levels
@@ -98,7 +99,9 @@ export async function trackContentView(userId: string, contentId: string, conten
     throw new Error(`Failed to fetch content view data: ${error.message}`);
   }
 
-  const currentViews = data?.most_viewed_tmh_content || [];
+  // Fix: Ensure we have an array to work with
+  const currentViews = Array.isArray(data?.most_viewed_tmh_content) ? 
+    data.most_viewed_tmh_content : [];
   
   // Add new view with timestamp
   const updatedViews = [

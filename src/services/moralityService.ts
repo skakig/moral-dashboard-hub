@@ -22,7 +22,9 @@ export async function saveUserMorality(data: {
     throw new Error(`Failed to check existing morality data: ${fetchError.message}`);
   }
 
-  let moral_progression_history = existingData?.moral_progression_history || [];
+  // Fix: Ensure moral_progression_history is an array
+  let moral_progression_history = Array.isArray(existingData?.moral_progression_history) ?
+    existingData.moral_progression_history : [];
   
   // Only add to history if level changed
   if (existingData && existingData.moral_level !== data.moral_level) {
@@ -105,7 +107,7 @@ export async function recordResponseTime(userId: string, questionId: string, tim
 
   // Update with new response time
   const responseTimeTracking = {
-    ...data?.response_time_tracking,
+    ...(data?.response_time_tracking || {}),
     [questionId]: timeMs
   };
 

@@ -10,7 +10,17 @@ import { Loader2, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-export function AIGenerationDialog({ open, onOpenChange, onContentGenerated }) {
+interface AIGenerationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onContentGenerated: (content: any) => void;
+}
+
+export function AIGenerationDialog({ 
+  open, 
+  onOpenChange, 
+  onContentGenerated 
+}: AIGenerationDialogProps) {
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState('');
   const [keywords, setKeywords] = useState('');

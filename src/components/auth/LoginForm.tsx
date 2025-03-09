@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuthContext";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -17,6 +17,7 @@ export function LoginForm() {
   const [isResetMode, setIsResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,22 +25,11 @@ export function LoginForm() {
     setError("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        setError(error.message);
-      } else if (data.user) {
-        toast("Login successful", {
-          description: "Welcome to TMH Admin Dashboard",
-        });
-        navigate("/");
-      }
+      await signIn(email, password);
+      navigate("/");
     } catch (err: any) {
       console.error("Login error:", err);
-      setError("An error occurred during login");
+      setError(err.message || "An error occurred during login");
     } finally {
       setIsLoading(false);
     }

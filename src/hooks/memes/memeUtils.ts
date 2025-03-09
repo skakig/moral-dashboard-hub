@@ -1,22 +1,41 @@
 
 import { toast } from 'sonner';
-import { MemeFormData } from '@/types/meme';
+import { supabase } from '@/integrations/supabase/client';
 
-// Generate meme image function - will be replaced with real API call later
+// Generate meme image function - connects to OpenAI DALL-E API through edge function
 export const generateMemeImage = async (prompt: string, platform?: string): Promise<string | null> => {
   try {
-    // Call your edge function or API to generate the image
-    // This is a mock implementation - replace with actual implementation
-    const response = await new Promise<string>((resolve) => {
-      setTimeout(() => {
-        resolve('https://placehold.co/600x400/png');
-      }, 1000);
+    // Get current user session to ensure user is authenticated
+    const { data: sessionData } = await supabase.auth.getSession();
+    
+    if (!sessionData.session) {
+      toast.error('You must be logged in to generate memes');
+      return null;
+    }
+    
+    // Call the edge function for image generation
+    const { data, error } = await supabase.functions.invoke('generate-image', {
+      body: {
+        prompt,
+        platform: platform || 'twitter',
+        width: 1024,
+        height: 1024
+      }
     });
     
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    if (!data?.image) {
+      throw new Error('No image was generated');
+    }
+    
     toast.success('Meme image generated!');
-    return response;
+    return data.image;
   } catch (err: any) {
     toast.error(`Error generating image: ${err.message}`);
+    console.error('Image generation error:', err);
     return null;
   }
 };
@@ -24,7 +43,7 @@ export const generateMemeImage = async (prompt: string, platform?: string): Prom
 // Download meme function
 export const downloadMeme = (imageUrl: string, topText: string, bottomText: string): void => {
   try {
-    // Basic implementation - in a real app you might render the meme with text first
+    // For now, simply download the image. In a future version, render the image with text overlay
     const link = document.createElement('a');
     link.href = imageUrl;
     link.download = `meme-${Date.now()}.jpg`;
@@ -46,15 +65,21 @@ export const shareMeme = (
   options?: { redirectUrl?: string, tags?: string[] }
 ): void => {
   try {
-    // Mock implementation - would connect to share API in real app
     let shareUrl = '';
     
-    switch (platform) {
+    switch (platform.toLowerCase()) {
       case 'twitter':
+      case 'x':
         shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(options?.redirectUrl || window.location.href)}`;
+        if (options?.tags && options.tags.length > 0) {
+          shareUrl += `&hashtags=${options.tags.join(',')}`;
+        }
         break;
       case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(options?.redirectUrl || window.location.href)}`;
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(options?.redirectUrl || window.location.href)}&quote=${encodeURIComponent(text)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(options?.redirectUrl || window.location.href)}`;
         break;
       default:
         toast.info(`Sharing to ${platform} not implemented yet`);

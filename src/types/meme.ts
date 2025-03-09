@@ -11,6 +11,7 @@ export interface Meme {
   created_at: string;
   updated_at?: string;
   user_id?: string;
+  engagement_score?: number;
 }
 
 // Form data for creating/editing a meme
@@ -25,21 +26,7 @@ export interface MemeFormData {
   engagement_score?: number;
 }
 
-// Database representation of a meme
-export interface DbMeme {
-  id: string;
-  prompt: string;
-  image_url: string;
-  top_text: string;
-  bottom_text: string;
-  platform?: string;
-  hashtags?: string[];
-  created_at: string;
-  updated_at?: string;
-  user_id?: string;
-}
-
-// Simplified database record structure to prevent deep type instantiation
+// Database representation of a meme for safer type handling
 export interface DbMemeRecord {
   id: string;
   prompt: string;
@@ -64,7 +51,7 @@ export const toMeme = (dbMeme: DbMemeRecord): Meme => {
   let bottomText = "";
   
   try {
-    // Try to parse the JSON string containing text data
+    // Parse the JSON string containing text data with error handling
     const memeText = JSON.parse(dbMeme.meme_text);
     topText = memeText.topText || "";
     bottomText = memeText.bottomText || "";
@@ -74,14 +61,15 @@ export const toMeme = (dbMeme: DbMemeRecord): Meme => {
   
   return {
     id: dbMeme.id,
-    prompt: dbMeme.prompt,
-    imageUrl: dbMeme.image_url,
+    prompt: dbMeme.prompt || "",
+    imageUrl: dbMeme.image_url || "",
     topText,
     bottomText,
     platform: dbMeme.platform_tags?.[0],
     hashtags: dbMeme.platform_tags?.slice(1),
     created_at: dbMeme.created_at,
-    user_id: dbMeme.user_id
+    user_id: dbMeme.user_id,
+    engagement_score: dbMeme.engagement_score || 0
   };
 };
 

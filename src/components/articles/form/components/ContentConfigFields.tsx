@@ -1,7 +1,6 @@
 
 import React from "react";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UseFormReturn } from "react-hook-form";
 
@@ -47,21 +46,24 @@ export function ContentConfigFields({ form, setContentLength }: ContentConfigFie
         name="moralLevel"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Target Moral Level (1-9)</FormLabel>
-            <FormControl>
-              <Input
-                type="number"
-                min={1}
-                max={9}
-                {...field}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value);
-                  if (value >= 1 && value <= 9) {
-                    field.onChange(value);
-                  }
-                }}
-              />
-            </FormControl>
+            <FormLabel>Moral Level</FormLabel>
+            <Select
+              onValueChange={(value) => field.onChange(parseInt(value))}
+              defaultValue={field.value?.toString() || "5"}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select moral level" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => (
+                  <SelectItem key={level} value={level.toString()}>
+                    Level {level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <FormMessage />
           </FormItem>
         )}

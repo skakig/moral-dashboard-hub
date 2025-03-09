@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useContentThemes } from '@/hooks/useContentThemes';
 
 interface AIGenerationDialogProps {
   open: boolean;
@@ -31,6 +32,7 @@ export function AIGenerationDialog({
   const [generatedContent, setGeneratedContent] = useState('');
   const [generatedTitle, setGeneratedTitle] = useState('');
   const [generatedMetaDescription, setGeneratedMetaDescription] = useState('');
+  const { themes, isLoading: themesLoading } = useContentThemes();
 
   const handleGenerate = async () => {
     if (!theme && !keywords) {
@@ -86,7 +88,8 @@ export function AIGenerationDialog({
   const getContentTypeOptions = () => {
     const defaultOptions = [
       { value: 'article', label: 'Article' },
-      { value: 'blog_post', label: 'Blog Post' }
+      { value: 'blog_post', label: 'Blog Post' },
+      { value: 'script', label: 'Script' }
     ];
     
     const platformSpecificOptions = {
@@ -137,12 +140,33 @@ export function AIGenerationDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="theme">Content Theme</Label>
-              <Input
-                id="theme"
-                placeholder="E.g., Ethical Relationships"
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-              />
+              <Select value={theme} onValueChange={setTheme}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {themesLoading ? (
+                    <SelectItem value="loading" disabled>
+                      Loading themes...
+                    </SelectItem>
+                  ) : (
+                    themes?.map((theme) => (
+                      <SelectItem key={theme.id} value={theme.name}>
+                        {theme.name}
+                      </SelectItem>
+                    ))
+                  )}
+                  <SelectItem value="custom">Custom Theme</SelectItem>
+                </SelectContent>
+              </Select>
+              {theme === 'custom' && (
+                <Input
+                  placeholder="Enter custom theme..."
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                  className="mt-2"
+                />
+              )}
             </div>
 
             <div className="space-y-2">
@@ -208,24 +232,19 @@ export function AIGenerationDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="moralLevel">Moral Level (1-9)</Label>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMoralLevel((prev) => Math.max(1, prev - 1))}
-                >
-                  -
-                </Button>
-                <div className="flex-1 text-center font-medium">{moralLevel}</div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMoralLevel((prev) => Math.min(9, prev + 1))}
-                >
-                  +
-                </Button>
-              </div>
+              <Label htmlFor="moralLevel">Moral Level</Label>
+              <Select value={moralLevel.toString()} onValueChange={(value) => setMoralLevel(parseInt(value))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select moral level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => (
+                    <SelectItem key={level} value={level.toString()}>
+                      Level {level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -244,7 +263,7 @@ export function AIGenerationDialog({
               ) : (
                 <>
                   <Wand2 className="mr-2 h-4 w-4" />
-                  Generate
+                  Generate with AI
                 </>
               )}
             </Button>

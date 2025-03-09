@@ -13,7 +13,8 @@ export function useContentTypeOptions(platform: string) {
   const getContentTypeOptions = () => {
     const defaultOptions = [
       { value: "article", label: "Article" },
-      { value: "blog_post", label: "Blog Post" }
+      { value: "blog_post", label: "Blog Post" },
+      { value: "script", label: "Script" }
     ];
     
     const platformSpecificOptions = {

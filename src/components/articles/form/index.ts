@@ -1,6 +1,7 @@
 
 import { ArticleFormFields } from './ArticleFormFields';
 import { ArticleForm } from './ArticleForm';
-import { ArticleFormValues } from './ArticleForm';
+import type { ArticleFormValues } from './ArticleForm';
 
-export { ArticleFormFields, ArticleForm, ArticleFormValues };
+export { ArticleFormFields, ArticleForm };
+export type { ArticleFormValues };

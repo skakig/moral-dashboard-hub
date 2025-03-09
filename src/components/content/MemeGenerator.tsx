@@ -1,16 +1,9 @@
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Wand2, RefreshCw, Download, Share2, Loader2, Save } from "lucide-react";
-import { MemePreview } from "./MemePreview";
-import { MemesList } from "./MemesList";
-// Importing the new modular hooks approach
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MemeForm } from "./meme-generator/MemeForm";
+import { SavedMemes } from "./meme-generator/SavedMemes";
 import { useMemeStorage, useMemeGeneration, useMemeActions } from "@/hooks/memes";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MemeFormData } from "@/types/meme";
 import { toast } from "sonner";
 
@@ -24,7 +17,7 @@ export function MemeGenerator() {
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   
-  // Using modular hooks instead of the monolithic useMemeOperations
+  // Using modular hooks
   const { isGenerating, generateMemeImage } = useMemeGeneration();
   const { isSaving, savedMemes, isLoading, saveMeme, fetchMemes, deleteMeme } = useMemeStorage();
   const { downloadMeme, shareMeme } = useMemeActions();
@@ -121,167 +114,49 @@ export function MemeGenerator() {
     setEditId(meme.id);
   };
 
+  const handleShareSaved = (meme: any) => {
+    const text = `${meme.topText} ${meme.bottomText}`.trim();
+    shareMeme(
+      meme.platform || 'twitter', 
+      meme.imageUrl, 
+      text, 
+      {
+        redirectUrl: "https://themh.io",
+        tags: ["TheMoralHierarchy", "TMH", meme.platform]
+      }
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <Card className="lg:col-span-2">
         <CardHeader>
           <CardTitle>{editMode ? "Edit Meme" : "Generate New Meme"}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="platform">Platform</Label>
-            <Select
-              value={formData.platform}
-              onValueChange={handlePlatformChange}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a platform" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="twitter">Twitter/X</SelectItem>
-                <SelectItem value="facebook">Facebook</SelectItem>
-                <SelectItem value="instagram">Instagram</SelectItem>
-                <SelectItem value="linkedin">LinkedIn</SelectItem>
-                <SelectItem value="tiktok">TikTok</SelectItem>
-                <SelectItem value="pinterest">Pinterest</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="prompt">Image Prompt</Label>
-            <Textarea
-              id="prompt"
-              name="prompt"
-              placeholder="Describe the meme image you want to generate..."
-              value={formData.prompt}
-              onChange={handleInputChange}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="topText">Top Text</Label>
-              <Input
-                id="topText"
-                name="topText"
-                placeholder="Top text for your meme"
-                value={formData.topText}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bottomText">Bottom Text</Label>
-              <Input
-                id="bottomText"
-                name="bottomText"
-                placeholder="Bottom text for your meme"
-                value={formData.bottomText}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-          
-          <div className="pt-4 flex flex-col items-center">
-            {formData.imageUrl ? (
-              <MemePreview 
-                imageUrl={formData.imageUrl} 
-                topText={formData.topText} 
-                bottomText={formData.bottomText} 
-              />
-            ) : (
-              <div className="w-full h-64 bg-muted/30 rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground">Your meme will appear here</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <div>
-            <Button
-              variant="outline"
-              onClick={handleReset}
-            >
-              Reset
-            </Button>
-          </div>
-          <div className="space-x-2">
-            {formData.imageUrl && (
-              <>
-                <Button variant="outline" onClick={handleDownload}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
-                <Button variant="outline" onClick={handleShare}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share
-                </Button>
-                <Button variant="outline" onClick={handleGenerate} disabled={isGenerating || !formData.prompt}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Regenerate
-                </Button>
-                <Button 
-                  onClick={handleSave} 
-                  disabled={isSaving || !formData.imageUrl}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {editMode ? "Updating..." : "Saving..."}
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      {editMode ? "Update Meme" : "Save Meme"}
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
-            {!formData.imageUrl && (
-              <Button onClick={handleGenerate} disabled={isGenerating || !formData.prompt}>
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Generate Meme
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </CardFooter>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Saved Memes</CardTitle>
-        </CardHeader>
         <CardContent>
-          <MemesList 
-            memes={savedMemes} 
-            isLoading={isLoading} 
-            onEdit={handleEditMeme} 
-            onDelete={deleteMeme} 
-            onShare={(meme) => {
-              const text = `${meme.topText} ${meme.bottomText}`.trim();
-              shareMeme(
-                meme.platform || 'twitter', 
-                meme.imageUrl, 
-                text, 
-                {
-                  redirectUrl: "https://themh.io",
-                  tags: ["TheMoralHierarchy", "TMH", meme.platform]
-                }
-              );
-            }}
+          <MemeForm
+            formData={formData}
+            isGenerating={isGenerating}
+            isSaving={isSaving}
+            editMode={editMode}
+            handleInputChange={handleInputChange}
+            handlePlatformChange={handlePlatformChange}
+            handleGenerate={handleGenerate}
+            handleSave={handleSave}
+            handleDownload={handleDownload}
+            handleShare={handleShare}
+            handleReset={handleReset}
           />
         </CardContent>
       </Card>
+      
+      <SavedMemes
+        memes={savedMemes} 
+        isLoading={isLoading} 
+        onEdit={handleEditMeme} 
+        onDelete={deleteMeme} 
+        onShare={handleShareSaved}
+      />
     </div>
   );
 }

@@ -23,6 +23,14 @@ export function useArticleFormDialog({
   };
 
   const handleEditArticle = (article: Article) => {
+    // Log the article we're editing to debug any issues
+    console.log("Editing article:", {
+      id: article.id,
+      title: article.title,
+      hasVoiceData: Boolean(article.voice_url),
+      voiceGenerated: article.voice_generated
+    });
+    
     // Map DB field names to form field names
     const mappedArticle = {
       id: article.id,
@@ -48,6 +56,13 @@ export function useArticleFormDialog({
   const handleFormSubmit = async (data: ArticleFormValues) => {
     try {
       setIsSubmitting(true);
+      
+      // Log what we're about to submit
+      console.log("Submitting article form:", {
+        title: data.title,
+        hasVoiceData: Boolean(data.voiceUrl),
+        voiceGenerated: data.voiceGenerated
+      });
       
       // If currentArticle exists, add its ID to the data
       const submitData = currentArticle 

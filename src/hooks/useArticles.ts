@@ -48,6 +48,14 @@ export function useArticles() {
       ? formValues.seoKeywords.split(',').map(k => k.trim()).filter(Boolean)
       : [];
       
+    // Log what we're saving to help debug
+    console.log("Saving article with voice data:", {
+      voiceUrl: formValues.voiceUrl,
+      voiceGenerated: formValues.voiceGenerated,
+      voiceFileName: formValues.voiceFileName,
+      hasVoiceBase64: Boolean(formValues.voiceBase64)
+    });
+    
     // Map the form fields to database fields - only include fields that exist in the DB schema
     return {
       title: formValues.title,
@@ -70,6 +78,13 @@ export function useArticles() {
   const createArticle = useMutation({
     mutationFn: async (article: ArticleFormValues) => {
       const dbArticle = mapFormToDbArticle(article);
+      
+      // Log what we're sending to Supabase
+      console.log("Creating article:", {
+        title: dbArticle.title,
+        hasContent: Boolean(dbArticle.content),
+        hasVoiceData: Boolean(dbArticle.voice_url)
+      });
       
       const { data, error } = await supabase
         .from('articles')
@@ -99,6 +114,13 @@ export function useArticles() {
     mutationFn: async ({ id, ...formValues }: Partial<ArticleFormValues> & { id: string }) => {
       const dbArticle = mapFormToDbArticle(formValues as ArticleFormValues);
       
+      // Log what we're updating in Supabase
+      console.log("Updating article:", {
+        id,
+        title: dbArticle.title,
+        hasVoiceData: Boolean(dbArticle.voice_url)
+      });
+      
       const { data, error } = await supabase
         .from('articles')
         .update(dbArticle)
@@ -107,6 +129,7 @@ export function useArticles() {
         .single();
 
       if (error) {
+        console.error("Error updating article:", error);
         throw new Error(error.message);
       }
 
@@ -155,6 +178,8 @@ export function useArticles() {
     tone?: string;
   }) => {
     try {
+      toast.info(`Generating content for ${params.contentType}...`);
+      
       const response = await supabase.functions.invoke('generate-article', {
         body: params,
       });
@@ -165,6 +190,7 @@ export function useArticles() {
         return null;
       }
 
+      toast.success("Content generated successfully");
       return response.data;
     } catch (error) {
       console.error("Error generating article:", error);

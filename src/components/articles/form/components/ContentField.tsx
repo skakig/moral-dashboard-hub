@@ -1,21 +1,21 @@
 
 import React from "react";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
-import { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Wand2, Loader2, Copy } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Wand2, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 interface ContentFieldProps {
-  form: UseFormReturn<any>;
+  form: any;
   isGenerating?: boolean;
   onGenerate?: () => void;
 }
 
 export function ContentField({ form, isGenerating = false, onGenerate }: ContentFieldProps) {
-  const handleCopy = () => {
-    const content = form.getValues('content');
+  // Function to copy content to clipboard
+  const handleCopyContent = () => {
+    const content = form.getValues("content");
     if (content) {
       navigator.clipboard.writeText(content);
       toast.success("Content copied to clipboard");
@@ -30,36 +30,37 @@ export function ContentField({ form, isGenerating = false, onGenerate }: Content
       name="content"
       render={({ field }) => (
         <FormItem>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex justify-between items-center">
             <FormLabel>Content</FormLabel>
             <div className="flex space-x-2">
               <Button 
                 type="button" 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
-                className="flex items-center gap-1"
-                onClick={handleCopy}
+                className="h-6 px-2 text-xs flex items-center gap-1"
+                onClick={handleCopyContent}
               >
-                <Copy className="h-3.5 w-3.5" />
-                Copy
+                <Copy className="h-3 w-3" />
+                Copy Content
               </Button>
               {onGenerate && (
                 <Button 
+                  type="button" 
                   variant="outline" 
                   size="sm" 
-                  className="flex items-center gap-2"
                   onClick={onGenerate}
                   disabled={isGenerating}
+                  className="h-6 px-2 text-xs flex items-center gap-1"
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" />
                       Generating...
                     </>
                   ) : (
                     <>
-                      <Wand2 className="h-4 w-4" />
-                      Generate with AI
+                      <Wand2 className="h-3 w-3" />
+                      Generate
                     </>
                   )}
                 </Button>
@@ -68,8 +69,8 @@ export function ContentField({ form, isGenerating = false, onGenerate }: Content
           </div>
           <FormControl>
             <Textarea
-              placeholder="Enter content here..."
-              className="min-h-[200px]"
+              placeholder="Enter your content here or use AI to generate it"
+              className="min-h-[300px] font-mono"
               {...field}
             />
           </FormControl>

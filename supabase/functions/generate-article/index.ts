@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
@@ -187,6 +186,7 @@ IMPORTANT: Ensure the content genuinely represents moral level ${moralLevel} thi
           { role: "user", content: userPrompt }
         ],
         temperature: 0.7,
+        max_tokens: 1500,
       }),
     });
 

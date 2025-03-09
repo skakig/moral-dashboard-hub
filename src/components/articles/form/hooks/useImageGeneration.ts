@@ -1,46 +1,78 @@
 
-import { toast } from "sonner";
-import { UseFormReturn } from "react-hook-form";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Hook for generating featured images for articles
- */
-export function useImageGeneration(form: UseFormReturn<any>) {
-  const generateImage = async () => {
+export function useImageGeneration() {
+  const [loading, setLoading] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
+
+  const generateImage = async (prompt: string) => {
+    if (!prompt) {
+      toast.error('Please enter a prompt for image generation');
+      return null;
+    }
+
+    setLoading(true);
     try {
-      toast.info("Generating featured image...");
-      
-      const theme = form.getValues("theme") || "";
-      const content = form.getValues("content") || "";
-      const platform = form.getValues("platform") || "general";
-      
-      if (!theme && !content) {
-        toast.error("Please enter a theme or content first");
-        return;
-      }
-      
-      // Call the edge function to generate an image
-      const { data, error } = await supabase.functions.invoke("generate-content", {
-        body: { 
-          contentType: "image",
-          text: theme || content.substring(0, 100),
-          moralLevel: form.getValues("moralLevel") || 5,
-          platform
-        }
+      toast.info('Generating image...');
+
+      // Call the generate-image edge function
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: { prompt }
       });
+
+      if (error) {
+        console.error("Error from generate-image function:", error);
+        
+        // If we've retried less than MAX_RETRIES, try again
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(retryCount + 1);
+          toast.warning(`Retrying image generation (Attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+          return generateImage(prompt);
+        }
+        
+        throw new Error(error.message || 'Failed to generate image');
+      }
+
+      if (!data || data.error) {
+        console.error("Error in response data:", data?.error);
+        
+        // If we've retried less than MAX_RETRIES, try again
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(retryCount + 1);
+          toast.warning(`Retrying image generation (Attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+          return generateImage(prompt);
+        }
+        
+        throw new Error(data?.error || 'Failed to generate image');
+      }
+
+      if (!data.image) {
+        throw new Error('No image data returned');
+      }
+
+      // Reset retry count on success
+      setRetryCount(0);
       
-      if (error) throw error;
-      
-      // Update form with image URL
-      form.setValue("featuredImageUrl", data.imageUrl);
-      
-      toast.success("Image generated successfully!");
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast.error("Failed to generate image");
+      setGeneratedImage(data.image);
+      toast.success('Image generated successfully!');
+      return data.image;
+    } catch (error: any) {
+      console.error('Error generating image:', error);
+      toast.error(`Failed to generate image: ${error.message || 'Unknown error'}`);
+      return null;
+    } finally {
+      setLoading(false);
     }
   };
 
-  return { generateImage };
+  return {
+    generateImage,
+    loading,
+    generatedImage,
+    setGeneratedImage
+  };
 }

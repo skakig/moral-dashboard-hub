@@ -16,141 +16,135 @@ serve(async (req) => {
   }
 
   try {
-    const { text, title, voiceId } = await req.json();
-    
+    const openAIApiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("OPEN_AI_TMH");
+    const elevenLabsApiKey = Deno.env.get("ELEVENLABS_API_KEY");
+
+    if (!openAIApiKey && !elevenLabsApiKey) {
+      throw new Error("API keys not configured. Please set either OPENAI_API_KEY or ELEVENLABS_API_KEY.");
+    }
+
+    const { text, voiceId } = await req.json();
+
     if (!text) {
-      throw new Error("Text content is required");
+      throw new Error("Text is required");
     }
-    
-    // Get API key from environment
-    const elevenlabsApiKey = Deno.env.get("ELEVENLABS_API_KEY");
-    if (!elevenlabsApiKey) {
-      throw new Error("ElevenLabs API key is not configured");
-    }
-    
-    // Use the provided voice ID or default to Rachel
-    const selectedVoiceId = voiceId || "21m00Tcm4TlvDq8ikWAM"; // Default is Rachel
-    
-    console.log(`Generating voice for text (${text.length} chars) using voice ID: ${selectedVoiceId}`);
-    
-    // For longer text, we might need to truncate or split it
-    const maxCharLimit = 5000; // ElevenLabs limit
-    const processedText = text.length > maxCharLimit ? 
-      text.substring(0, maxCharLimit - 3) + "..." : 
-      text;
-    
-    // Implement retry logic with exponential backoff
-    let response = null;
-    let retries = 3;
-    let delay = 1000; // Start with 1 second delay
-    
-    while (retries > 0) {
+
+    console.log(`Generating voice for text (length: ${text.length}) with voice ID: ${voiceId || "default"}`);
+
+    // Try ElevenLabs first if API key is available
+    if (elevenLabsApiKey) {
       try {
-        // Call the ElevenLabs Text-to-Speech API
-        response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}`, {
+        // Use ElevenLabs API
+        const response = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + (voiceId || "21m00Tcm4TlvDq8ikWAM"), {
           method: "POST",
           headers: {
-            "xi-api-key": elevenlabsApiKey,
             "Content-Type": "application/json",
+            "xi-api-key": elevenLabsApiKey,
           },
           body: JSON.stringify({
-            text: processedText,
+            text: text,
             model_id: "eleven_multilingual_v2",
             voice_settings: {
               stability: 0.5,
-              similarity_boost: 0.5,
-            }
+              similarity_boost: 0.75,
+            },
           }),
         });
-        
-        // If successful or response is not a rate limit error, break the loop
-        if (response.ok || (response.status !== 429 && response.status !== 503)) {
-          break;
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("ElevenLabs API error:", errorData);
+          throw new Error(`ElevenLabs API error: ${response.statusText}`);
         }
-        
-        // Handle rate limit or server errors
-        console.log(`ElevenLabs API returned status ${response.status}. Retrying in ${delay/1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= 2; // Exponential backoff
-        retries--;
-      } catch (e) {
-        console.error("Error calling ElevenLabs:", e);
-        retries--;
-        
-        if (retries === 0) throw e;
-        
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= 2;
+
+        const audioArrayBuffer = await response.arrayBuffer();
+        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
+
+        const fileName = `voice_${Date.now()}.mp3`;
+
+        return new Response(
+          JSON.stringify({
+            audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
+            fileName: fileName,
+            base64Audio: base64Audio,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (elevenLabsError) {
+        console.error("ElevenLabs processing error:", elevenLabsError);
+        // Fall back to OpenAI if ElevenLabs fails
+        if (!openAIApiKey) throw elevenLabsError;
       }
     }
-    
-    if (!response || !response.ok) {
-      let errorText;
-      try {
-        const errorData = await response?.json();
-        errorText = errorData?.detail || response?.statusText || "Unknown error";
-      } catch (e) {
-        errorText = response?.statusText || "Failed to generate voice content";
-      }
+
+    // Fall back to OpenAI TTS if ElevenLabs fails or isn't configured
+    if (openAIApiKey) {
+      // Use OpenAI API instead
+      const openAiVoice = getOpenAIVoiceFromElevenLabsId(voiceId);
       
-      console.error("ElevenLabs API error:", errorText, "Status:", response?.status);
-      throw new Error(`Failed to generate voice: ${errorText} (Status: ${response?.status})`);
+      const response = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openAIApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "tts-1",
+          input: text,
+          voice: openAiVoice,
+          response_format: "mp3",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("OpenAI API error:", errorData);
+        throw new Error(`OpenAI API error: ${response.statusText}`);
+      }
+
+      const audioArrayBuffer = await response.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
+
+      const fileName = `voice_${Date.now()}.mp3`;
+
+      return new Response(
+        JSON.stringify({
+          audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
+          fileName: fileName,
+          base64Audio: base64Audio,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-    
-    // Convert the audio response to base64
-    const arrayBuffer = await response.arrayBuffer();
-    const base64Audio = bytesToBase64(new Uint8Array(arrayBuffer));
-    
-    // Generate a filename based on the title
-    const safeTitleForFilename = (title || "voice-content")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .substring(0, 50);
-    
-    const fileName = `${safeTitleForFilename}-${Date.now()}.mp3`;
-    
-    return new Response(
-      JSON.stringify({
-        success: true,
-        audioBase64: base64Audio,
-        fileName: fileName,
-        mimeType: "audio/mpeg",
-        durationSeconds: estimateAudioDuration(text.length), // Rough estimate
-        createdAt: new Date().toISOString()
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+
+    throw new Error("No available text-to-speech service");
+
   } catch (error) {
-    console.error("Error in voice generation:", error);
+    console.error("Voice generation error:", error);
     return new Response(
       JSON.stringify({ 
-        success: false, 
-        error: error.message || "Failed to generate voice content" 
+        error: error.message || "Failed to generate voice content",
+        details: error.toString()
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500
+      }
     );
   }
 });
 
-// Helper function to convert bytes to base64
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-// Helper function to estimate audio duration based on text length
-// This is a very rough estimation (about 3 words per second)
-function estimateAudioDuration(textLength: number): number {
-  const averageWordsPerMinute = 150; // Average speaking rate
-  const averageCharactersPerWord = 5; // Average English word length
+// Helper function to map ElevenLabs voice IDs to OpenAI voices
+function getOpenAIVoiceFromElevenLabsId(elevenlabsId: string): string {
+  const voiceMap: Record<string, string> = {
+    '21m00Tcm4TlvDq8ikWAM': 'nova', // Rachel
+    'AZnzlk1XvdvUeBnXmlld': 'shimmer', // Domi
+    'EXAVITQu4vr4xnSDxMaL': 'nova', // Sarah
+    'MF3mGyEYCl7XYWbV9V6O': 'echo', // Adam
+    'TxGEqnHWrfWFTfGW9XjX': 'onyx', // Josh
+    'VR6AewLTigWG4xSOukaG': 'alloy', // Nicole
+    'pNInz6obpgDQGcFmaJgB': 'fable', // Sam
+  };
   
-  const estimatedWords = textLength / averageCharactersPerWord;
-  const estimatedMinutes = estimatedWords / averageWordsPerMinute;
-  
-  return Math.max(1, Math.round(estimatedMinutes * 60)); // Return seconds, minimum 1 second
+  return voiceMap[elevenlabsId] || 'alloy'; // Default to alloy if no mapping exists
 }

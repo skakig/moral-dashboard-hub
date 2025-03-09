@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -23,6 +23,19 @@ interface GeneratedContent {
 export function useAIGeneration() {
   const [loading, setLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
+
+  // Debounce function to prevent too many rapid calls
+  const debounce = (func: Function, wait: number) => {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    
+    return (...args: any[]) => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
 
   const generateContent = async (params: GenerationParams) => {
     if (!params.theme) {
@@ -41,36 +54,65 @@ export function useAIGeneration() {
     }
 
     setLoading(true);
+    setGenerationProgress(10); // Start progress
+    
     try {
-      toast.info(`Generating ${params.contentType} for ${params.platform} with AI...`);
-
-      console.log("Calling generate-article with params:", params);
-      
-      // Create a more detailed generation message based on parameters
       const contentDetails = `${params.contentLength} ${params.tone || 'informative'} content (Level ${params.moralLevel})`;
       toast.info(`Generating ${params.contentType} for ${params.platform} (${contentDetails})...`);
+
+      setGenerationProgress(25); // Update progress
 
       // Call the generate-article edge function
       const { data, error } = await supabase.functions.invoke('generate-article', {
         body: params
       });
       
+      setGenerationProgress(75); // Update progress
+      
       if (error) {
         console.error("Error from Supabase function:", error);
+        
+        // Retry logic
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          toast.warning(`Retrying content generation (Attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+          return generateContent(params);
+        }
+        
         throw new Error(error.message || 'Failed to generate content');
       }
 
       if (!data) {
         console.error("No data returned from function");
+        
+        // Retry logic
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          toast.warning(`Retrying content generation (Attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+          return generateContent(params);
+        }
+        
         throw new Error('No data returned from content generation');
       }
 
       if (data.error) {
         console.error("Error in response data:", data.error);
+        
+        // Retry logic
+        if (retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          toast.warning(`Retrying content generation (Attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+          return generateContent(params);
+        }
+        
         throw new Error(data.error || 'Failed to generate content');
       }
 
       console.log("Generated content response:", data);
+      setGenerationProgress(90); // Almost done
+
+      // Reset retry count on success
+      setRetryCount(0);
 
       // Validate the response data
       if (!data.content || typeof data.content !== 'string') {
@@ -86,6 +128,7 @@ export function useAIGeneration() {
       };
       
       setGeneratedContent(content);
+      setGenerationProgress(100); // Done
       
       // Show detailed success message
       const successMessage = `${params.contentType} for ${params.platform} generated successfully!`;
@@ -108,11 +151,18 @@ export function useAIGeneration() {
       }
       
       toast.error(`Failed to generate content: ${errorMessage}`);
+      setGenerationProgress(0); // Reset progress on error
       return null;
     } finally {
       setLoading(false);
     }
   };
+
+  // Create a debounced version of generateContent
+  const debouncedGenerate = useCallback(
+    debounce((params: GenerationParams) => generateContent(params), 1000),
+    []
+  );
 
   // Generate SEO keywords based on theme, platform, and content type
   const generateKeywords = async (theme: string, platform: string, contentType: string) => {
@@ -148,8 +198,10 @@ export function useAIGeneration() {
     loading,
     generatedContent,
     generateContent,
+    debouncedGenerate,
     generateKeywords,
-    resetGeneratedContent
+    resetGeneratedContent,
+    generationProgress
   };
 }
 

@@ -7,7 +7,6 @@ import { ArticlesTab } from "./tabs/ArticlesTab";
 import { ThemesTab } from "./tabs/ThemesTab";
 import { useArticleFormDialog } from "./hooks/useArticleFormDialog";
 import { useThemeFormDialog } from "./hooks/useThemeFormDialog";
-import { Article, ContentTheme } from "@/types/articles";
 import { useArticles } from "@/hooks/useArticles";
 import { useContentThemes } from "@/hooks/useContentThemes";
 

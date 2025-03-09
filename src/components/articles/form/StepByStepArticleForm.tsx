@@ -10,7 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, ChevronRight, Wand2, Mic, Play, Pause, Download, Save, Loader2, Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 
 // Components for each step
 import { ThemeField } from "./components/ThemeField";
@@ -198,7 +199,7 @@ export function StepByStepArticleForm({
   };
 
   // Copy function for each field
-  const handleCopyField = (fieldName: string, successMessage: string) => {
+  const handleCopyField = (fieldName: keyof ArticleFormValues, successMessage: string) => {
     const value = form.getValues(fieldName);
     if (value) {
       navigator.clipboard.writeText(String(value));
@@ -400,7 +401,7 @@ export function StepByStepArticleForm({
                     variant="ghost" 
                     size="sm" 
                     className="h-6 px-2 text-xs flex items-center gap-1"
-                    onClick={() => handleCopyField('seoKeywords', 'Keywords copied to clipboard')}
+                    onClick={() => handleCopyField("seoKeywords", 'Keywords copied to clipboard')}
                   >
                     <Copy className="h-3 w-3" />
                     Copy
@@ -435,7 +436,7 @@ export function StepByStepArticleForm({
               type="button" 
               variant="outline" 
               size="sm"
-              onClick={() => handleCopyField('title', 'Title copied to clipboard')}
+              onClick={() => handleCopyField("title", 'Title copied to clipboard')}
               className="flex items-center gap-1"
             >
               <Copy className="h-3.5 w-3.5" />
@@ -445,7 +446,7 @@ export function StepByStepArticleForm({
               type="button" 
               variant="outline" 
               size="sm"
-              onClick={() => handleCopyField('excerpt', 'Excerpt copied to clipboard')}
+              onClick={() => handleCopyField("excerpt", 'Excerpt copied to clipboard')}
               className="flex items-center gap-1"
             >
               <Copy className="h-3.5 w-3.5" />

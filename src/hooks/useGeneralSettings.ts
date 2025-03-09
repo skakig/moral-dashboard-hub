@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { SiteSettings } from "@/types/settings";
+import { SiteSettings, PasswordConfirmData } from "@/types/settings";
 
 export function useGeneralSettings() {
   const [saving, setSaving] = useState(false);
@@ -108,7 +108,7 @@ export function useGeneralSettings() {
         return;
       }
 
-      await saveSettings();
+      await saveSettings({});
     } catch (error: any) {
       console.error("Exception preparing save:", error);
       setError(`An unexpected error occurred: ${error.message}`);
@@ -116,7 +116,7 @@ export function useGeneralSettings() {
     }
   };
 
-  const saveSettings = async (password?: string) => {
+  const saveSettings = async (data: PasswordConfirmData) => {
     try {
       setSaving(true);
       setError(null);
@@ -130,7 +130,7 @@ export function useGeneralSettings() {
       }
       
       // If email is changed and password is provided, verify the password
-      if (password && settings.admin_email !== originalEmail) {
+      if (data.password && settings.admin_email !== originalEmail) {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
@@ -142,7 +142,7 @@ export function useGeneralSettings() {
         // Verify password by attempting to sign in
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: user.email!,
-          password: password
+          password: data.password
         });
         
         if (signInError) {

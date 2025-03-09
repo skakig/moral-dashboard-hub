@@ -20,6 +20,7 @@ import {
   FormLabel,
   FormMessage
 } from "@/components/ui/form";
+import { PasswordConfirmData } from "@/types/settings";
 
 const passwordConfirmSchema = z.object({
   password: z.string().min(1, "Password is required"),
@@ -31,7 +32,7 @@ interface PasswordConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCancel: () => void;
-  onConfirm: (data: { password: string }) => Promise<void>;
+  onConfirm: (data: PasswordConfirmData) => Promise<void>;
   saving: boolean;
 }
 
@@ -48,7 +49,7 @@ export function PasswordConfirmDialog({
   });
 
   const handleSubmit = async (data: PasswordConfirmFormData) => {
-    await onConfirm(data);
+    await onConfirm({ password: data.password });
     form.reset();
   };
 

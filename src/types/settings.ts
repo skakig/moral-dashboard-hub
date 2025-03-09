@@ -8,5 +8,5 @@ export interface SiteSettings {
 }
 
 export interface PasswordConfirmData {
-  password: string;
+  password?: string;
 }

@@ -62,6 +62,7 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
       <StepHeader 
         title="Content Configuration" 
         description="Customize your content settings"
+        progress={50} // Adding the required progress prop
       />
       
       <div>
@@ -129,11 +130,14 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
         </p>
       </div>
             
-      <StepControls 
-        onNext={onNext} 
-        onBack={onBack}
-        nextLabel="Next: Content" 
-      />
+      <div className="flex justify-between mt-8">
+        <Button variant="outline" onClick={onBack}>
+          Previous
+        </Button>
+        <Button onClick={onNext}>
+          Next: Content
+        </Button>
+      </div>
     </div>
   );
 }

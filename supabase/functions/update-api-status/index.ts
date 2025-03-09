@@ -53,11 +53,12 @@ serve(async (req) => {
     const newStatus = isActive ? 'active' : 'inactive';
     console.log(`Updating status from ${existingKey.status} to ${newStatus}`);
     
-    // Update the status
+    // Update the status AND the is_active boolean field
     const { error: updateError } = await supabaseAdmin
       .from("api_keys")
       .update({ 
         status: newStatus,
+        is_active: isActive,
         updated_at: new Date().toISOString()
       })
       .eq("id", existingKey.id);

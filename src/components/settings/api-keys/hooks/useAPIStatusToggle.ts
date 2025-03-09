@@ -27,6 +27,8 @@ export function useAPIStatusToggle({
     
     setIsToggling(true);
     try {
+      console.log(`Toggling ${serviceName} status from ${isActive ? 'active' : 'inactive'} to ${!isActive ? 'active' : 'inactive'}`);
+      
       const { data, error } = await supabase.functions.invoke('update-api-status', {
         body: {
           id,

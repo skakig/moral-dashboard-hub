@@ -1,12 +1,12 @@
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { APIKeyCard } from './APIKeyCard';
-import { Plus, ChevronDown, ChevronRight, AlertCircle, Server } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { APIKeyFormDialog } from './APIKeyFormDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { APIKeysTable } from './APIKeysTable';
+import { Plus, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 // Map of categories to icons and colors
@@ -27,6 +27,10 @@ const CATEGORY_ICONS: Record<string, { icon: React.ReactNode; color: string }> =
     icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M12 6v12"></path><path d="M6 12h12"></path></svg>, 
     color: 'bg-orange-100 text-orange-800'
   },
+  'Voice Generation': { 
+    icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line><rect width="4" height="12" x="10" y="2" rx="2"></rect></svg>, 
+    color: 'bg-pink-100 text-pink-800'
+  },
   'Embeddings': { 
     icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>, 
     color: 'bg-pink-100 text-pink-800'
@@ -35,7 +39,7 @@ const CATEGORY_ICONS: Record<string, { icon: React.ReactNode; color: string }> =
 
 // Default fallback
 const DEFAULT_CATEGORY_ICON = { 
-  icon: <Server className="h-5 w-5" />, 
+  icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path></svg>, 
   color: 'bg-gray-100 text-gray-800'
 };
 
@@ -48,41 +52,17 @@ interface CategoryViewProps {
 
 export function CategoryView({ category, apiKeys, onAddKey, onSuccess }: CategoryViewProps) {
   const [isOpen, setIsOpen] = useState(true);
-  const [updatingPrimary, setUpdatingPrimary] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedKeyData, setSelectedKeyData] = useState<any>(null);
   
-  const sortedKeys = useMemo(() => {
-    // Sort by primary keys first, then by service name
-    return [...apiKeys].sort((a, b) => {
-      if (a.isPrimary && !b.isPrimary) return -1;
-      if (!a.isPrimary && b.isPrimary) return 1;
-      return a.serviceName.localeCompare(b.serviceName);
-    });
-  }, [apiKeys]);
+  const handleOpenEditDialog = (keyData: any) => {
+    setSelectedKeyData(keyData);
+    setIsEditDialogOpen(true);
+  };
   
-  const handleSetPrimary = async (id: string) => {
-    setUpdatingPrimary(id);
-    try {
-      const { error } = await supabase.functions.invoke('update-api-key-primary', {
-        body: {
-          id,
-          category,
-        },
-      });
-      
-      if (error) {
-        console.error('Error setting primary API key:', error);
-        toast.error('Failed to set primary API key');
-        return;
-      }
-      
-      toast.success('Primary API key updated successfully');
-      onSuccess();
-    } catch (err: any) {
-      console.error('Exception setting primary API key:', err);
-      toast.error('Failed to set primary API key');
-    } finally {
-      setUpdatingPrimary(null);
-    }
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setSelectedKeyData(null);
   };
   
   // Get the icon and color for this category
@@ -144,32 +124,36 @@ export function CategoryView({ category, apiKeys, onAddKey, onSuccess }: Categor
                   </div>
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {sortedKeys.map((keyData: any) => (
-                    <APIKeyCard
-                      key={keyData.id}
-                      id={keyData.id}
-                      title={keyData.serviceName}
-                      description={`${category} service`}
-                      serviceName={keyData.serviceName}
-                      category={category}
-                      baseUrl={keyData.baseUrl}
-                      isConfigured={keyData.isConfigured}
-                      isActive={keyData.isActive}
-                      isPrimary={keyData.isPrimary}
-                      lastValidated={keyData.lastValidated}
-                      createdAt={keyData.createdAt}
-                      validationErrors={keyData.validationErrors}
-                      onSuccess={onSuccess}
-                      onSetPrimary={handleSetPrimary}
-                    />
-                  ))}
-                </div>
+                <APIKeysTable 
+                  apiKeys={apiKeys}
+                  category={category}
+                  onEdit={handleOpenEditDialog}
+                  onSuccess={onSuccess}
+                />
               )}
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
       </CardHeader>
+      
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit {selectedKeyData?.serviceName} API Key</DialogTitle>
+          </DialogHeader>
+          {selectedKeyData && (
+            <APIKeyFormDialog 
+              category={category}
+              keyData={selectedKeyData}
+              onSuccess={() => {
+                onSuccess();
+                handleCloseEditDialog();
+              }}
+              onCancel={handleCloseEditDialog}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

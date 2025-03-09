@@ -38,18 +38,15 @@ export function useAIGeneration() {
     }
   }, []);
 
-  // Add the missing generateKeywords method
+  // Fix the missing parameter in generateKeywords method
   const generateKeywords = useCallback(async (theme: string, platform: string, contentType: string): Promise<string[]> => {
     setLoading(true);
     setError(null);
     
     try {
       // Call the edge function to generate keywords
-      const result = await EdgeFunctionService.generateSEOData({
-        theme,
-        platform,
-        contentType
-      });
+      // Fixed: Added the missing content parameter (now passing an empty object since it's required)
+      const result = await EdgeFunctionService.generateSEOData({}, theme);
       
       if (!result || !result.keywords) {
         throw new Error('Failed to generate keywords. Please try again.');

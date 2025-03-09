@@ -5,12 +5,10 @@ import { toast } from 'sonner';
 import { 
   Meme, 
   MemeFormData, 
-  DbMemeRecord,
-  toMeme, 
-  toDbMemeRecord
+  toMeme
 } from '@/types/meme';
 
-// Define structure for database response to avoid type confusion
+// Define structure for database response to avoid type confusion and infinite type recursion
 interface MemeDbResponse {
   id: string;
   prompt: string;
@@ -95,19 +93,24 @@ export function useMemeOperations() {
         user_id: userId
       };
       
-      // Convert to database format
-      const dbMeme = toDbMemeRecord(memeWithUser);
+      // Convert meme text to JSON string
+      const memeTextJson = JSON.stringify({
+        topText: memeWithUser.topText,
+        bottomText: memeWithUser.bottomText
+      });
       
       // Insert into database
       const { data, error } = await supabase
         .from('memes')
         .insert({
-          image_url: dbMeme.image_url,
-          meme_text: dbMeme.meme_text,
-          platform_tags: dbMeme.platform_tags,
-          prompt: dbMeme.prompt,
-          user_id: dbMeme.user_id,
-          engagement_score: dbMeme.engagement_score || 0
+          image_url: memeWithUser.imageUrl || '',
+          meme_text: memeTextJson,
+          platform_tags: memeWithUser.platform 
+            ? [memeWithUser.platform, ...(memeWithUser.hashtags || [])]
+            : memeWithUser.hashtags,
+          prompt: memeWithUser.prompt,
+          user_id: memeWithUser.user_id,
+          engagement_score: memeWithUser.engagement_score || 0
         })
         .select()
         .single();
@@ -117,7 +120,9 @@ export function useMemeOperations() {
       }
       
       // Convert response back to frontend format
-      const newMeme = toMeme(data as MemeDbResponse);
+      // Fix: Use an explicit cast to the expected type to avoid deep instantiation
+      const dbResponse = data as MemeDbResponse;
+      const newMeme = toMeme(dbResponse);
       
       // Add to local state
       setSavedMemes(prevMemes => [newMeme, ...prevMemes]);
@@ -166,9 +171,8 @@ export function useMemeOperations() {
       const memeRecords = data as MemeDbResponse[];
       
       // Convert each record to frontend format and set state
-      const formattedMemes = (memeRecords || []).map(
-        (item: MemeDbResponse) => toMeme(item as any)
-      );
+      // Fix: Map directly with explicit type assertion
+      const formattedMemes = memeRecords.map((item: MemeDbResponse) => toMeme(item));
       
       setSavedMemes(formattedMemes);
       

@@ -47,8 +47,8 @@ export function ThemeStep({
               id="autoGenerateVoice"
               checked={autoGenerateOptions.voice}
               onChange={(e) => setAutoGenerateOptions({
-                ...autoGenerateOptions,
-                voice: e.target.checked
+                voice: e.target.checked,
+                image: autoGenerateOptions.image
               })}
               className="rounded border-gray-300 text-primary focus:ring-primary"
             />
@@ -63,7 +63,7 @@ export function ThemeStep({
               id="autoGenerateImage"
               checked={autoGenerateOptions.image}
               onChange={(e) => setAutoGenerateOptions({
-                ...autoGenerateOptions,
+                voice: autoGenerateOptions.voice,
                 image: e.target.checked
               })}
               className="rounded border-gray-300 text-primary focus:ring-primary"

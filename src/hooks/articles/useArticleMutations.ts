@@ -13,12 +13,13 @@ export function useArticleMutations() {
       // Prepare the data for the database
       const { id, ...articleData } = article;
       
-      // Set a default category if not provided and ensure title is present
+      // Set default values for required fields
       const formattedData = {
         ...articleData,
         category: articleData.category || 'general', // Default category
         content: articleData.content || '', // Ensure content is never undefined/null
-        title: articleData.title || 'Untitled', // Ensure title is never undefined
+        title: articleData.title || 'Untitled', // Ensure title is never undefined/null
+        status: 'draft' // Default status
         // Any necessary transformations
       };
       

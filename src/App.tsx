@@ -1,53 +1,28 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "./components/ThemeProvider";
-import { Toaster } from "./components/ui/toaster";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-// Import pages
-import Index from "./pages/Index";
-import Assessments from "./pages/Assessments";
-import Demographics from "./pages/Demographics";
-import AIContent from "./pages/AIContent";
-import AIInsights from "./pages/AIInsights";
-import Settings from "./pages/Settings";
-import UserProfile from "./pages/UserProfile";
+import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
-import Users from "./pages/Users";
-import ArticlesPage from "./pages/articles";
-import AffiliatesPage from "./pages/Affiliates";
-import Trends from "./pages/Trends";
-
-// Create a client
-const queryClient = new QueryClient();
+import Register from "./pages/Register";
+import Settings from "./pages/Settings";
+import ArticlesPage from "./pages/articles/ArticlesPage";
+import ArticleViewPage from "./pages/articles/ArticleViewPage";
+import Demographics from "./pages/Demographics";
+import Affiliates from "./pages/Affiliates";
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light">
-        <Router>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/assessments" element={<Assessments />} />
-            <Route path="/demographics" element={<Demographics />} />
-            <Route path="/content" element={<AIContent />} />
-            <Route path="/insights" element={<AIInsights />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/profile" element={<UserProfile />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/articles/*" element={<ArticlesPage />} />
-            <Route path="/affiliates" element={<AffiliatesPage />} />
-            <Route path="/trends" element={<Trends />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </Router>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/articles" element={<ArticlesPage />} />
+        <Route path="/articles/:id" element={<ArticleViewPage />} />
+        <Route path="/demographics" element={<Demographics />} />
+        <Route path="/affiliates" element={<Affiliates />} />
+      </Routes>
+    </Router>
   );
 }
 

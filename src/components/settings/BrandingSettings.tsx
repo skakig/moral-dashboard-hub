@@ -10,27 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-
-interface BrandingSettings {
-  id: string;
-  youtube_channel: string;
-  instagram_handle: string;
-  tiktok_handle: string;
-  twitter_handle: string;
-  facebook_page: string;
-  website_url: string;
-  company_name: string;
-  tagline: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import { BrandingSettings as BrandingSettingsType } from "@/types/settings";
 
 export function BrandingSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<BrandingSettings>({
+  const { register, handleSubmit, reset } = useForm<BrandingSettingsType>({
     defaultValues: {
       youtube_channel: "",
       instagram_handle: "",
@@ -67,26 +54,31 @@ export function BrandingSettings() {
         reset(data[0]);
       } else {
         // Create default settings if none exist
-        const { data: insertData, error: insertError } = await supabase
-          .from('branding_settings')
-          .insert([{
-            youtube_channel: "",
-            instagram_handle: "",
-            tiktok_handle: "",
-            twitter_handle: "",
-            facebook_page: "",
-            website_url: "",
-            company_name: "The Moral Hierarchy",
-            tagline: "Elevate Your Moral Understanding"
-          }])
-          .select();
+        try {
+          const { data: insertData, error: insertError } = await supabase
+            .from('branding_settings')
+            .insert([{
+              youtube_channel: "",
+              instagram_handle: "",
+              tiktok_handle: "",
+              twitter_handle: "",
+              facebook_page: "",
+              website_url: "",
+              company_name: "The Moral Hierarchy",
+              tagline: "Elevate Your Moral Understanding"
+            }])
+            .select();
+            
+          if (insertError) {
+            throw insertError;
+          }
           
-        if (insertError) {
-          throw insertError;
-        }
-        
-        if (insertData && insertData.length > 0) {
-          reset(insertData[0]);
+          if (insertData && insertData.length > 0) {
+            reset(insertData[0]);
+          }
+        } catch (insertErr: any) {
+          console.error("Error creating default branding settings:", insertErr);
+          setError(`Failed to create default branding settings: ${insertErr.message}`);
         }
       }
     } catch (error: any) {
@@ -98,31 +90,48 @@ export function BrandingSettings() {
     }
   };
 
-  const saveBrandingSettings = async (data: BrandingSettings) => {
+  const saveBrandingSettings = async (data: BrandingSettingsType) => {
     try {
       setSaving(true);
       setError(null);
       
-      const { error } = await supabase
-        .from('branding_settings')
-        .update({
-          youtube_channel: data.youtube_channel,
-          instagram_handle: data.instagram_handle,
-          tiktok_handle: data.tiktok_handle,
-          twitter_handle: data.twitter_handle,
-          facebook_page: data.facebook_page,
-          website_url: data.website_url,
-          company_name: data.company_name,
-          tagline: data.tagline,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', data.id);
-      
-      if (error) {
-        throw error;
+      if (data.id) {
+        // Update existing record
+        const { error } = await supabase
+          .from('branding_settings')
+          .update({
+            youtube_channel: data.youtube_channel,
+            instagram_handle: data.instagram_handle,
+            tiktok_handle: data.tiktok_handle,
+            twitter_handle: data.twitter_handle,
+            facebook_page: data.facebook_page,
+            website_url: data.website_url,
+            company_name: data.company_name,
+            tagline: data.tagline
+          })
+          .eq('id', data.id);
+        
+        if (error) throw error;
+      } else {
+        // Insert new record if no ID (shouldn't typically happen)
+        const { error } = await supabase
+          .from('branding_settings')
+          .insert([{
+            youtube_channel: data.youtube_channel,
+            instagram_handle: data.instagram_handle,
+            tiktok_handle: data.tiktok_handle,
+            twitter_handle: data.twitter_handle,
+            facebook_page: data.facebook_page,
+            website_url: data.website_url,
+            company_name: data.company_name,
+            tagline: data.tagline
+          }]);
+        
+        if (error) throw error;
       }
       
       toast.success("Branding settings saved successfully");
+      fetchBrandingSettings(); // Refresh the data
     } catch (error: any) {
       console.error("Error saving branding settings:", error);
       setError(`Failed to save branding settings: ${error.message}`);
@@ -170,9 +179,6 @@ export function BrandingSettings() {
               id="company_name" 
               {...register("company_name", { required: "Brand name is required" })}
             />
-            {errors.company_name && (
-              <p className="text-sm text-red-500">{errors.company_name.message}</p>
-            )}
           </div>
           
           <div className="space-y-2">

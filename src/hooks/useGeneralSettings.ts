@@ -1,8 +1,15 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { SiteSettings, PasswordConfirmData } from "@/types/settings";
+import { 
+  fetchSiteSettings, 
+  createDefaultSettings, 
+  updateSiteSettings,
+  verifyUserPassword,
+  getCurrentUser 
+} from "@/services/siteSettingsService";
+import { isValidEmail } from "@/utils/validationUtils";
 
 export function useGeneralSettings() {
   const [saving, setSaving] = useState(false);
@@ -19,25 +26,15 @@ export function useGeneralSettings() {
     maintenance_mode: false
   });
 
-  const fetchSettings = async () => {
+  const initializeSettings = async () => {
     try {
       setLoading(true);
       setError(null);
       
       console.log("Fetching settings...");
       
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('*')
-        .limit(1);
-
-      if (error) {
-        console.error("Error fetching settings:", error);
-        setError(`Failed to load settings: ${error.message}`);
-        toast.error("Failed to load settings: " + error.message);
-        return;
-      }
-
+      const data = await fetchSiteSettings();
+      
       console.log("Settings data received:", data);
       
       if (data && data.length > 0) {
@@ -60,20 +57,9 @@ export function useGeneralSettings() {
         toast.warning("Using default settings. Please save to create settings record.");
         
         // Create default settings record if none exists
-        const { data: insertData, error: insertError } = await supabase
-          .from('site_settings')
-          .insert([{
-            site_name: "The Moral Hierarchy",
-            admin_email: "admin@tmh.com",
-            timezone: "utc",
-            maintenance_mode: false
-          }])
-          .select();
+        const insertData = await createDefaultSettings();
           
-        if (insertError) {
-          console.error("Error creating default settings:", insertError);
-          setError(`Failed to create default settings: ${insertError.message}`);
-        } else if (insertData && insertData.length > 0) {
+        if (insertData && insertData.length > 0) {
           // Set the ID from the newly created record
           const newId = insertData[0].id;
           setSettingsId(newId);
@@ -96,8 +82,7 @@ export function useGeneralSettings() {
   const handleSave = async () => {
     try {
       // Validate email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(settings.admin_email)) {
+      if (!isValidEmail(settings.admin_email)) {
         toast.error("Please enter a valid email address");
         return;
       }
@@ -131,7 +116,7 @@ export function useGeneralSettings() {
       
       // If email is changed and password is provided, verify the password
       if (data.password && settings.admin_email !== originalEmail) {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getCurrentUser();
         
         if (!user) {
           setError("You must be logged in to change admin email");
@@ -140,52 +125,18 @@ export function useGeneralSettings() {
         }
         
         // Verify password by attempting to sign in
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: user.email!,
-          password: data.password
-        });
-        
-        if (signInError) {
-          console.error("Password verification failed:", signInError);
+        try {
+          await verifyUserPassword(user.email!, data.password);
+        } catch (error: any) {
+          console.error("Password verification failed:", error);
           setError("Incorrect password. Admin email was not updated.");
           toast.error("Password verification failed");
           return;
         }
       }
       
-      // Use the Edge Function to update settings
-      const { error: edgeFunctionError } = await supabase.functions.invoke('update-site-settings', {
-        body: {
-          id: settingsId,
-          site_name: settings.site_name,
-          admin_email: settings.admin_email,
-          timezone: settings.timezone,
-          maintenance_mode: settings.maintenance_mode
-        }
-      });
-
-      if (edgeFunctionError) {
-        console.error("Error using edge function:", edgeFunctionError);
-        
-        // Fallback to direct update if edge function fails
-        const { error: directUpdateError } = await supabase
-          .from('site_settings')
-          .update({
-            site_name: settings.site_name,
-            admin_email: settings.admin_email,
-            timezone: settings.timezone,
-            maintenance_mode: settings.maintenance_mode,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', settingsId);
-
-        if (directUpdateError) {
-          console.error("Error with direct update:", directUpdateError);
-          setError(`Failed to save settings: ${directUpdateError.message}`);
-          toast.error("Failed to save settings: " + directUpdateError.message);
-          return;
-        }
-      }
+      // Update the settings
+      await updateSiteSettings(settings);
 
       // Update originalEmail if admin_email changed
       if (settings.admin_email !== originalEmail) {
@@ -196,7 +147,7 @@ export function useGeneralSettings() {
       console.log("Settings updated successfully");
       
       // Refresh settings to ensure UI is updated with the latest data
-      await fetchSettings();
+      await initializeSettings();
       
       // Close password confirmation dialog
       setShowPasswordConfirm(false);
@@ -211,7 +162,7 @@ export function useGeneralSettings() {
   };
 
   useEffect(() => {
-    fetchSettings();
+    initializeSettings();
   }, []);
 
   return {

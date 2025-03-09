@@ -27,8 +27,6 @@ export function ArticleAudioPlayer({
   const segmentsRef = useRef<{audioUrl: string, fileName: string}[]>([]);
 
   useEffect(() => {
-    console.log("ArticleAudioPlayer receiving props:", { voiceUrl, voiceFileName, hasVoiceSegments: Boolean(voiceSegments) });
-    
     // Check if we have segments data
     if (voiceSegments) {
       try {
@@ -37,7 +35,7 @@ export function ArticleAudioPlayer({
           segmentsRef.current = parsedSegments;
           setSegments(parsedSegments);
           setHasMultipleSegments(parsedSegments.length > 1);
-          console.log(`ArticleAudioPlayer: Loaded ${parsedSegments.length} audio segments:`, parsedSegments);
+          console.log(`ArticleAudioPlayer: Loaded ${parsedSegments.length} audio segments`);
         }
       } catch (err) {
         console.error("Error parsing voice segments:", err);
@@ -60,16 +58,9 @@ export function ArticleAudioPlayer({
         throw new Error("No audio URL available");
       }
       
-      // For data URLs, ensure they are valid
-      if (audioUrl.startsWith('data:') && !audioUrl.includes('base64,')) {
-        console.error("Invalid data URL:", audioUrl.substring(0, 50) + "...");
-        throw new Error("Invalid audio data format");
-      }
-      
       const audioElement = new Audio(audioUrl);
       audioRef.current = audioElement;
       
-      // Set up event listeners
       const updateProgress = () => {
         if (audioElement.duration) {
           setProgress((audioElement.currentTime / audioElement.duration) * 100);
@@ -107,9 +98,6 @@ export function ArticleAudioPlayer({
       audioElement.addEventListener('play', handlePlay);
       audioElement.addEventListener('pause', handlePause);
       audioElement.addEventListener('ended', handleEnded);
-      
-      // Load the audio to check if it works
-      audioElement.load();
       
       // Clean up when component unmounts
       return () => {
@@ -196,7 +184,6 @@ export function ArticleAudioPlayer({
     }
   };
 
-  // Don't render anything if there's no audio content
   if (!voiceUrl && (!segments || segments.length === 0)) {
     return null;
   }

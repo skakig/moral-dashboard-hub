@@ -51,7 +51,7 @@ export function useVoiceGeneration(form: any) {
       }
       
       // Use the edge function service to generate voice
-      const result = await EdgeFunctionService.generateVoice(plainText, voiceId);
+      const result = await EdgeFunctionService.generateVoice(plainText);
       
       if (!result) {
         setError("Voice generation failed. Please try again later.");
@@ -77,7 +77,7 @@ export function useVoiceGeneration(form: any) {
     } catch (error: any) {
       console.error('Error generating voice content:', error);
       setError(error.message || "Failed to generate voice content");
-      // The error is already handled by the service
+      toast.error(`Voice generation failed: ${error.message || 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
     }

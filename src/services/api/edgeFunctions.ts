@@ -1,176 +1,114 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { getPreferredServiceForFunction } from "@/services/functionMappingService";
+import { supabase } from '@/integrations/supabase/client';
+import { getPreferredServiceForFunction } from '@/services/functionMappingService';
 
-interface GenerateArticleParams {
-  theme: string;
-  keywords?: string[];
-  contentType: string;
-  moralLevel: number;
-  platform?: string;
-  contentLength?: string;
-  tone?: string;
-  demographicTargeting?: boolean;
-  targetDemographics?: string[];
-}
-
+/**
+ * This service handles interactions with Supabase Edge Functions.
+ * It also checks for function mappings to determine which service to use.
+ */
 export class EdgeFunctionService {
-  static async generateArticle(params: GenerateArticleParams) {
+  /**
+   * Generate content using AI
+   */
+  static async generateContent(params: any) {
     try {
-      // Determine which service to use for this function
-      const serviceMapping = await getPreferredServiceForFunction('generate-article');
-      const serviceName = serviceMapping.preferred_service || 'OpenAI';
+      console.log("Generating content with params:", params);
       
-      console.log(`Using ${serviceName} for article generation`);
+      // Get the preferred service for content generation
+      const mapping = await getPreferredServiceForFunction('generate-content');
+      const service = mapping?.service_name || 'OpenAI';
       
-      // Add branding information from settings if available
-      const brandingParams = await this.getBrandingParams();
+      console.log(`Using ${service} for content generation`);
       
-      // Call Edge Function
-      const { data, error } = await supabase.functions.invoke('generate-article', {
-        body: {
-          ...params,
-          ...brandingParams,
-          service: serviceName
-        }
+      // Call the edge function
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: { ...params, service }
       });
       
-      if (error) {
-        console.error("Error generating article:", error);
-        toast.error(`Failed to generate content: ${error.message}`);
-        return null;
-      }
-      
-      if (!data) {
-        toast.error("No data returned from content generation");
-        return null;
-      }
-      
-      if (data.error) {
-        toast.error(`Error generating content: ${data.error}`);
-        return null;
-      }
-      
+      if (error) throw error;
       return data;
     } catch (error: any) {
-      console.error("Error calling generate-article function:", error);
-      toast.error(`Error generating content: ${error.message}`);
-      return null;
+      console.error('Error generating content:', error);
+      throw new Error(error.message || 'Failed to generate content');
     }
   }
   
-  static async generateVoice(params: { content: string; voice?: string }) {
+  /**
+   * Generate an image using AI
+   */
+  static async generateImage(prompt: string) {
     try {
-      // Determine which service to use for this function
-      const serviceMapping = await getPreferredServiceForFunction('generate-voice');
-      const serviceName = serviceMapping.preferred_service || 'ElevenLabs';
+      // Get the preferred service for image generation
+      const mapping = await getPreferredServiceForFunction('generate-image');
+      const service = mapping?.service_name || 'StableDiffusion';
       
-      console.log(`Using ${serviceName} for voice generation`);
+      console.log(`Using ${service} for image generation`);
       
-      // Call Edge Function
-      const { data, error } = await supabase.functions.invoke('generate-voice', {
-        body: {
-          ...params,
-          service: serviceName
-        }
-      });
-      
-      if (error) {
-        console.error("Error generating voice:", error);
-        toast.error(`Failed to generate voice: ${error.message}`);
-        return null;
-      }
-      
-      if (!data) {
-        toast.error("No data returned from voice generation");
-        return null;
-      }
-      
-      if (data.error) {
-        toast.error(`Error generating voice: ${data.error}`);
-        return null;
-      }
-      
-      return data;
-    } catch (error: any) {
-      console.error("Error calling generate-voice function:", error);
-      toast.error(`Error generating voice: ${error.message}`);
-      return null;
-    }
-  }
-  
-  static async generateImage(params: { prompt: string }) {
-    try {
-      // Determine which service to use for this function
-      const serviceMapping = await getPreferredServiceForFunction('generate-image');
-      const serviceName = serviceMapping.preferred_service || 'StableDiffusion';
-      
-      console.log(`Using ${serviceName} for image generation`);
-      
-      // Call Edge Function
+      // Call the edge function
       const { data, error } = await supabase.functions.invoke('generate-image', {
-        body: {
-          ...params,
-          service: serviceName
+        body: { 
+          prompt,
+          service
         }
       });
       
-      if (error) {
-        console.error("Error generating image:", error);
-        toast.error(`Failed to generate image: ${error.message}`);
-        return null;
-      }
-      
-      if (!data) {
-        toast.error("No data returned from image generation");
-        return null;
-      }
-      
-      if (data.error) {
-        toast.error(`Error generating image: ${data.error}`);
-        return null;
-      }
-      
+      if (error) throw error;
       return data;
     } catch (error: any) {
-      console.error("Error calling generate-image function:", error);
-      toast.error(`Error generating image: ${error.message}`);
-      return null;
+      console.error('Error generating image:', error);
+      throw new Error(error.message || 'Failed to generate image');
     }
   }
   
-  // Get branding parameters from settings
-  static async getBrandingParams() {
+  /**
+   * Generate voice (audio) from text
+   */
+  static async generateVoice(text: string) {
     try {
-      const { data, error } = await supabase
-        .from('branding_settings')
-        .select('*')
-        .limit(1)
-        .single();
-        
-      if (error) {
-        console.warn("Could not retrieve branding settings:", error);
-        return {};
+      if (!text) {
+        throw new Error('No text provided for voice generation');
       }
       
-      if (!data) return {};
+      // Limit text to reasonable length
+      const truncatedText = text.length > 4000 ? text.substring(0, 4000) : text;
       
-      return {
-        branding: {
-          companyName: data.company_name,
-          tagline: data.tagline,
-          websiteUrl: data.website_url,
-          youtubeChannel: data.youtube_channel,
-          instagramHandle: data.instagram_handle,
-          tiktokHandle: data.tiktok_handle,
-          twitterHandle: data.twitter_handle,
-          facebookPage: data.facebook_page
+      // Get the preferred service for voice generation
+      const mapping = await getPreferredServiceForFunction('generate-voice');
+      const service = mapping?.service_name || 'ElevenLabs';
+      
+      console.log(`Using ${service} for voice generation`);
+      
+      // Call the edge function
+      const { data, error } = await supabase.functions.invoke('generate-voice', {
+        body: { 
+          text: truncatedText,
+          service
         }
-      };
-    } catch (error) {
-      console.warn("Error retrieving branding settings:", error);
-      return {};
+      });
+      
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.error('Error generating voice:', error);
+      throw new Error(error.message || 'Failed to generate voice');
+    }
+  }
+  
+  /**
+   * Generate SEO data (meta description, keywords) for content
+   */
+  static async generateSEOData(content: string, title: string) {
+    try {
+      // Call the edge function
+      const { data, error } = await supabase.functions.invoke('generate-seo-data', {
+        body: { content, title }
+      });
+      
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      console.error('Error generating SEO data:', error);
+      throw new Error(error.message || 'Failed to generate SEO data');
     }
   }
 }

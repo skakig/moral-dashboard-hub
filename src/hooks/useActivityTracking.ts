@@ -18,7 +18,7 @@ export function useActivityTracking() {
         const contentId = path;
         
         // Track the content view
-        await trackContentView(user.id, contentId, contentType);
+        await trackContentView(user.id, contentId, 'article');
         
         // Calculate engagement score based on path
         let engagementScore = 1; // Default score for any page view
@@ -32,9 +32,7 @@ export function useActivityTracking() {
         }
         
         // Update user engagement data
-        await updateUserEngagement(user.id, {
-          platform_engagement_score: engagementScore
-        });
+        await updateUserEngagement(user.id, 'page_view', engagementScore);
       } catch (error) {
         console.error("Error tracking activity:", error);
       }

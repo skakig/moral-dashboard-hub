@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FunctionMappingSection } from "./FunctionMappingSection";
@@ -6,6 +7,27 @@ import { APIRateLimits } from "./APIRateLimits";
 
 export function APIKeysSection() {
   const [activeTab, setActiveTab] = useState("api-keys");
+  
+  // Mock data for usage stats and rate limits
+  const usageStats = {
+    serviceUsage: [
+      { service: "OpenAI", requests: 250, successRate: 98.5 },
+      { service: "ElevenLabs", requests: 120, successRate: 95.2 },
+      { service: "StableDiffusion", requests: 85, successRate: 97.0 }
+    ],
+    totalRequests: 455,
+    averageSuccessRate: 96.9,
+    lastUpdated: "2023-07-15T14:30:00Z"
+  };
+  
+  const rateLimits = {
+    limits: [
+      { service: "OpenAI", hourly: 100, daily: 1000, monthly: 10000, currentHourly: 12, currentDaily: 250, currentMonthly: 2500 },
+      { service: "ElevenLabs", hourly: 50, daily: 500, monthly: 5000, currentHourly: 5, currentDaily: 120, currentMonthly: 1200 },
+      { service: "StableDiffusion", hourly: 30, daily: 300, monthly: 3000, currentHourly: 8, currentDaily: 85, currentMonthly: 900 }
+    ],
+    isLoading: false
+  };
   
   return (
     <div className="space-y-4">
@@ -93,8 +115,8 @@ export function APIKeysSection() {
         </TabsContent>
         
         <TabsContent value="usage-stats" className="space-y-4 mt-6">
-          <APIUsageStats />
-          <APIRateLimits />
+          <APIUsageStats usageStats={usageStats} />
+          <APIRateLimits rateLimits={rateLimits} />
         </TabsContent>
       </Tabs>
     </div>

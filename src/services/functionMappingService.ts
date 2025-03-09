@@ -1,11 +1,13 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface FunctionMapping {
   id: string;
   function_name: string;
-  preferred_service: string;
-  fallback_service: string | null;
+  service_name: string;
   description: string | null;
+  parameters: any | null;
+  is_active: boolean;
   updated_at: string;
 }
 
@@ -43,9 +45,10 @@ export async function getFunctionMappings() {
 export async function updateFunctionMapping(mapping: {
   id?: string;
   function_name: string;
-  preferred_service: string;
-  fallback_service?: string | null;
+  service_name: string;
   description?: string | null;
+  parameters?: any | null;
+  is_active?: boolean;
 }) {
   try {
     // If we have an ID, update the existing record
@@ -53,9 +56,10 @@ export async function updateFunctionMapping(mapping: {
       const { data, error } = await supabase
         .from('api_function_mapping')
         .update({
-          preferred_service: mapping.preferred_service,
-          fallback_service: mapping.fallback_service,
-          description: mapping.description
+          service_name: mapping.service_name,
+          description: mapping.description,
+          parameters: mapping.parameters,
+          is_active: mapping.is_active
         })
         .eq('id', mapping.id)
         .select();
@@ -69,9 +73,10 @@ export async function updateFunctionMapping(mapping: {
         .from('api_function_mapping')
         .insert([{
           function_name: mapping.function_name,
-          preferred_service: mapping.preferred_service,
-          fallback_service: mapping.fallback_service,
-          description: mapping.description
+          service_name: mapping.service_name,
+          description: mapping.description,
+          parameters: mapping.parameters,
+          is_active: mapping.is_active
         }])
         .select();
       
@@ -109,7 +114,7 @@ export async function getPreferredServiceForFunction(functionName: string) {
   try {
     const { data, error } = await supabase
       .from('api_function_mapping')
-      .select('preferred_service, fallback_service')
+      .select('service_name')
       .eq('function_name', functionName)
       .single();
     
@@ -117,8 +122,7 @@ export async function getPreferredServiceForFunction(functionName: string) {
       // If the function isn't mapped, return a default service
       console.warn(`No mapping found for function: ${functionName}`);
       return {
-        preferred_service: 'OpenAI', // Default to OpenAI
-        fallback_service: null
+        service_name: 'OpenAI' // Default to OpenAI
       };
     }
     
@@ -126,8 +130,7 @@ export async function getPreferredServiceForFunction(functionName: string) {
   } catch (error: any) {
     console.error(`Error getting preferred service for ${functionName}:`, error);
     return {
-      preferred_service: 'OpenAI', // Default to OpenAI
-      fallback_service: null
+      service_name: 'OpenAI' // Default to OpenAI
     };
   }
 }

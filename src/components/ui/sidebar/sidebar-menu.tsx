@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -207,3 +206,23 @@ export const SidebarMenuSkeleton = React.forwardRef<
   )
 })
 SidebarMenuSkeleton.displayName = "SidebarMenuSkeleton"
+
+export interface SidebarItemProps extends React.HTMLAttributes<HTMLLIElement> {
+  active?: boolean;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+export const SidebarItem = React.forwardRef<HTMLLIElement, SidebarItemProps>(
+  ({ active = false, icon, children, className, ...props }, ref) => {
+    return (
+      <SidebarMenuItem ref={ref} className={className} {...props}>
+        <SidebarMenuButton isActive={active} tooltip={typeof children === "string" ? children : undefined}>
+          {icon}
+          <span>{children}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    )
+  }
+)
+SidebarItem.displayName = "SidebarItem"

@@ -13,26 +13,29 @@ import Assessments from "./pages/Assessments";
 import Trends from "./pages/Trends";
 import AIContent from "./pages/AIContent";
 import NotFound from "./pages/NotFound";
+import { QueryProvider } from "./providers/QueryProvider";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/articles" element={<ArticlesPage />} />
-        <Route path="/articles/:id" element={<ArticleViewPage />} />
-        <Route path="/demographics" element={<Demographics />} />
-        <Route path="/affiliates" element={<Affiliates />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/assessments" element={<Assessments />} />
-        <Route path="/trends" element={<Trends />} />
-        <Route path="/content" element={<AIContent />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+    <QueryProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/articles" element={<ArticlesPage />} />
+          <Route path="/articles/:id" element={<ArticleViewPage />} />
+          <Route path="/demographics" element={<Demographics />} />
+          <Route path="/affiliates" element={<Affiliates />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/assessments" element={<Assessments />} />
+          <Route path="/trends" element={<Trends />} />
+          <Route path="/content" element={<AIContent />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
+    </QueryProvider>
   );
 }
 

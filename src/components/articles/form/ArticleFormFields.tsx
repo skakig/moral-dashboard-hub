@@ -6,12 +6,14 @@ import { ContentConfigFields } from "./components/ContentConfigFields";
 import { ContentField } from "./components/ContentField";
 import { MetaDescriptionField } from "./components/MetaDescriptionField";
 import { FeaturedImageField } from "./components/FeaturedImageField";
-import { ThemeField } from "./components/ThemeField"; // Import the new ThemeField
+import { ThemeField } from "./components/ThemeField";
 import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
+import { useAIGeneration } from "./hooks/useAIGeneration";
 import { Button } from "@/components/ui/button";
 import { FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Mic } from "lucide-react";
+import { Mic, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 // Main ArticleFormFields component now acts as a coordinator
 export function ArticleFormFields({ form }) {
@@ -20,6 +22,8 @@ export function ArticleFormFields({ form }) {
   const [contentLength, setContentLength] = useState(form.watch("contentLength") || "medium");
   const [moralLevel, setMoralLevel] = useState(form.watch("moralLevel") || 5);
   const { generateVoiceContent } = useVoiceGeneration(form);
+  const { loading, generateContent } = useAIGeneration();
+  const [isGenerating, setIsGenerating] = useState(false);
   const voiceGenerated = form.watch("voiceGenerated") || false;
 
   // Preserve form values when selections change
@@ -33,6 +37,83 @@ export function ArticleFormFields({ form }) {
     
     return () => subscription.unsubscribe();
   }, [form]);
+
+  const handleGenerateContent = async () => {
+    try {
+      setIsGenerating(true);
+      
+      // Get the current form values to use as input parameters
+      const theme = form.getValues("theme") || ""; 
+      const contentType = form.getValues("contentType") || "article";
+      const moralLevel = form.getValues("moralLevel") || 5;
+      const platform = form.getValues("platform") || "";
+      const contentLength = form.getValues("contentLength") || "medium";
+      const tone = form.getValues("tone") || "informative";
+      const keywords = form.getValues("seoKeywords") ? 
+        form.getValues("seoKeywords").split(',').map((k: string) => k.trim()) : 
+        [];
+
+      if (!theme) {
+        toast.error("Please enter a theme or description of what you want to generate");
+        setIsGenerating(false);
+        return;
+      }
+
+      if (!platform) {
+        toast.error("Please select a platform");
+        setIsGenerating(false);
+        return;
+      }
+
+      if (!contentType) {
+        toast.error("Please select a content type");
+        setIsGenerating(false);
+        return;
+      }
+
+      console.log("Generating content with params:", { 
+        theme, keywords, contentType, moralLevel, platform, contentLength, tone 
+      });
+
+      // Call the AI generation
+      const content = await generateContent({
+        theme,
+        keywords,
+        contentType,
+        moralLevel: parseInt(String(moralLevel), 10),
+        platform,
+        contentLength,
+        tone
+      });
+
+      if (content) {
+        // Update the form values
+        form.setValue("content", content.content, { shouldDirty: true });
+        
+        // Only update title if it's empty or if the current title is the theme
+        if (!form.getValues("title") || form.getValues("title") === theme) {
+          form.setValue("title", content.title, { shouldDirty: true });
+        }
+        
+        // Update meta description
+        if (content.metaDescription) {
+          form.setValue("metaDescription", content.metaDescription, { shouldDirty: true });
+        }
+        
+        // Update keywords if they were generated and not already set
+        if (content.keywords && content.keywords.length > 0) {
+          form.setValue("seoKeywords", content.keywords.join(', '), { shouldDirty: true });
+        }
+        
+        toast.success("Content generated successfully!");
+      }
+    } catch (error) {
+      console.error("Error generating content:", error);
+      toast.error("Failed to generate content: " + (error instanceof Error ? error.message : "Unknown error"));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -58,12 +139,12 @@ export function ArticleFormFields({ form }) {
         </p>
         <Separator className="mb-4" />
         
-        {/* Add the ThemeField component before ContentField */}
+        {/* Add the ThemeField component before ContentField with the generate handler */}
         <div className="mb-4">
-          <ThemeField form={form} />
+          <ThemeField form={form} onGenerate={handleGenerateContent} />
         </div>
         
-        <ContentField form={form} />
+        <ContentField form={form} isGenerating={isGenerating} onGenerate={handleGenerateContent} />
       </div>
       
       {form.watch("content") && (

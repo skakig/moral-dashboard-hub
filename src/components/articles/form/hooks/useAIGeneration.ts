@@ -89,7 +89,7 @@ export function useAIGeneration() {
         return [];
       }
 
-      return data.keywords || [];
+      return data?.keywords || [];
     } catch (error) {
       console.error("Error generating keywords:", error);
       return [];

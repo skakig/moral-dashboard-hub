@@ -2,7 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Check multiple possible environment variable names for the OpenAI API key
+// Get the API key from environment variables - check multiple possible env var names
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY') || 
                     Deno.env.get('OPEN_AI_TMH') || 
                     Deno.env.get('OPEN-AI-CUSTOM-GPT');
@@ -34,39 +34,19 @@ serve(async (req) => {
         }
       );
     }
-    
-    const { content, theme, platform, contentType } = await req.json();
 
-    if (!content && !theme) {
+    const { theme, platform = "general", contentType = "article" } = await req.json();
+    
+    if (!theme) {
       return new Response(
-        JSON.stringify({ error: 'Content or theme is required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: 'Missing required parameters', details: 'Theme is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Generating SEO data for platform: ${platform}, content type: ${contentType}`);
+    console.log("Generating SEO keywords for:", { theme, platform, contentType });
 
-    // Format the prompt based on the platform and content type
-    let platformSpecificInstructions = '';
-    
-    switch(platform) {
-      case 'Instagram':
-        platformSpecificInstructions = 'Include popular and relevant Instagram hashtags. Focus on engagement and visual appeal.';
-        break;
-      case 'YouTube':
-        platformSpecificInstructions = 'Include SEO-optimized keywords for YouTube search. Focus on clickability and viewer retention.';
-        break;
-      case 'Twitter':
-        platformSpecificInstructions = 'Include popular Twitter hashtags and ensure brevity. Focus on shareable content.';
-        break;
-      case 'TikTok':
-        platformSpecificInstructions = 'Include trending TikTok hashtags and sounds references if appropriate. Focus on viral potential.';
-        break;
-      default:
-        platformSpecificInstructions = 'Focus on general SEO best practices for discoverability and engagement.';
-    }
-
-    // Send request to OpenAI
+    // Generate keywords with OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -78,21 +58,12 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `You are an SEO and social media expert for The Moral Hierarchy, a platform focused on moral development and ethical growth. You need to generate:
-            
-            1. A concise, SEO-friendly meta description (max 160 characters) that summarizes the content and includes key keywords.
-            2. A list of 5-10 relevant keywords or hashtags appropriate for the platform.
-            
-            ${platformSpecificInstructions}
-            
-            Return your response in JSON format with "metaDescription" and "keywords" (array) fields.`
+            content: `Generate 5-10 platform-specific keywords or hashtags for ${platform} content about ${theme}. Return only the keywords as a comma-separated list without any other text.` 
           },
-          { 
-            role: 'user', 
-            content: `Generate SEO data for ${platform || 'general'} ${contentType || 'content'} with theme: "${theme || ''}" and content: "${content?.substring(0, 500) || ''}"` 
-          }
+          { role: 'user', content: `Create keywords for a ${contentType} about ${theme} for ${platform}` }
         ],
-        temperature: 0.7,
+        temperature: 0.5,
+        max_tokens: 100,
       }),
     });
 
@@ -101,47 +72,25 @@ serve(async (req) => {
     if (!data.choices || data.choices.length === 0) {
       console.error('Invalid OpenAI response:', data);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate SEO data', details: data }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        JSON.stringify({ error: 'Failed to generate keywords', details: data }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Parse the response - handle both JSON and non-JSON responses
-    let seoData;
-    try {
-      const contentText = data.choices[0].message.content;
-      
-      // Try to parse as JSON
-      try {
-        seoData = JSON.parse(contentText);
-      } catch (e) {
-        // If not JSON, extract data using regex
-        const metaDescriptionMatch = contentText.match(/meta\s*description[:\s]*(.*?)(?:\n|$)/i);
-        const keywordsMatch = contentText.match(/keywords[:\s]*(.*?)(?:\n|$)/i);
-        
-        seoData = {
-          metaDescription: metaDescriptionMatch ? metaDescriptionMatch[1].trim() : 'Generated meta description',
-          keywords: keywordsMatch 
-            ? keywordsMatch[1].split(/,|\n/).map(k => k.trim()).filter(Boolean) 
-            : ['moral', 'ethics', 'development']
-        };
-      }
-    } catch (error) {
-      console.error('Error parsing SEO data:', error);
-      seoData = {
-        metaDescription: "Content about moral development and ethical growth.",
-        keywords: ['moral hierarchy', 'ethics', 'development']
-      };
-    }
+    const keywordsText = data.choices[0].message.content;
+    // Parse the comma-separated list
+    const keywords = keywordsText.split(',').map((k: string) => k.trim());
+
+    console.log("Generated keywords:", keywords);
 
     return new Response(
-      JSON.stringify(seoData),
+      JSON.stringify({ keywords }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error generating SEO data:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

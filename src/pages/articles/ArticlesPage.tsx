@@ -47,8 +47,7 @@ export default function ArticlesPage() {
     handleEditArticle,
     renderArticleFormDialog
   } = useArticleFormDialog({
-    onSubmit: handleArticleSubmit,
-    generateArticle
+    onSubmit: handleArticleSubmit
   });
 
   // Theme form dialog management

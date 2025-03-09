@@ -35,9 +35,9 @@ serve(async (req) => {
       );
     }
 
-    const { theme, keywords, contentType, moralLevel, platform = "general", contentLength = "medium" } = await req.json();
+    const { theme, keywords, contentType, moralLevel, platform = "general", contentLength = "medium", tone = "informative" } = await req.json();
     
-    console.log("Request parameters:", { theme, contentType, moralLevel, platform, contentLength });
+    console.log("Request parameters:", { theme, contentType, moralLevel, platform, contentLength, tone });
 
     // Construct the prompt based on TMH knowledge
     const tmhContext = `The Moral Hierarchy (TMH) is a framework with 9 levels of moral development:
@@ -66,7 +66,7 @@ serve(async (req) => {
         targetLength = "1000-1500 words";
     }
 
-    // Adjust instructions based on content type and platform
+    // Adjust instructions based on content type, platform, and tone
     let contentSpecificInstructions = "";
     
     if (contentType.includes("social_media")) {
@@ -77,6 +77,7 @@ serve(async (req) => {
       3. Has an engaging hook in the first 3 seconds/lines
       4. References moral hierarchy concepts in an accessible way
       5. Includes suggestions for visuals or graphics to accompany the post
+      6. Uses a ${tone} tone throughout the content
       `;
     } else if (contentType.includes("youtube") || contentType === "script") {
       contentSpecificInstructions = `
@@ -84,7 +85,7 @@ serve(async (req) => {
       1. Has a strong hook in the first ${contentType.includes("shorts") ? "3" : "15"} seconds
       2. Includes timestamps and chapter markers
       3. Contains calls-to-action for engagement (like, subscribe)
-      4. Balances educational content with engaging delivery
+      4. Balances educational content with engaging delivery in a ${tone} tone
       5. Ends with a question to encourage comments
       `;
     } else if (platform === "Instagram" && contentType.includes("reels")) {
@@ -93,7 +94,7 @@ serve(async (req) => {
       1. Has a captivating first 3 seconds
       2. Includes trending audio suggestions
       3. Has clear, concise talking points
-      4. Incorporates moral concepts in an engaging, visually-oriented way
+      4. Incorporates moral concepts in a ${tone}, visually-oriented way
       5. Suggests simple visual transitions or effects
       `;
     } else if (platform === "TikTok") {
@@ -102,7 +103,7 @@ serve(async (req) => {
       1. Has a viral-worthy hook in the first 3 seconds
       2. Uses trending sounds or concepts if relevant
       3. Is paced for the TikTok format (fast, engaging)
-      4. Makes complex moral concepts approachable and entertaining
+      4. Makes complex moral concepts approachable in a ${tone} tone
       5. Includes suggestions for simple visual effects
       `;
     } else if (contentType.includes("tweet")) {
@@ -113,19 +114,20 @@ serve(async (req) => {
       3. Uses numbering or clear connections between tweets
       4. Incorporates relevant hashtags strategically
       5. Ends with a call to action or thought-provoking question
+      6. Maintains a ${tone} tone throughout
       `;
     } else {
       contentSpecificInstructions = `
       Create high-quality, engaging ${contentType} on the theme of "${theme}" that:
       1. Includes clear headings and subheadings for structure
-      2. Is factually accurate and well-researched  
+      2. Is factually accurate and well-researched
       3. Includes practical examples and applications
       4. Ends with a clear call-to-action for the reader to take the TMH assessment
-      5. Is conversational but authoritative in tone
+      5. Uses a ${tone} tone throughout
       `;
     }
 
-    console.log("Sending request to OpenAI with content type:", contentType, "platform:", platform);
+    console.log("Sending request to OpenAI with content type:", contentType, "platform:", platform, "tone:", tone);
 
     // Construct the system prompt
     const systemPrompt = `You are an expert content writer for The Moral Hierarchy (TMH), a platform focused on moral development and ethical growth. 
@@ -138,6 +140,7 @@ serve(async (req) => {
     2. Incorporate these keywords naturally: ${keywords?.join(', ') || theme}
     3. Be approximately ${targetLength} in length
     4. Format the content in Markdown for easy reading
+    5. Maintain a ${tone} tone throughout
 
     If you encounter any challenges creating this content, focus on quality over keywords or length.`;
 
@@ -153,7 +156,7 @@ serve(async (req) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Create ${contentType} content for ${platform} about ${theme || keywords?.join(', ')} that would resonate with people interested in moral development.` }
+          { role: 'user', content: `Create ${contentType} content for ${platform} about ${theme || keywords?.join(', ')} that would resonate with people interested in moral development. Use a ${tone} tone.` }
         ],
         temperature: 0.7,
       }),
@@ -213,13 +216,42 @@ serve(async (req) => {
     const titleData = await titleResponse.json();
     const title = titleData.choices[0].message.content;
 
+    // Generate platform-specific keywords if none were provided
+    let keywordsToUse = keywords;
+    if (!keywords || keywords.length === 0) {
+      const keywordsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { 
+              role: 'system', 
+              content: `Generate 5-10 platform-specific keywords or hashtags for ${platform} content about ${theme}. Return only the keywords as a comma-separated list without any other text.` 
+            },
+            { role: 'user', content: generatedContent }
+          ],
+          temperature: 0.5,
+          max_tokens: 100,
+        }),
+      });
+
+      const keywordsData = await keywordsResponse.json();
+      const keywordsText = keywordsData.choices[0].message.content;
+      // Parse the comma-separated list
+      keywordsToUse = keywordsText.split(',').map((k: string) => k.trim());
+    }
+
     console.log("Successfully generated content");
 
     return new Response(JSON.stringify({ 
       content: generatedContent,
       metaDescription,
       title,
-      keywords
+      keywords: keywordsToUse
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

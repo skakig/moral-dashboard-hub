@@ -21,14 +21,30 @@ export function ContentField({ form }: ContentFieldProps) {
       setIsGenerating(true);
       
       // Get the current form values to use as input parameters
-      const theme = form.getValues("title") || ""; 
+      const theme = form.getValues("theme") || ""; 
       const contentType = form.getValues("contentType") || "article";
       const moralLevel = form.getValues("moralLevel") || 5;
       const platform = form.getValues("platform") || "";
       const contentLength = form.getValues("contentLength") || "medium";
+      const tone = form.getValues("tone") || "informative";
       const keywords = form.getValues("seoKeywords") ? 
         form.getValues("seoKeywords").split(',').map((k: string) => k.trim()) : 
         [];
+
+      if (!theme) {
+        toast.error("Please enter a theme or topic");
+        return;
+      }
+
+      if (!platform) {
+        toast.error("Please select a platform");
+        return;
+      }
+
+      if (!contentType) {
+        toast.error("Please select a content type");
+        return;
+      }
 
       // Call the AI generation
       const content = await generateContent({
@@ -37,21 +53,27 @@ export function ContentField({ form }: ContentFieldProps) {
         contentType,
         moralLevel: parseInt(moralLevel, 10),
         platform,
-        contentLength
+        contentLength,
+        tone
       });
 
       if (content) {
         // Update the form values
         form.setValue("content", content.content, { shouldDirty: true });
         
-        // Only update title if it's empty
-        if (content.title && !form.getValues("title")) {
+        // Only update title if it's empty or if the current title is the theme
+        if (!form.getValues("title") || form.getValues("title") === theme) {
           form.setValue("title", content.title, { shouldDirty: true });
         }
         
         // Update meta description
         if (content.metaDescription) {
           form.setValue("metaDescription", content.metaDescription, { shouldDirty: true });
+        }
+        
+        // Update keywords if they were generated and not already set
+        if (content.keywords && content.keywords.length > 0) {
+          form.setValue("seoKeywords", content.keywords.join(', '), { shouldDirty: true });
         }
         
         toast.success("Content generated successfully!");

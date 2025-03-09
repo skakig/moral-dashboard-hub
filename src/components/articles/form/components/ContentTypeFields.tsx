@@ -21,7 +21,7 @@ export function ContentTypeFields({
   const { getContentTypeOptions } = useContentTypeOptions(platform);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <FormField
         control={form.control}
         name="platform"
@@ -79,6 +79,37 @@ export function ContentTypeFields({
                     {option.label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="tone"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Content Tone</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              defaultValue={field.value || "informative"}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select tone" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="informative">Informative</SelectItem>
+                <SelectItem value="humorous">Humorous</SelectItem>
+                <SelectItem value="serious">Serious</SelectItem>
+                <SelectItem value="inspirational">Inspirational</SelectItem>
+                <SelectItem value="scientific">Scientific</SelectItem>
+                <SelectItem value="conversational">Conversational</SelectItem>
+                <SelectItem value="formal">Formal</SelectItem>
+                <SelectItem value="persuasive">Persuasive</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />

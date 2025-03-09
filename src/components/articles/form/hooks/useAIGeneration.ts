@@ -5,17 +5,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface GenerationParams {
   theme: string;
-  keywords: string[];
+  keywords?: string[];
   contentType: string;
   moralLevel: number;
   platform: string;
   contentLength: string;
+  tone?: string;
 }
 
 interface GeneratedContent {
   title: string;
   content: string;
   metaDescription: string;
+  keywords?: string[];
 }
 
 export function useAIGeneration() {
@@ -23,8 +25,8 @@ export function useAIGeneration() {
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
 
   const generateContent = async (params: GenerationParams) => {
-    if (!params.theme && (!params.keywords || !params.keywords.length)) {
-      toast.error('Please enter a theme or keywords');
+    if (!params.theme) {
+      toast.error('Please enter a theme or topic');
       return null;
     }
 
@@ -54,7 +56,8 @@ export function useAIGeneration() {
       const content = {
         title: data.title || '',
         content: data.content || '',
-        metaDescription: data.metaDescription || ''
+        metaDescription: data.metaDescription || '',
+        keywords: data.keywords || []
       };
       
       setGeneratedContent(content);
@@ -69,12 +72,36 @@ export function useAIGeneration() {
     }
   };
 
+  // Generate SEO keywords based on theme, platform, and content type
+  const generateKeywords = async (theme: string, platform: string, contentType: string) => {
+    if (!theme) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-seo-data', {
+        body: { theme, platform, contentType }
+      });
+
+      if (error) {
+        console.error("Error generating keywords:", error);
+        return [];
+      }
+
+      return data.keywords || [];
+    } catch (error) {
+      console.error("Error generating keywords:", error);
+      return [];
+    }
+  };
+
   const resetGeneratedContent = () => setGeneratedContent(null);
 
   return {
     loading,
     generatedContent,
     generateContent,
+    generateKeywords,
     resetGeneratedContent
   };
 }

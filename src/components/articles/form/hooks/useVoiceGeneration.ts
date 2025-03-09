@@ -1,14 +1,18 @@
 
-import { toast } from "sonner";
-import { UseFormReturn } from "react-hook-form";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { UseFormReturn } from 'react-hook-form';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Hook for generating voice content for articles
  */
 export function useVoiceGeneration(form: UseFormReturn<any>) {
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const generateVoiceContent = async () => {
     try {
+      setIsGenerating(true);
       toast.info("Generating voice content...");
       
       // Get article content from form
@@ -56,20 +60,23 @@ export function useVoiceGeneration(form: UseFormReturn<any>) {
       }
       
       console.log("Voice generation successful:", data);
+      
+      // In a real implementation with ElevenLabs, we would get a URL or binary audio data
+      // For now, we'll simulate success with a timestamp-based URL
+      const dummyVoiceUrl = `https://example.com/voice/${Date.now()}.mp3`;
+      
+      // Update the form with the voice URL
+      form.setValue("voiceUrl", dummyVoiceUrl);
+      form.setValue("voiceGenerated", true);
+      
       toast.success("Voice content generated successfully!");
-      
-      // Update the form with the voice URL if available
-      if (data.result) {
-        // In a real implementation, this would be a voice file URL
-        form.setValue("voiceUrl", data.result);
-        form.setValue("voiceGenerated", true);
-      }
-      
     } catch (error) {
       console.error("Error generating voice content:", error);
-      toast.error("Failed to generate voice content");
+      toast.error(`Failed to generate voice content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  return { generateVoiceContent };
+  return { generateVoiceContent, isGenerating };
 }

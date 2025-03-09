@@ -22,7 +22,7 @@ serve(async (req) => {
       throw new Error("OpenAI API key not configured");
     }
 
-    const { theme, keywords, contentType, moralLevel, platform, contentLength, tone } = await req.json();
+    const { theme, keywords, contentType, moralLevel, contentLength, tone } = await req.json();
 
     if (!theme) {
       return new Response(
@@ -31,86 +31,25 @@ serve(async (req) => {
       );
     }
 
-    if (!platform) {
-      return new Response(
-        JSON.stringify({ error: "Platform is required" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
-    }
+    console.log(`Generating LinkedIn content: ${contentType}, Moral Level: ${moralLevel}, Length: ${contentLength}, Tone: ${tone || 'informative'}`);
 
-    console.log(`Generating content for ${platform}: ${contentType}, Moral Level: ${moralLevel}, Length: ${contentLength}, Tone: ${tone || 'informative'}`);
-
-    // Check if we need to use the LinkedIn-specific endpoint
-    if (platform === "LinkedIn") {
-      console.log("Redirecting to LinkedIn-specific function");
-      
-      // Call the LinkedIn-specific function
-      const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-linkedin-post`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-        },
-        body: JSON.stringify({
-          theme, 
-          keywords, 
-          contentType, 
-          moralLevel, 
-          contentLength, 
-          tone
-        }),
-      });
-      
-      if (!response.ok) {
-        let errorMessage;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || response.statusText;
-        } catch (e) {
-          errorMessage = response.statusText;
-        }
-        throw new Error(`LinkedIn content generation failed: ${errorMessage}`);
-      }
-      
-      const linkedInContent = await response.json();
-      return new Response(
-        JSON.stringify(linkedInContent),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Determine the content type instruction
+    // Determine the content instruction based on content type
     let contentInstruction = "";
     if (contentType === "article") {
-      contentInstruction = "a comprehensive article";
-    } else if (contentType === "blog_post") {
-      contentInstruction = "an engaging blog post";
+      contentInstruction = "a professional LinkedIn article";
     } else if (contentType === "social_media") {
-      contentInstruction = `a social media post for ${platform}`;
-    } else if (contentType === "youtube_script") {
-      contentInstruction = "a YouTube video script with intro, main sections, and outro";
-    } else if (contentType === "youtube_shorts") {
-      contentInstruction = "a short YouTube script (30-60 seconds)";
-    } else if (contentType === "youtube_description") {
-      contentInstruction = "a YouTube video description with tags";
-    } else if (contentType === "tweet_thread") {
-      contentInstruction = "a Twitter thread (5-7 tweets)";
-    } else if (contentType === "carousel") {
-      contentInstruction = "an Instagram carousel post with 5-7 slides";
-    } else if (contentType === "reels_script") {
-      contentInstruction = "an Instagram Reels script";
+      contentInstruction = "a professional LinkedIn post";
     } else {
-      contentInstruction = `content for ${platform}`;
+      contentInstruction = "professional LinkedIn content";
     }
 
     // Prepare the prompt for OpenAI
-    const systemPrompt = `You are an expert content creator with deep knowledge of The Moral Hierarchy (TMH) framework.
+    const systemPrompt = `You are an expert LinkedIn content creator with deep knowledge of The Moral Hierarchy (TMH) framework.
 Your task is to create ${contentInstruction} about the following theme: "${theme}".
 The content should align with moral level ${moralLevel} of TMH, which corresponds to ${getMoralLevelDescription(moralLevel)}.
 The content length should be ${contentLength} and the tone should be ${tone || 'informative'}.
 ${keywords && keywords.length > 0 ? `Try to incorporate these keywords: ${keywords.join(', ')}.` : ''}
-Format the content appropriately for ${platform}, including appropriate formatting, structure, and style for that platform.
-Include a compelling title and, if appropriate for the platform, a meta description or summary.`;
+Format the content appropriately for LinkedIn, including appropriate line breaks, emojis if appropriate, and a compelling title.`;
 
     const userPrompt = `Please create ${contentInstruction} about: ${theme}`;
 
@@ -170,7 +109,7 @@ Include a compelling title and, if appropriate for the platform, a meta descript
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error generating content:", error);
+    console.error("Error generating LinkedIn content:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Failed to generate content" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

@@ -30,9 +30,19 @@ export function useAIGeneration() {
       return null;
     }
 
+    if (!params.platform) {
+      toast.error('Please select a platform');
+      return null;
+    }
+
+    if (!params.contentType) {
+      toast.error('Please select a content type');
+      return null;
+    }
+
     setLoading(true);
     try {
-      toast.info(`Generating ${params.contentType} with AI...`);
+      toast.info(`Generating ${params.contentType} for ${params.platform} with AI...`);
 
       console.log("Calling generate-article with params:", params);
 

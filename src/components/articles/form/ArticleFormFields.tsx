@@ -11,22 +11,22 @@ import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { useAIGeneration } from "./hooks/useAIGeneration";
 import { Button } from "@/components/ui/button";
 import { FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Mic, Loader2 } from "lucide-react";
+import { Mic, Loader2, Download } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Main ArticleFormFields component now acts as a coordinator
+// Main ArticleFormFields component
 export function ArticleFormFields({ form }) {
   const [contentType, setContentType] = useState(form.watch("contentType") || "");
   const [platform, setPlatform] = useState(form.watch("platform") || "");
   const [contentLength, setContentLength] = useState(form.watch("contentLength") || "medium");
   const [moralLevel, setMoralLevel] = useState(form.watch("moralLevel") || 5);
-  const { generateVoiceContent } = useVoiceGeneration(form);
-  const { loading, generateContent } = useAIGeneration();
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { generateVoiceContent, isGenerating: isGeneratingVoice } = useVoiceGeneration(form);
+  const { loading: isGeneratingContent, generateContent } = useAIGeneration();
   const [error, setError] = useState<string | null>(null);
   const voiceGenerated = form.watch("voiceGenerated") || false;
+  const voiceUrl = form.watch("voiceUrl") || "";
 
   // Preserve form values when selections change
   useEffect(() => {
@@ -42,7 +42,6 @@ export function ArticleFormFields({ form }) {
 
   const handleGenerateContent = async () => {
     try {
-      setIsGenerating(true);
       setError(null);
       
       // Get the current form values to use as input parameters
@@ -58,19 +57,16 @@ export function ArticleFormFields({ form }) {
 
       if (!theme) {
         toast.error("Please enter a theme or description of what you want to generate");
-        setIsGenerating(false);
         return;
       }
 
       if (!platform) {
         toast.error("Please select a platform");
-        setIsGenerating(false);
         return;
       }
 
       if (!contentType) {
         toast.error("Please select a content type");
-        setIsGenerating(false);
         return;
       }
 
@@ -107,16 +103,29 @@ export function ArticleFormFields({ form }) {
         if (content.keywords && content.keywords.length > 0) {
           form.setValue("seoKeywords", content.keywords.join(', '), { shouldDirty: true });
         }
-        
-        toast.success("Content generated successfully!");
       }
     } catch (error: any) {
       console.error("Error generating content:", error);
       setError(error.message || "Failed to generate content");
       toast.error(`Failed to generate content: ${error instanceof Error ? error.message : "Unknown error"}`);
-    } finally {
-      setIsGenerating(false);
     }
+  };
+
+  const handleDownloadVoice = () => {
+    if (!voiceUrl) {
+      toast.error("No voice content available to download");
+      return;
+    }
+
+    // Create a temporary link element and trigger download
+    const link = document.createElement('a');
+    link.href = voiceUrl;
+    link.download = `voice-content-${Date.now()}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Voice content download started");
   };
 
   return (
@@ -157,7 +166,7 @@ export function ArticleFormFields({ form }) {
           <ThemeField form={form} onGenerate={handleGenerateContent} />
         </div>
         
-        <ContentField form={form} isGenerating={isGenerating} onGenerate={handleGenerateContent} />
+        <ContentField form={form} isGenerating={isGeneratingContent} onGenerate={handleGenerateContent} />
       </div>
       
       {form.watch("content") && (
@@ -172,13 +181,26 @@ export function ArticleFormFields({ form }) {
                   type="button" 
                   variant="outline" 
                   onClick={generateVoiceContent}
+                  disabled={isGeneratingVoice}
                   className="flex items-center gap-2"
                 >
-                  <Mic className="w-4 h-4" />
+                  {isGeneratingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
                   {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
                 </Button>
+                
                 {voiceGenerated && (
-                  <span className="text-sm text-green-600">Voice content generated!</span>
+                  <>
+                    <span className="text-sm text-green-600">Voice content generated!</span>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleDownloadVoice}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Voice
+                    </Button>
+                  </>
                 )}
               </div>
             </FormItem>

@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AffiliateDashboard } from "@/components/affiliate/AffiliateDashboard";
 import { AffiliateManagement } from "@/components/affiliate/AffiliateManagement";
@@ -12,32 +13,36 @@ export default function AffiliatesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
+      <AppLayout>
+        <div className="flex h-full items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="mb-6 text-3xl font-bold">Affiliate Program</h1>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="dashboard">Affiliate Dashboard</TabsTrigger>
-          {isAdmin && <TabsTrigger value="management">Affiliate Management</TabsTrigger>}
-        </TabsList>
+    <AppLayout>
+      <div className="container mx-auto">
+        <h1 className="mb-6 text-3xl font-bold">Affiliate Program</h1>
         
-        <TabsContent value="dashboard" className="mt-0">
-          {user?.id && <AffiliateDashboard userId={user.id} />}
-        </TabsContent>
-        
-        {isAdmin && (
-          <TabsContent value="management" className="mt-0">
-            <AffiliateManagement />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="dashboard">Affiliate Dashboard</TabsTrigger>
+            {isAdmin && <TabsTrigger value="management">Affiliate Management</TabsTrigger>}
+          </TabsList>
+          
+          <TabsContent value="dashboard" className="mt-0">
+            {user?.id && <AffiliateDashboard userId={user.id} />}
           </TabsContent>
-        )}
-      </Tabs>
-    </div>
+          
+          {isAdmin && (
+            <TabsContent value="management" className="mt-0">
+              <AffiliateManagement />
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
+    </AppLayout>
   );
 }

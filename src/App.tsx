@@ -1,7 +1,6 @@
 
-import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { AppLayout } from "./components/layout/AppLayout";
 import { Toaster } from "./components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -19,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import Users from "./pages/Users";
 import ArticlesPage from "./pages/articles";
 import AffiliatesPage from "./pages/Affiliates";
+import Trends from "./pages/Trends";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -29,24 +29,23 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <Router>
           <Routes>
-            <Route path="/" element={<AppLayout><Outlet /></AppLayout>}>
-              <Route index element={<Index />} />
-              <Route path="/assessments" element={<Assessments />} />
-              <Route path="/demographics" element={<Demographics />} />
-              <Route path="/content" element={<AIContent />} />
-              <Route path="/insights" element={<AIInsights />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/profile" element={<UserProfile />} />
-              <Route path="/users" element={<Users />} />
-              <Route path="/articles/*" element={<ArticlesPage />} />
-              <Route path="/affiliates" element={<AffiliatesPage />} />
-            </Route>
+            <Route path="/" element={<Index />} />
+            <Route path="/assessments" element={<Assessments />} />
+            <Route path="/demographics" element={<Demographics />} />
+            <Route path="/content" element={<AIContent />} />
+            <Route path="/insights" element={<AIInsights />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/articles/*" element={<ArticlesPage />} />
+            <Route path="/affiliates" element={<AffiliatesPage />} />
+            <Route path="/trends" element={<Trends />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <Toaster />
         </Router>
-        <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
   );

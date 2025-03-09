@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { EdgeFunctionService } from '@/services/api/edgeFunctions';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useVoiceGeneration(form: any) {
   const [isGenerating, setIsGenerating] = useState(false);

@@ -172,21 +172,12 @@ export function useMemeOperations() {
         return;
       }
       
-      // Cast data to proper type to avoid infinite type instantiation
-      // Using a more direct approach without complex type assertions
-      const formattedMemes = data.map(item => {
-        // Manually map the database record to a Meme object using the toMeme function
-        return toMeme({
-          id: item.id,
-          prompt: item.prompt,
-          image_url: item.image_url,
-          meme_text: item.meme_text,
-          platform_tags: item.platform_tags,
-          created_at: item.created_at,
-          user_id: item.user_id,
-          engagement_score: item.engagement_score
-        });
-      });
+      // Fix: Use type assertion to ensure data has all required fields
+      // This avoids the "property does not exist" errors and infinite type instantiation
+      const typedData = data as unknown as MemeDbResponse[];
+      
+      // Now map with the properly typed data
+      const formattedMemes = typedData.map(item => toMeme(item));
       
       setSavedMemes(formattedMemes);
       

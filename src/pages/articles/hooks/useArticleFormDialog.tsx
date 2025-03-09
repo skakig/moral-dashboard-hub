@@ -6,7 +6,7 @@ import { ArticleForm, ArticleFormValues } from "@/components/articles/form";
 import { Article } from "@/types/articles";
 
 interface UseArticleFormDialogProps {
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: ArticleFormValues) => Promise<void>;
 }
 
 export function useArticleFormDialog({

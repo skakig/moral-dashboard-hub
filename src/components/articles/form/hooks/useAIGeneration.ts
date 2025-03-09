@@ -37,20 +37,18 @@ export function useAIGeneration() {
       console.log("Calling generate-article with params:", params);
 
       // Call the generate-article edge function
-      const { data, error, status } = await supabase.functions.invoke('generate-article', {
+      const { data, error } = await supabase.functions.invoke('generate-article', {
         body: params
       });
-
-      console.log("Response status:", status);
       
       if (error) {
         console.error("Error from Supabase function:", error);
-        throw new Error(error.message || `Failed to generate content (Status: ${status})`);
+        throw new Error(error.message || 'Failed to generate content');
       }
 
       if (!data) {
-        console.error("No data returned, status:", status);
-        throw new Error(`No data returned from content generation (Status: ${status})`);
+        console.error("No data returned from function");
+        throw new Error('No data returned from content generation');
       }
 
       console.log("Generated content response:", data);

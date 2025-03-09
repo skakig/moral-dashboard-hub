@@ -1,4 +1,3 @@
-
 import {
   BarChart,
   Bot,
@@ -35,6 +34,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+// Update the sidebar import to use the refactored components
 import {
   Sidebar, 
   SidebarContent, 

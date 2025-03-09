@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ArticleFormValues } from "@/components/articles/form";
 import { mapFormToDbArticle } from "./utils/articleMappers";
+import { useUser } from "@/hooks/useUser";
 
 /**
  * Hook for article CRUD operations
  */
 export function useArticleMutations() {
   const queryClient = useQueryClient();
+  const { user } = useUser();
 
   // Create new article
   const createArticle = useMutation({
@@ -42,7 +44,7 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error creating article:", error);
-      toast.error("Failed to create article");
+      toast.error(`Failed to create article: ${error instanceof Error ? error.message : "Unknown error"}`);
     },
   });
 
@@ -78,7 +80,7 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error updating article:", error);
-      toast.error("Failed to update article");
+      toast.error(`Failed to update article: ${error instanceof Error ? error.message : "Unknown error"}`);
     },
   });
 
@@ -100,7 +102,7 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error deleting article:", error);
-      toast.error("Failed to delete article");
+      toast.error(`Failed to delete article: ${error instanceof Error ? error.message : "Unknown error"}`);
     },
   });
 

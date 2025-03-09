@@ -1,5 +1,7 @@
 
 import { ArticleFormValues } from "@/components/articles/form";
+import { useUser } from "@/hooks/useUser";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Maps form values to database fields for article storage

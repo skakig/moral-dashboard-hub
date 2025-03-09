@@ -4,20 +4,18 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { StepHeader } from "../StepHeader";
-import { StepControls } from "../StepControls";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
   const [level, setLevel] = useState<number>(data?.moralLevel || 5);
   const [tags, setTags] = useState<string[]>(data?.tags || []);
   const [tag, setTag] = useState("");
   
-  const handleSliderChange = (value: number[]) => {
-    // Convert to a number explicitly
-    const newLevel = Number(value[0]);
+  const handleLevelChange = (value: string) => {
+    const newLevel = parseInt(value, 10);
     setLevel(newLevel);
     onDataChange({ ...data, moralLevel: newLevel });
   };
@@ -46,15 +44,19 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
   
   // When we interpret the moral level with levels
   const getMoralLevelText = (level: number): string => {
-    if (level <= 1) return "Level 1: Survival Morality";
-    if (level > 1 && level <= 2) return "Level 2: Self-Interest";
-    if (level > 2 && level <= 3) return "Level 3: Social Contract";
-    if (level > 3 && level <= 4) return "Level 4: Fairness";
-    if (level > 4 && level <= 5) return "Level 5: Empathy";
-    if (level > 5 && level <= 6) return "Level 6: Altruism";
-    if (level > 6 && level <= 7) return "Level 7: Integrity";
-    if (level > 7 && level <= 8) return "Level 8: Virtue";
-    return "Level 9: Self-Actualization"; 
+    const levelTexts = {
+      1: "Level 1: Survival Morality",
+      2: "Level 2: Self-Interest",
+      3: "Level 3: Social Contract",
+      4: "Level 4: Fairness",
+      5: "Level 5: Empathy",
+      6: "Level 6: Altruism",
+      7: "Level 7: Integrity",
+      8: "Level 8: Virtue",
+      9: "Level 9: Self-Actualization"
+    };
+    
+    return levelTexts[level as keyof typeof levelTexts] || "Level 5: Empathy";
   };
 
   return (
@@ -62,26 +64,30 @@ export function ConfigStep({ data, onDataChange, onNext, onBack }: any) {
       <StepHeader 
         title="Content Configuration" 
         description="Customize your content settings"
-        progress={50} // Adding the required progress prop
+        progress={50}
       />
       
       <div>
         <Label htmlFor="moral-level" className="block mb-2">
-          Moral Level: <span className="font-medium">{getMoralLevelText(level)}</span>
+          Moral Level
         </Label>
-        <Slider 
-          id="moral-level"
-          min={1} 
-          max={9} 
-          step={1} 
-          value={[level]} 
-          onValueChange={handleSliderChange}
-          className="w-full"
-        />
-        <div className="flex justify-between mt-1 text-xs text-gray-500">
-          <span>Level 1</span>
-          <span>Level 9</span>
-        </div>
+        <Select
+          value={String(level)}
+          onValueChange={handleLevelChange}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a moral level">
+              {getMoralLevelText(level)}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((l) => (
+              <SelectItem key={l} value={String(l)}>
+                {getMoralLevelText(l)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         
         <Card className="mt-4 bg-muted/50">
           <CardContent className="pt-6">

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Mic, Loader2, Download, Play, Pause } from "lucide-react";
@@ -44,86 +44,116 @@ export function VoiceContentSection({
   setIsPlaying,
   downloadAudio
 }: VoiceContentSectionProps) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <FormField
       control={form.control}
       name="voiceGenerated"
       render={() => (
         <FormItem>
-          <FormLabel>Voice Content</FormLabel>
-          <div className="flex flex-col space-y-4">
-            <div className="flex items-center space-x-3">
-              <FormLabel className="min-w-24">Voice Style:</FormLabel>
-              <Select 
-                defaultValue={selectedVoice} 
-                onValueChange={setSelectedVoice}
-              >
-                <FormControl>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select voice style" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {voiceOptions.map(voice => (
-                    <SelectItem key={voice.id} value={voice.id}>
-                      {voice.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleGenerateVoice}
-                disabled={isGeneratingVoice}
-                className="flex items-center gap-2"
-              >
-                {isGeneratingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-                {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
-              </Button>
+          <FormLabel className="flex justify-between items-center">
+            <span>Voice Content</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setExpanded(!expanded)}
+              className="h-6 px-2 text-xs"
+            >
+              {expanded ? 'Collapse' : 'Expand'}
+            </Button>
+          </FormLabel>
+          {expanded && (
+            <div className="flex flex-col space-y-4 border p-4 rounded-md bg-card">
+              <div className="flex items-center space-x-3">
+                <FormLabel className="min-w-24">Voice Style:</FormLabel>
+                <Select 
+                  defaultValue={selectedVoice} 
+                  onValueChange={setSelectedVoice}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select voice style" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {voiceOptions.map(voice => (
+                      <SelectItem key={voice.id} value={voice.id}>
+                        {voice.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
-              {voiceGenerated && (
-                <>
-                  <span className="text-sm text-green-600">Voice content generated!</span>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={togglePlayPause}
-                    className="flex items-center gap-2"
-                  >
-                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    {isPlaying ? "Pause" : "Play"}
-                  </Button>
-                  
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={downloadAudio}
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </Button>
-                </>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleGenerateVoice}
+                  disabled={isGeneratingVoice || !form.getValues("content")}
+                  className="flex items-center gap-2"
+                >
+                  {isGeneratingVoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                  {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
+                </Button>
+                
+                {voiceGenerated && (
+                  <>
+                    <span className="text-sm text-green-600">Voice content generated!</span>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={togglePlayPause}
+                      className="flex items-center gap-2"
+                    >
+                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      {isPlaying ? "Pause" : "Play"}
+                    </Button>
+                    
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={downloadAudio}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </Button>
+                  </>
+                )}
+              </div>
+              
+              {voiceGenerated && audioUrl && (
+                <div className="mt-2 p-2 border rounded bg-muted/50">
+                  <audio 
+                    controls 
+                    src={audioUrl} 
+                    className="w-full" 
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
+                  />
+                </div>
               )}
             </div>
-            
-            {voiceGenerated && audioUrl && (
-              <div className="mt-2 p-2 border rounded bg-muted/50">
-                <audio 
-                  controls 
-                  src={audioUrl} 
-                  className="w-full" 
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
-                />
-              </div>
-            )}
-          </div>
+          )}
+          
+          {!expanded && voiceGenerated && (
+            <div className="flex items-center space-x-2 text-sm">
+              <span className="text-green-600">✓ Voice content generated</span>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm"
+                onClick={togglePlayPause}
+                className="flex items-center gap-1 h-6 px-2"
+              >
+                {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                {isPlaying ? "Pause" : "Play"}
+              </Button>
+            </div>
+          )}
         </FormItem>
       )}
     />

@@ -104,7 +104,7 @@ export function useContentGeneration(
         if (autoGenerateOptions.image) {
           const imagePrompt = `Create a high-quality featured image for: ${content.title}. Platform: ${platform}, Content type: ${contentType}`;
           
-          const imageUrl = await generateImage(imagePrompt, platform);
+          const imageUrl = await generateImage(imagePrompt);
           if (imageUrl) {
             form.setValue("featuredImage", imageUrl, { shouldDirty: true });
             toast.success("Featured image generated successfully");

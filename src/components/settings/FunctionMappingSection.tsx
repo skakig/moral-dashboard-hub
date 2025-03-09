@@ -85,8 +85,7 @@ export function FunctionMappingSection() {
   const handleCreateMapping = () => {
     setCurrentMapping({
       function_name: "",
-      preferred_service: availableServices[0],
-      fallback_service: null,
+      service_name: availableServices[0],
       description: ""
     });
     setDialogOpen(true);
@@ -115,8 +114,8 @@ export function FunctionMappingSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!currentMapping || !currentMapping.function_name || !currentMapping.preferred_service) {
-      toast.error("Function name and preferred service are required");
+    if (!currentMapping || !currentMapping.function_name || !currentMapping.service_name) {
+      toast.error("Function name and service are required");
       return;
     }
     
@@ -126,8 +125,7 @@ export function FunctionMappingSection() {
       await updateFunctionMapping({
         id: currentMapping.id,
         function_name: currentMapping.function_name,
-        preferred_service: currentMapping.preferred_service,
-        fallback_service: currentMapping.fallback_service,
+        service_name: currentMapping.service_name,
         description: currentMapping.description
       });
       
@@ -198,8 +196,7 @@ export function FunctionMappingSection() {
             <TableHeader>
               <TableRow>
                 <TableHead>Function Name</TableHead>
-                <TableHead>Preferred Service</TableHead>
-                <TableHead>Fallback Service</TableHead>
+                <TableHead>Service</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -208,8 +205,7 @@ export function FunctionMappingSection() {
               {functionMappings.map((mapping) => (
                 <TableRow key={mapping.id}>
                   <TableCell className="font-medium">{mapping.function_name}</TableCell>
-                  <TableCell>{mapping.preferred_service}</TableCell>
-                  <TableCell>{mapping.fallback_service || "-"}</TableCell>
+                  <TableCell>{mapping.service_name}</TableCell>
                   <TableCell className="max-w-xs truncate">{mapping.description || "-"}</TableCell>
                   <TableCell className="text-right">
                     <Button
@@ -262,45 +258,20 @@ export function FunctionMappingSection() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="preferred_service">Preferred Service</Label>
+                <Label htmlFor="service_name">Service</Label>
                 <Select
-                  value={currentMapping?.preferred_service || ""}
+                  value={currentMapping?.service_name || ""}
                   onValueChange={(value) =>
                     setCurrentMapping({
                       ...currentMapping,
-                      preferred_service: value,
+                      service_name: value,
                     })
                   }
                 >
-                  <SelectTrigger id="preferred_service">
+                  <SelectTrigger id="service_name">
                     <SelectValue placeholder="Select a service" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableServices.map((service) => (
-                      <SelectItem key={service} value={service}>
-                        {service}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="fallback_service">Fallback Service (Optional)</Label>
-                <Select
-                  value={currentMapping?.fallback_service || ""}
-                  onValueChange={(value) =>
-                    setCurrentMapping({
-                      ...currentMapping,
-                      fallback_service: value,
-                    })
-                  }
-                >
-                  <SelectTrigger id="fallback_service">
-                    <SelectValue placeholder="Select a fallback service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
                     {availableServices.map((service) => (
                       <SelectItem key={service} value={service}>
                         {service}

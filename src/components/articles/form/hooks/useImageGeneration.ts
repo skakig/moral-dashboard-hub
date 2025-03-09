@@ -7,7 +7,7 @@ export function useImageGeneration() {
   const [loading, setLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
-  const generateImage = async (prompt: string) => {
+  const generateImage = async (prompt: string, platform?: string) => {
     if (!prompt) {
       toast.error('Please enter a prompt for image generation');
       return null;

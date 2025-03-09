@@ -25,7 +25,16 @@ export function useArticleGeneration() {
       setLoading(true);
       toast.info(`Generating content for ${params.contentType}...`);
       
-      const response = await EdgeFunctionService.generateArticle(params);
+      // Use the existing generateContent function instead of non-existent generateArticle
+      const response = await EdgeFunctionService.generateContent({
+        prompt: params.theme,
+        content_type: params.contentType,
+        moral_level: params.moralLevel,
+        platform: params.platform,
+        length: params.contentLength,
+        tone: params.tone,
+        keywords: params.keywords
+      });
       
       if (!response) {
         return null;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -64,7 +63,6 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
     try {
       // Use theme or title as prompt
       const theme = form.getValues("theme") || form.getValues("title") || "Featured image";
-      const platform = form.getValues("platform");
       
       // Include content excerpt for better context
       const content = form.getValues("content");
@@ -77,8 +75,8 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
       
       const prompt = `${theme}${contentSummary ? ". Content summary: " + contentSummary : ""}`;
       
-      // Generate image with platform dimensions
-      const result = await generateImage(prompt, platform);
+      // Generate image
+      const result = await generateImage(prompt);
       
       if (result) {
         form.setValue("featuredImage", result, { shouldDirty: true });

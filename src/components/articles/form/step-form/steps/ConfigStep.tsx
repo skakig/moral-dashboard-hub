@@ -1,130 +1,160 @@
 
-import React from 'react';
-import { FormField, FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
-import { Slider } from '@/components/ui/slider';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
+import React from "react";
+import { UseFormReturn } from "react-hook-form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { ArticleFormValues } from "../types";
 
-export function ConfigStep({ form, setContentLength }) {
-  const moralLevel = form.watch('moralLevel');
-  const formattedMoralLevel = typeof moralLevel === 'string' ? parseInt(moralLevel, 10) : moralLevel;
+interface ConfigStepProps {
+  form: UseFormReturn<ArticleFormValues>;
+  setContentLength: (value: string) => void;
+}
+
+export function ConfigStep({ form, setContentLength }: ConfigStepProps) {
+  const handleSliderChange = (value: number[]) => {
+    form.setValue("moralLevel", value[0], { shouldDirty: true });
+  };
+
+  const getMoralLevelColor = (value: number | string): string => {
+    const level = Number(value);
+    
+    if (level <= 3) {
+      return "bg-red-500"; // Low moral level
+    } else if (level > 3 && level <= 6) {
+      return "bg-yellow-500"; // Medium moral level
+    } else {
+      return "bg-green-500"; // High moral level
+    }
+  };
+
+  const getMoralLevelLabel = (value: number | string): string => {
+    const level = Number(value);
+
+    switch (level) {
+      case 1:
+        return "Survival Ethics";
+      case 2:
+        return "Self-Interest";
+      case 3:
+        return "Social Conformity";
+      case 4:
+        return "Law & Order";
+      case 5:
+        return "Human Rights";
+      case 6:
+        return "Empathetic Morality";
+      case 7:
+        return "Universal Ethics";
+      case 8:
+        return "Holistic Morality";
+      case 9:
+        return "Transcendent Morality";
+      default:
+        return `Level ${level}`;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium">Content Configuration</h3>
-        <Alert variant="outline" className="bg-muted/50">
-          <InfoIcon className="h-4 w-4 mr-2" />
-          <AlertDescription>
-            These settings control the tone, length, and moral complexity of your content.
-          </AlertDescription>
-        </Alert>
-      </div>
-      
       <FormField
         control={form.control}
         name="tone"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Tone</FormLabel>
-            <RadioGroup 
-              onValueChange={field.onChange} 
-              defaultValue={field.value || "informative"} 
-              className="grid grid-cols-3 gap-2"
+            <FormLabel>Tone of Voice</FormLabel>
+            <Select
+              onValueChange={(value) => {
+                field.onChange(value);
+                form.trigger("tone");
+              }}
+              value={field.value}
+              defaultValue="informative"
             >
-              <FormItem className="flex items-center space-x-2 space-y-0">
-                <FormControl>
-                  <RadioGroupItem value="informative" id="informative" />
-                </FormControl>
-                <FormLabel htmlFor="informative" className="font-normal">
-                  Informative
-                </FormLabel>
-              </FormItem>
-              <FormItem className="flex items-center space-x-2 space-y-0">
-                <FormControl>
-                  <RadioGroupItem value="conversational" id="conversational" />
-                </FormControl>
-                <FormLabel htmlFor="conversational" className="font-normal">
-                  Conversational
-                </FormLabel>
-              </FormItem>
-              <FormItem className="flex items-center space-x-2 space-y-0">
-                <FormControl>
-                  <RadioGroupItem value="inspirational" id="inspirational" />
-                </FormControl>
-                <FormLabel htmlFor="inspirational" className="font-normal">
-                  Inspirational
-                </FormLabel>
-              </FormItem>
-            </RadioGroup>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a tone" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="informative">Informative</SelectItem>
+                <SelectItem value="conversational">Conversational</SelectItem>
+                <SelectItem value="professional">Professional</SelectItem>
+                <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                <SelectItem value="persuasive">Persuasive</SelectItem>
+                <SelectItem value="empathetic">Empathetic</SelectItem>
+                <SelectItem value="authoritative">Authoritative</SelectItem>
+                <SelectItem value="humorous">Humorous</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormDescription>
+              Choose the tone for your content
+            </FormDescription>
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={form.control}
         name="contentLength"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Content Length</FormLabel>
-            <Select 
+            <Select
               onValueChange={(value) => {
                 field.onChange(value);
                 setContentLength(value);
+                form.trigger("contentLength");
               }}
-              defaultValue={field.value || "medium"}
+              value={field.value}
+              defaultValue="medium"
             >
               <FormControl>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select content length" />
+                  <SelectValue placeholder="Select a length" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="short">Short (300-500 words)</SelectItem>
-                <SelectItem value="medium">Medium (500-800 words)</SelectItem>
-                <SelectItem value="long">Long (800-1200 words)</SelectItem>
+                <SelectItem value="short">Short (~250 words)</SelectItem>
+                <SelectItem value="medium">Medium (~500 words)</SelectItem>
+                <SelectItem value="long">Long (~1000 words)</SelectItem>
+                <SelectItem value="comprehensive">Comprehensive (1500+ words)</SelectItem>
               </SelectContent>
             </Select>
+            <FormDescription>
+              Choose how detailed your content should be
+            </FormDescription>
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={form.control}
         name="moralLevel"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Moral Level</FormLabel>
-            <FormControl>
-              <div className="space-y-2">
-                <Slider
-                  min={1}
-                  max={9}
-                  step={1}
-                  value={[formattedMoralLevel || 5]}
-                  onValueChange={(values) => field.onChange(values[0])}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <div>Basic</div>
-                  <div>Complex</div>
-                </div>
-                <div className="text-center text-sm">
-                  {formattedMoralLevel === 1 && 'Level 1: Survival Morality'}
-                  {formattedMoralLevel === 2 && 'Level 2: Self-Interest'}
-                  {formattedMoralLevel === 3 && 'Level 3: Social Contract'}
-                  {formattedMoralLevel === 4 && 'Level 4: Fairness'}
-                  {formattedMoralLevel === 5 && 'Level 5: Empathy'}
-                  {formattedMoralLevel === 6 && 'Level 6: Altruism'}
-                  {formattedMoralLevel === 7 && 'Level 7: Integrity'}
-                  {formattedMoralLevel === 8 && 'Level 8: Virtue'}
-                  {formattedMoralLevel === 9 && 'Level 9: Self-Actualization'}
-                </div>
+            <FormLabel>
+              <div className="flex justify-between items-center">
+                <span>Moral Complexity Level</span>
+                <Badge variant="secondary" className={getMoralLevelColor(field.value)}>
+                  {getMoralLevelLabel(field.value)}
+                </Badge>
               </div>
+            </FormLabel>
+            <FormControl>
+              <Slider
+                defaultValue={[Number(field.value) || 5]}
+                max={9}
+                min={1}
+                step={1}
+                onValueChange={handleSliderChange}
+                value={[Number(field.value) || 5]}
+              />
             </FormControl>
             <FormDescription>
-              Choose the moral complexity level (1-9) for your content.
+              Select the moral level of the content (1-9)
             </FormDescription>
           </FormItem>
         )}

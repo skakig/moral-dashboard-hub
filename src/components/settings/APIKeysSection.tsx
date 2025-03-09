@@ -8,26 +8,55 @@ import { APIRateLimits } from "./APIRateLimits";
 export function APIKeysSection() {
   const [activeTab, setActiveTab] = useState("api-keys");
   
-  // Mock data for usage stats and rate limits
+  // Mock data for usage stats and rate limits that match the expected types
   const usageStats = {
-    serviceUsage: [
-      { service: "OpenAI", requests: 250, successRate: 98.5 },
-      { service: "ElevenLabs", requests: 120, successRate: 95.2 },
-      { service: "StableDiffusion", requests: 85, successRate: 97.0 }
-    ],
-    totalRequests: 455,
-    averageSuccessRate: 96.9,
-    lastUpdated: "2023-07-15T14:30:00Z"
+    byService: {
+      "OpenAI": { requests: 250, successRate: 98.5, cost: 12.50 },
+      "ElevenLabs": { requests: 120, successRate: 95.2, cost: 8.75 },
+      "StableDiffusion": { requests: 85, successRate: 97.0, cost: 5.30 }
+    },
+    byCategory: {
+      "Text Generation": { requests: 150, successRate: 98.0, cost: 7.50 },
+      "Image Generation": { requests: 85, successRate: 97.0, cost: 5.30 },
+      "Voice Generation": { requests: 120, successRate: 95.2, cost: 8.75 },
+      "Analysis": { requests: 100, successRate: 99.0, cost: 5.00 }
+    }
   };
   
-  const rateLimits = {
-    limits: [
-      { service: "OpenAI", hourly: 100, daily: 1000, monthly: 10000, currentHourly: 12, currentDaily: 250, currentMonthly: 2500 },
-      { service: "ElevenLabs", hourly: 50, daily: 500, monthly: 5000, currentHourly: 5, currentDaily: 120, currentMonthly: 1200 },
-      { service: "StableDiffusion", hourly: 30, daily: 300, monthly: 3000, currentHourly: 8, currentDaily: 85, currentMonthly: 900 }
-    ],
-    isLoading: false
-  };
+  const rateLimits = [
+    { 
+      id: "1", 
+      service: "OpenAI", 
+      limit_type: "hourly", 
+      limit_value: 100, 
+      current_usage: 12,
+      reset_time: new Date(Date.now() + 3600000).toISOString()
+    },
+    { 
+      id: "2", 
+      service: "OpenAI", 
+      limit_type: "daily", 
+      limit_value: 1000, 
+      current_usage: 250,
+      reset_time: new Date(Date.now() + 86400000).toISOString()
+    },
+    { 
+      id: "3", 
+      service: "ElevenLabs", 
+      limit_type: "hourly", 
+      limit_value: 50, 
+      current_usage: 5,
+      reset_time: new Date(Date.now() + 3600000).toISOString()
+    },
+    { 
+      id: "4", 
+      service: "StableDiffusion", 
+      limit_type: "daily", 
+      limit_value: 300, 
+      current_usage: 85,
+      reset_time: new Date(Date.now() + 86400000).toISOString()
+    }
+  ];
   
   return (
     <div className="space-y-4">

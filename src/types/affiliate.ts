@@ -4,18 +4,18 @@ export interface AffiliateProfile {
   user_id: string;
   name: string;
   email: string;
-  status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  status: string;
   commission_rate: number;
   referral_code: string;
   earnings_total: number;
   earnings_paid: number;
   earnings_pending: number;
   approved_at: string | null;
-  preferred_payout_method: 'stripe' | 'paypal' | 'crypto' | 'bank';
-  payout_details: Record<string, any>;
+  preferred_payout_method: string;
+  payout_details: any;
   created_at: string;
   updated_at: string;
-  social_profiles: Record<string, any>;
+  social_profiles: any;
   tier: string;
 }
 
@@ -24,7 +24,7 @@ export interface Referral {
   affiliate_id: string;
   referred_user_id: string | null;
   referral_code: string;
-  status: 'pending' | 'converted' | 'expired';
+  status: string;
   ip_address: string | null;
   user_agent: string | null;
   referrer_url: string | null;
@@ -40,21 +40,21 @@ export interface Commission {
   affiliate_id: string;
   referral_id: string | null;
   amount: number;
-  status: 'pending' | 'approved' | 'paid' | 'rejected';
+  status: string;
   created_at: string;
   updated_at: string;
   paid_at: string | null;
   transaction_id: string | null;
-  commission_type: 'one_time' | 'recurring';
+  commission_type: string;
 }
 
 export interface PayoutRequest {
   id: string;
   affiliate_id: string;
   amount: number;
-  status: 'pending' | 'approved' | 'paid' | 'rejected';
+  status: string;
   payout_method: string;
-  payout_details: Record<string, any>;
+  payout_details: any;
   created_at: string;
   updated_at: string;
   processed_at: string | null;
@@ -77,11 +77,23 @@ export interface PromoCode {
   usage_count: number;
 }
 
+export interface AffiliateTier {
+  id: string;
+  name: string;
+  description: string | null;
+  commission_rate: number;
+  min_earnings: number;
+  min_referrals: number;
+  benefits: any;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MarketingMaterial {
   id: string;
   title: string;
   description: string | null;
-  material_type: 'banner' | 'social_post' | 'email_template' | 'social_copy';
+  material_type: string;
   asset_url: string | null;
   is_active: boolean;
   created_at: string;
@@ -93,8 +105,8 @@ export interface AffiliateAchievement {
   name: string;
   description: string;
   icon_url: string | null;
-  criteria: Record<string, any>;
-  reward_type: 'commission_boost' | 'one_time_bonus' | null;
+  criteria: any;
+  reward_type: string | null;
   reward_amount: number | null;
   reward_duration: number | null;
   is_active: boolean;
@@ -102,28 +114,17 @@ export interface AffiliateAchievement {
   updated_at: string;
 }
 
-export interface AffiliateEarnedAchievement {
+export interface EarnedAchievement {
   id: string;
   affiliate_id: string;
   achievement_id: string;
   earned_at: string;
   reward_applied: boolean;
   reward_expires_at: string | null;
+  achievement: AffiliateAchievement;
 }
 
-export interface AffiliateTier {
-  id: string;
-  name: string;
-  description: string | null;
-  commission_rate: number;
-  min_earnings: number;
-  min_referrals: number;
-  benefits: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AffiliateLeaderboardEntry {
+export interface AffiliateLeaderboardItem {
   id: string;
   name: string;
   tier: string;
@@ -131,12 +132,4 @@ export interface AffiliateLeaderboardEntry {
   total_conversions: number;
   achievements_count: number;
   rank: number;
-}
-
-export interface MonthlyTopPerformer {
-  id: string;
-  name: string;
-  month_earnings: number;
-  month: string;
-  month_rank: number;
 }

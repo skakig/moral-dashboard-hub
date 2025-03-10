@@ -2,9 +2,10 @@
 import React from "react";
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { Mic, Loader2, Download, Play, Pause } from "lucide-react";
+import { Mic, Loader2, Download, Play, Pause, Volume2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UseFormReturn } from "react-hook-form";
+import { Slider } from "@/components/ui/slider";
 
 // Voice options with IDs from ElevenLabs
 export const voiceOptions = [
@@ -44,6 +45,18 @@ export function VoiceContentSection({
   setIsPlaying,
   downloadAudio
 }: VoiceContentSectionProps) {
+  const [volume, setVolume] = React.useState(1);
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+
+  // Update volume when slider changes
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0];
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  };
+
   return (
     <FormField
       control={form.control}
@@ -55,7 +68,7 @@ export function VoiceContentSection({
             <div className="flex items-center space-x-3">
               <FormLabel className="min-w-24">Voice Style:</FormLabel>
               <Select 
-                defaultValue={selectedVoice} 
+                value={selectedVoice} 
                 onValueChange={setSelectedVoice}
               >
                 <FormControl>
@@ -112,15 +125,34 @@ export function VoiceContentSection({
             </div>
             
             {voiceGenerated && audioUrl && (
-              <div className="mt-2 p-2 border rounded bg-muted/50">
-                <audio 
-                  controls 
-                  src={audioUrl} 
-                  className="w-full" 
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
-                />
+              <div className="mt-4 p-4 border rounded-lg bg-muted/30">
+                <div className="flex flex-col space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Volume2 className="w-4 h-4 text-muted-foreground" />
+                    <Slider
+                      value={[volume]} 
+                      min={0} 
+                      max={1} 
+                      step={0.01}
+                      onValueChange={handleVolumeChange}
+                      className="w-32" 
+                    />
+                  </div>
+                
+                  <audio 
+                    ref={audioRef}
+                    controls 
+                    src={audioUrl} 
+                    className="w-full" 
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
+                  />
+                </div>
+                
+                <div className="text-xs text-muted-foreground mt-3">
+                  {form.getValues("voiceFileName") || "voice-file.mp3"}
+                </div>
               </div>
             )}
           </div>

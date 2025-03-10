@@ -494,6 +494,7 @@ export type Database = {
       }
       articles: {
         Row: {
+          author_id: string | null
           category: string
           content: string
           created_at: string | null
@@ -501,14 +502,20 @@ export type Database = {
           featured_image: string | null
           id: string
           meta_description: string | null
+          moral_level: number | null
           publish_date: string | null
           seo_keywords: string[] | null
           status: string
           title: string
           updated_at: string | null
           view_count: number | null
+          voice_base64: string | null
+          voice_file_name: string | null
+          voice_generated: boolean | null
+          voice_url: string | null
         }
         Insert: {
+          author_id?: string | null
           category: string
           content: string
           created_at?: string | null
@@ -516,14 +523,20 @@ export type Database = {
           featured_image?: string | null
           id?: string
           meta_description?: string | null
+          moral_level?: number | null
           publish_date?: string | null
           seo_keywords?: string[] | null
           status?: string
           title: string
           updated_at?: string | null
           view_count?: number | null
+          voice_base64?: string | null
+          voice_file_name?: string | null
+          voice_generated?: boolean | null
+          voice_url?: string | null
         }
         Update: {
+          author_id?: string | null
           category?: string
           content?: string
           created_at?: string | null
@@ -531,12 +544,17 @@ export type Database = {
           featured_image?: string | null
           id?: string
           meta_description?: string | null
+          moral_level?: number | null
           publish_date?: string | null
           seo_keywords?: string[] | null
           status?: string
           title?: string
           updated_at?: string | null
           view_count?: number | null
+          voice_base64?: string | null
+          voice_file_name?: string | null
+          voice_generated?: boolean | null
+          voice_url?: string | null
         }
         Relationships: []
       }
@@ -662,6 +680,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      branding_settings: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          facebook_page: string | null
+          id: string
+          instagram_handle: string | null
+          tagline: string | null
+          tiktok_handle: string | null
+          twitter_handle: string | null
+          updated_at: string | null
+          website_url: string | null
+          youtube_channel: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          facebook_page?: string | null
+          id?: string
+          instagram_handle?: string | null
+          tagline?: string | null
+          tiktok_handle?: string | null
+          twitter_handle?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+          youtube_channel?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          facebook_page?: string | null
+          id?: string
+          instagram_handle?: string | null
+          tagline?: string | null
+          tiktok_handle?: string | null
+          twitter_handle?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+          youtube_channel?: string | null
+        }
+        Relationships: []
       }
       commission_tiers: {
         Row: {

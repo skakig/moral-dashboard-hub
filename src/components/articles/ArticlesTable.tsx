@@ -27,7 +27,10 @@ import {
   Trash, 
   Calendar, 
   Share2,
-  ExternalLink 
+  ExternalLink,
+  Volume,
+  Play,
+  FileAudio
 } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -36,11 +39,23 @@ interface ArticlesTableProps {
   articles: Article[];
   onEdit: (article: Article) => void;
   onDelete: (articleId: string) => void;
+  onPublish?: (article: Article) => void;
+  onView?: (article: Article) => void;
 }
 
-export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps) {
+export function ArticlesTable({ 
+  articles, 
+  onEdit, 
+  onDelete,
+  onPublish,
+  onView
+}: ArticlesTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<Article | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = useState<HTMLAudioElement | null>(null);
 
   const handleDeleteClick = (article: Article) => {
     setArticleToDelete(article);
@@ -52,6 +67,39 @@ export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps
       onDelete(articleToDelete.id);
       setDeleteDialogOpen(false);
     }
+  };
+
+  const handleViewClick = (article: Article) => {
+    if (onView) {
+      onView(article);
+    } else {
+      // If no onView handler, open a preview dialog
+      setPreviewArticle(article);
+      setPreviewDialogOpen(true);
+    }
+  };
+
+  const handlePublishClick = (article: Article) => {
+    if (onPublish) {
+      onPublish(article);
+    }
+  };
+
+  const toggleAudioPlayback = () => {
+    if (!previewArticle?.voice_url) return;
+    
+    if (audioRef[0]) {
+      if (isAudioPlaying) {
+        audioRef[0].pause();
+      } else {
+        audioRef[0].play();
+      }
+      setIsAudioPlaying(!isAudioPlaying);
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsAudioPlaying(false);
   };
 
   const getStatusBadge = (status: string) => {
@@ -108,6 +156,12 @@ export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps
                   <div className="font-medium">{article.title}</div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Views: {article.view_count || 0}
+                    {article.voice_generated && (
+                      <span className="ml-2 inline-flex items-center">
+                        <FileAudio className="h-3 w-3 mr-1" />
+                        Voice
+                      </span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>{article.category}</TableCell>
@@ -137,14 +191,23 @@ export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps
                         <FileEdit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewClick(article)}>
                         <ExternalLink className="mr-2 h-4 w-4" />
                         View
                       </DropdownMenuItem>
                       {article.status !== "published" && (
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handlePublishClick(article)}>
                           <Calendar className="mr-2 h-4 w-4" />
                           Publish Now
+                        </DropdownMenuItem>
+                      )}
+                      {article.voice_generated && (
+                        <DropdownMenuItem onClick={() => {
+                          setPreviewArticle(article);
+                          setPreviewDialogOpen(true);
+                        }}>
+                          <Volume className="mr-2 h-4 w-4" />
+                          Play Audio
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem>
@@ -168,6 +231,7 @@ export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps
         </TableBody>
       </Table>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -183,6 +247,71 @@ export function ArticlesTable({ articles, onEdit, onDelete }: ArticlesTableProps
             <Button variant="destructive" onClick={confirmDelete}>
               Delete
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Article Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{previewArticle?.title}</DialogTitle>
+          </DialogHeader>
+
+          {previewArticle?.featured_image && (
+            <div className="aspect-video w-full overflow-hidden rounded-lg mb-4">
+              <img 
+                src={previewArticle.featured_image} 
+                alt={previewArticle.title} 
+                className="object-cover w-full h-full"
+              />
+            </div>
+          )}
+
+          {previewArticle?.voice_url && (
+            <div className="mb-4 p-3 bg-muted rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={toggleAudioPlayback}
+                  className="flex items-center space-x-1"
+                >
+                  {isAudioPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  <span>{isAudioPlaying ? "Pause" : "Play"} Audio</span>
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {previewArticle.voice_file_name || "audio.mp3"}
+                </span>
+              </div>
+              <audio 
+                ref={(el) => audioRef[0] = el}
+                src={previewArticle.voice_url} 
+                onEnded={handleAudioEnded}
+                className="hidden" 
+              />
+            </div>
+          )}
+
+          <div className="prose prose-sm max-w-none">
+            {previewArticle?.content && (
+              <div dangerouslySetInnerHTML={{ __html: previewArticle.content.replace(/\n/g, '<br />') }} />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
+              Close
+            </Button>
+            {previewArticle && (
+              <Button variant="default" onClick={() => {
+                setPreviewDialogOpen(false);
+                onEdit(previewArticle);
+              }}>
+                <FileEdit className="mr-2 h-4 w-4" />
+                Edit Article
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

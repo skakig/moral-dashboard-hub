@@ -41,7 +41,7 @@ export function useFetchMemes() {
         throw fetchError;
       }
       
-      if (!data || data.length ===.length === 0) {
+      if (!data || data.length === 0) {
         setSavedMemes([]);
         return;
       }

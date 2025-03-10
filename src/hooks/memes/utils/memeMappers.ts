@@ -7,32 +7,45 @@ import { logError } from './errorLogger';
  * This simplifies type handling and avoids recursive type issues
  */
 export function dbRecordToMeme(dbRecord: any): Meme {
-  // Create a base meme object with default values
-  const meme: Meme = {
-    id: dbRecord.id,
-    prompt: dbRecord.prompt || "",
-    imageUrl: dbRecord.image_url || "",
-    topText: "",
-    bottomText: "",
-    platform: Array.isArray(dbRecord.platform_tags) ? dbRecord.platform_tags[0] : undefined,
-    hashtags: Array.isArray(dbRecord.platform_tags) ? dbRecord.platform_tags.slice(1) : [],
-    created_at: dbRecord.created_at,
-    user_id: dbRecord.user_id,
-    engagement_score: dbRecord.engagement_score || 0
-  };
-  
-  // Parse the meme text JSON if present
   try {
+    // Create a base meme object with default values
+    const meme: Meme = {
+      id: dbRecord.id,
+      prompt: dbRecord.prompt || "",
+      imageUrl: dbRecord.image_url || "",
+      topText: "",
+      bottomText: "",
+      platform: Array.isArray(dbRecord.platform_tags) ? dbRecord.platform_tags[0] : undefined,
+      hashtags: Array.isArray(dbRecord.platform_tags) ? dbRecord.platform_tags.slice(1) : [],
+      created_at: dbRecord.created_at,
+      user_id: dbRecord.user_id,
+      engagement_score: dbRecord.engagement_score || 0
+    };
+    
+    // Parse the meme text JSON if present
     if (typeof dbRecord.meme_text === 'string') {
-      const parsed = JSON.parse(dbRecord.meme_text);
-      meme.topText = parsed?.topText || "";
-      meme.bottomText = parsed?.bottomText || "";
+      try {
+        const parsed = JSON.parse(dbRecord.meme_text);
+        meme.topText = parsed?.topText || "";
+        meme.bottomText = parsed?.bottomText || "";
+      } catch (e) {
+        logError("Error parsing meme text for meme ID:", dbRecord.id, e);
+      }
     }
+    
+    return meme;
   } catch (e) {
-    logError("Error parsing meme text for meme ID:", dbRecord.id, e);
+    logError("Error transforming database record to meme:", e);
+    // Return a minimal valid meme object to prevent UI errors
+    return {
+      id: dbRecord?.id || "error",
+      prompt: "",
+      imageUrl: "",
+      topText: "",
+      bottomText: "",
+      created_at: dbRecord?.created_at || new Date().toISOString()
+    };
   }
-  
-  return meme;
 }
 
 /**

@@ -35,7 +35,7 @@ export function useSaveMeme() {
         user_id: userId
       };
       
-      // Convert to database format and insert
+      // Convert to database format
       const dbRecord = memeFormToDbRecord(memeWithUser);
       
       // Insert into database
@@ -53,7 +53,7 @@ export function useSaveMeme() {
         throw new Error('No data returned from insert operation');
       }
       
-      // Convert database response to Meme type
+      // Convert database response to Meme type using explicit transformation
       const newMeme = dbRecordToMeme(data);
       
       toast.success('Meme saved successfully!');

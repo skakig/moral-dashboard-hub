@@ -18,13 +18,13 @@ export function useDeleteMeme() {
     try {
       setIsLoading(true);
       
-      const { error } = await supabase
+      const { error: deleteError } = await supabase
         .from('memes')
         .delete()
         .eq('id', id);
         
-      if (error) {
-        throw error;
+      if (deleteError) {
+        throw deleteError;
       }
       
       toast.success('Meme deleted successfully');

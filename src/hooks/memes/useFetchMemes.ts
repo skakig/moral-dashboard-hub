@@ -45,10 +45,15 @@ export function useFetchMemes() {
         return;
       }
       
-      // Process data and transform to Meme array
-      // Use simple mapping to avoid deep type recursion
-      const memes = data.map((item) => dbRecordToMeme(item));
-      setSavedMemes(memes);
+      // Transform raw database records to frontend Meme objects
+      // Explicit transformation to break circular type references
+      const transformedMemes: Meme[] = [];
+      
+      for (const item of data) {
+        transformedMemes.push(dbRecordToMeme(item));
+      }
+      
+      setSavedMemes(transformedMemes);
       
     } catch (err: any) {
       const errorMsg = err.message || 'Failed to load memes';

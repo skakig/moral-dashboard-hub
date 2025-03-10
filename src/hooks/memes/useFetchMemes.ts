@@ -33,13 +33,11 @@ export function useFetchMemes() {
       
       // Breaking the type instantiation by using any for the query result
       // and then properly typing the data afterward
-      const response: any = await supabase
+      const { data, error: fetchError } = await supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
-        .order('created_at', { ascending: false });
-        
-      const { data, error: fetchError } = response;
+        .order('created_at', { ascending: false }) as any;
         
       if (fetchError) {
         throw fetchError;

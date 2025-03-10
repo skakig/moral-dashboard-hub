@@ -30,14 +30,14 @@ export function useFetchMemes() {
       }
       
       // Fetch memes for the current user
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
         .order('created_at', { ascending: false });
         
-      if (error) {
-        throw error;
+      if (fetchError) {
+        throw fetchError;
       }
       
       if (!data || data.length === 0) {
@@ -46,7 +46,8 @@ export function useFetchMemes() {
       }
       
       // Process data and transform to Meme array
-      const memes = data.map(item => dbRecordToMeme(item));
+      // Use simple mapping to avoid deep type recursion
+      const memes = data.map((item) => dbRecordToMeme(item));
       setSavedMemes(memes);
       
     } catch (err: any) {

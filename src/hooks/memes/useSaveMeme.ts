@@ -39,14 +39,14 @@ export function useSaveMeme() {
       const dbRecord = memeFormToDbRecord(memeWithUser);
       
       // Insert into database
-      const { data, error } = await supabase
+      const { data, error: saveError } = await supabase
         .from('memes')
         .insert(dbRecord)
         .select()
         .single();
       
-      if (error) {
-        throw error;
+      if (saveError) {
+        throw saveError;
       }
       
       if (!data) {

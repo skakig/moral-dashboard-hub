@@ -14,9 +14,6 @@ interface ArticlesTabProps {
   onCreateNew: () => void;
   onEdit: (article: Article) => void;
   onDelete: (articleId: string) => void;
-  onView?: (article: Article) => void;
-  onPublish?: (article: Article) => void;
-  onDownload?: (article: Article) => void;
 }
 
 export function ArticlesTab({
@@ -28,10 +25,7 @@ export function ArticlesTab({
   onStatusFilterChange,
   onCreateNew,
   onEdit,
-  onDelete,
-  onView,
-  onPublish,
-  onDownload
+  onDelete
 }: ArticlesTabProps) {
   return (
     <>
@@ -52,9 +46,6 @@ export function ArticlesTab({
           articles={articles}
           onEdit={onEdit}
           onDelete={onDelete}
-          onView={onView}
-          onPublish={onPublish}
-          onDownload={onDownload}
         />
       )}
     </>

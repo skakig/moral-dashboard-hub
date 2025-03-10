@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -22,7 +23,6 @@ import {
 // Import hooks and types
 import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { useAIGeneration } from "./hooks/useAIGeneration";
-import { useImageGeneration } from "./hooks/useImageGeneration";
 import { ArticleFormValues, articleFormSchema, Step } from "./step-form/types";
 
 export type { ArticleFormValues } from "./step-form/types";
@@ -46,10 +46,6 @@ export function StepByStepArticleForm({
   const [error, setError] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState("21m00Tcm4TlvDq8ikWAM"); // Default to Rachel
   const [autoGenerateContent, setAutoGenerateContent] = useState(true);
-  const [autoGenerateOptions, setAutoGenerateOptions] = useState({
-    voice: false,
-    image: false,
-  });
   
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
@@ -70,7 +66,6 @@ export function StepByStepArticleForm({
       theme: "",
       ...initialData,
     },
-    mode: "onSubmit" // Change to onSubmit to prevent premature validation
   });
 
   const { 
@@ -84,7 +79,6 @@ export function StepByStepArticleForm({
   } = useVoiceGeneration(form);
   
   const { loading: isGeneratingContent, generateContent } = useAIGeneration();
-  const { generateImage, loading: isGeneratingImage } = useImageGeneration();
 
   const handleGenerateContent = async () => {
     try {
@@ -146,32 +140,6 @@ export function StepByStepArticleForm({
           form.setValue("seoKeywords", content.keywords.join(', '), { shouldDirty: true });
         }
 
-        // If auto-generate voice is enabled, generate voice content
-        if (autoGenerateOptions.voice) {
-          // Move to content step first to ensure content is available
-          const contentStepIndex = steps.findIndex(step => step.id === 'content');
-          if (contentStepIndex !== -1) {
-            setCurrentStepIndex(contentStepIndex);
-            
-            // Wait a bit for the UI to update before generating voice
-            setTimeout(async () => {
-              await generateVoiceContent(selectedVoice);
-              toast.success("Voice content generated successfully");
-            }, 500);
-          }
-        }
-        
-        // If auto-generate image is enabled, generate featured image
-        if (autoGenerateOptions.image) {
-          const imagePrompt = `Create a high-quality featured image for: ${content.title}. Platform: ${platform}, Content type: ${contentType}`;
-          
-          const imageUrl = await generateImage(imagePrompt, platform);
-          if (imageUrl) {
-            form.setValue("featuredImage", imageUrl, { shouldDirty: true });
-            toast.success("Featured image generated successfully");
-          }
-        }
-
         // Move to the content step
         const contentStepIndex = steps.findIndex(step => step.id === 'content');
         if (contentStepIndex !== -1) {
@@ -201,9 +169,7 @@ export function StepByStepArticleForm({
           form={form} 
           onGenerate={handleGenerateContent} 
           autoGenerate={autoGenerateContent} 
-          setAutoGenerate={setAutoGenerateContent}
-          autoGenerateOptions={autoGenerateOptions}
-          setAutoGenerateOptions={setAutoGenerateOptions}
+          setAutoGenerate={setAutoGenerateContent} 
         />
       ),
       isRequired: true,
@@ -296,8 +262,8 @@ export function StepByStepArticleForm({
   const isLastStep = currentStepIndex === steps.length - 1;
 
   const goToNextStep = () => {
-    // Only validate fields required for the current step
     if (currentStep.isRequired) {
+      // Check if the fields for this step are valid
       let isValid = true;
       
       if (currentStep.id === 'theme' && !form.getValues("theme")) {
@@ -305,15 +271,14 @@ export function StepByStepArticleForm({
         isValid = false;
       }
       
-      if (currentStep.id === 'platform-type') {
+      if (currentStep.id === 'platform-type' && (!form.getValues("platform") || !form.getValues("contentType"))) {
         if (!form.getValues("platform")) {
           toast.error("Please select a platform");
-          isValid = false;
         }
         if (!form.getValues("contentType")) {
           toast.error("Please select a content type");
-          isValid = false;
         }
+        isValid = false;
       }
       
       if (currentStep.id === 'content' && !form.getValues("content")) {
@@ -338,15 +303,6 @@ export function StepByStepArticleForm({
 
   const handleSubmit = async (data: ArticleFormValues) => {
     try {
-      // If we have a title but no content, ensure we require content
-      if (data.title && !data.content) {
-        form.setError("content", { 
-          type: "required", 
-          message: "Content is required when providing a title" 
-        });
-        return;
-      }
-      
       if (onFormSubmit) {
         await onFormSubmit(data);
       }

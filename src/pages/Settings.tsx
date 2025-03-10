@@ -5,8 +5,7 @@ import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { APIKeysSection } from "@/components/settings/APIKeysSection";
 import { AIConfigSettings } from "@/components/settings/AIConfigSettings";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
-import { BrandingSettings } from "@/components/settings/BrandingSettings";
-import { Cog, Key, MessageSquare, Bell, Paintbrush } from "lucide-react";
+import { Cog, Key, MessageSquare, Bell } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -151,17 +150,11 @@ export default function Settings() {
           </div>
         ) : (
           <Tabs defaultValue="api-keys" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="general">
                 <div className="flex items-center gap-1">
                   <Cog className="h-4 w-4" />
                   <span className="hidden sm:inline">General</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger value="branding">
-                <div className="flex items-center gap-1">
-                  <Paintbrush className="h-4 w-4" />
-                  <span className="hidden sm:inline">Branding</span>
                 </div>
               </TabsTrigger>
               <TabsTrigger value="api-keys">
@@ -186,10 +179,6 @@ export default function Settings() {
             
             <TabsContent value="general" className="space-y-4">
               <GeneralSettings />
-            </TabsContent>
-
-            <TabsContent value="branding" className="space-y-4">
-              <BrandingSettings />
             </TabsContent>
             
             <TabsContent value="api-keys" className="space-y-4">

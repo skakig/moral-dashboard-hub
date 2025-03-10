@@ -7,7 +7,7 @@ export function useImageGeneration() {
   const [loading, setLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
-  const generateImage = async (prompt: string, platform?: string) => {
+  const generateImage = async (prompt: string) => {
     if (!prompt) {
       toast.error('Please enter a prompt for image generation');
       return null;
@@ -18,14 +18,15 @@ export function useImageGeneration() {
     try {
       toast.info('Generating image...');
 
-      // Pass platform to the edge function for proper sizing
-      const result = await EdgeFunctionService.generateImage(prompt, platform);
+      // Generate image using the edge function service
+      const result = await EdgeFunctionService.generateImage(prompt);
       
       if (!result) {
         throw new Error('Image generation failed');
       }
 
       setGeneratedImage(result.image);
+      toast.success('Image generated successfully!');
       return result.image;
     } catch (error: any) {
       console.error('Error generating image:', error);

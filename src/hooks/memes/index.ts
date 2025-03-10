@@ -8,3 +8,4 @@ export * from './useSaveMeme';
 export * from './useFetchMemes';
 export * from './useDeleteMeme';
 export * from './utils/errorLogger';
+export * from './utils/memeMappers';

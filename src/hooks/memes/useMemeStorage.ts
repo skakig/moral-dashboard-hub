@@ -5,6 +5,9 @@ import { useSaveMeme } from './useSaveMeme';
 import { useFetchMemes } from './useFetchMemes';
 import { useDeleteMeme } from './useDeleteMeme';
 
+/**
+ * Combined hook for meme storage operations (fetch, save, delete)
+ */
 export function useMemeStorage() {
   const { isSaving, error: saveError, saveMeme } = useSaveMeme();
   const { savedMemes: fetchedMemes, isLoading: isFetching, error: fetchError, fetchMemes } = useFetchMemes();
@@ -23,7 +26,9 @@ export function useMemeStorage() {
     setError(saveError || fetchError || deleteError || null);
   }, [saveError, fetchError, deleteError]);
 
-  // Enhanced save meme that updates local state
+  /**
+   * Enhanced save meme that updates local state
+   */
   const saveNewMeme = async (memeData: MemeFormData): Promise<Meme | null> => {
     const newMeme = await saveMeme(memeData);
     
@@ -35,7 +40,9 @@ export function useMemeStorage() {
     return newMeme;
   };
 
-  // Enhanced delete meme that updates local state
+  /**
+   * Enhanced delete meme that updates local state
+   */
   const deleteMemeAndUpdate = async (id: string): Promise<boolean> => {
     const success = await deleteMemeFn(id);
     

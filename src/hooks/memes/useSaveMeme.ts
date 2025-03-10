@@ -4,12 +4,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { Meme, MemeFormData } from '@/types/meme';
 import { toast } from 'sonner';
 import { logError } from './utils/errorLogger';
+import { dbRecordToMeme, memeFormToDbRecord } from './utils/memeMappers';
 
+/**
+ * Hook for saving a meme to the database
+ */
 export function useSaveMeme() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Create or save a meme
+  /**
+   * Create or save a meme to the database
+   */
   const saveMeme = async (memeData: MemeFormData): Promise<Meme | null> => {
     try {
       setIsSaving(true);
@@ -29,25 +35,13 @@ export function useSaveMeme() {
         user_id: userId
       };
       
-      // Convert meme text to JSON string
-      const memeTextJson = JSON.stringify({
-        topText: memeWithUser.topText,
-        bottomText: memeWithUser.bottomText
-      });
+      // Convert to database format and insert
+      const dbRecord = memeFormToDbRecord(memeWithUser);
       
       // Insert into database
       const { data, error } = await supabase
         .from('memes')
-        .insert({
-          image_url: memeWithUser.imageUrl || '',
-          meme_text: memeTextJson,
-          platform_tags: memeWithUser.platform 
-            ? [memeWithUser.platform, ...(memeWithUser.hashtags || [])]
-            : memeWithUser.hashtags,
-          prompt: memeWithUser.prompt,
-          user_id: memeWithUser.user_id,
-          engagement_score: memeWithUser.engagement_score || 0
-        })
+        .insert(dbRecord)
         .select()
         .single();
       
@@ -59,33 +53,8 @@ export function useSaveMeme() {
         throw new Error('No data returned from insert operation');
       }
       
-      // Simply cast the data directly to prevent deep type instantiation
-      const dbRecord = data as any;
-      
-      // Manually construct a Meme object from the database response
-      let newMeme: Meme = {
-        id: dbRecord.id,
-        prompt: dbRecord.prompt || "",
-        imageUrl: dbRecord.image_url || "",
-        topText: "",
-        bottomText: "",
-        platform: Array.isArray(dbRecord.platform_tags) ? dbRecord.platform_tags[0] : undefined,
-        hashtags: Array.isArray(dbRecord.platform_tags) ? dbRecord.platform_tags.slice(1) : [],
-        created_at: dbRecord.created_at,
-        user_id: dbRecord.user_id,
-        engagement_score: dbRecord.engagement_score || 0
-      };
-      
-      // Parse the meme text JSON if present
-      try {
-        if (typeof dbRecord.meme_text === 'string') {
-          const parsed = JSON.parse(dbRecord.meme_text);
-          newMeme.topText = parsed?.topText || "";
-          newMeme.bottomText = parsed?.bottomText || "";
-        }
-      } catch (e) {
-        logError("Error parsing meme text:", e);
-      }
+      // Convert database response to Meme type
+      const newMeme = dbRecordToMeme(data);
       
       toast.success('Meme saved successfully!');
       return newMeme;

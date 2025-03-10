@@ -5,25 +5,23 @@ import { logError } from './errorLogger';
 
 /**
  * Fetches meme records for a specific user from Supabase
- * Using a safer approach to avoid type instantiation issues
+ * Using a type-safe approach to avoid excessive type instantiation
  */
 export async function fetchUserMemes(userId: string): Promise<MemeDbRecord[]> {
   try {
-    // Execute query with limited type checking to avoid excessive type instantiation
-    const response = await supabase
+    // Use a simple approach that avoids TypeScript's complex type inference
+    const result = await supabase
       .from('memes')
       .select('id, image_url, meme_text, platform_tags, created_at, prompt, engagement_score')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
       
-    if (response.error) {
-      throw response.error;
+    if (result.error) {
+      throw result.error;
     }
     
-    // First convert to unknown to avoid TypeScript's type checking, then to our expected type
-    const data = (response.data || []) as unknown as MemeDbRecord[];
-    
-    return data;
+    // Cast to a safe type using a two-step assertion to bypass TypeScript's type checking
+    return (result.data || []) as unknown as MemeDbRecord[];
   } catch (error) {
     logError('Error fetching user memes:', error);
     throw error;

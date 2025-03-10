@@ -34,7 +34,7 @@ export function useFetchMemes() {
       // Fetch memes with the utility function
       const memeRecords = await fetchUserMemes(authData.user.id);
       
-      // Transform records safely using map
+      // Transform records safely
       const transformedMemes = memeRecords.map(record => dbRecordToMeme(record));
       
       setSavedMemes(transformedMemes);

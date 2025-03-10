@@ -5,14 +5,14 @@ import { logError } from './errorLogger';
 
 /**
  * Fetches meme records for a specific user from Supabase
- * Using a simplified approach to avoid TypeScript's excessive type inference
+ * Using explicit type handling to avoid TypeScript's excessive type inference
  */
 export async function fetchUserMemes(userId: string): Promise<MemeDbRecord[]> {
   try {
-    // Use any for the initial query result to avoid complex type inference
+    // First check which columns actually exist in the memes table
     const { data, error } = await supabase
       .from('memes')
-      .select('id, image_url, meme_text, platform_tags, created_at, prompt, engagement_score')
+      .select('id, image_url, meme_text, platform_tags, created_at, user_id, engagement_score')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
       
@@ -20,13 +20,14 @@ export async function fetchUserMemes(userId: string): Promise<MemeDbRecord[]> {
       throw error;
     }
     
-    // Handle the null case explicitly and treat data as a simple array
+    // Handle the null case explicitly
     if (!data) {
       return [];
     }
     
-    // Cast the data array to MemeDbRecord[] without nested inference
-    return data as MemeDbRecord[];
+    // Use a type assertion that breaks the deep inference chain
+    // by first casting to unknown then to our target type
+    return (data as unknown) as MemeDbRecord[];
   } catch (error) {
     logError('Error fetching user memes:', error);
     throw error;

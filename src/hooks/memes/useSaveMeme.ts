@@ -60,7 +60,7 @@ export function useSaveMeme() {
       }
       
       // Simply cast the data directly to prevent deep type instantiation
-      const dbRecord = data as MemeDbRecord;
+      const dbRecord = data as any;
       
       // Manually construct a Meme object from the database response
       let newMeme: Meme = {

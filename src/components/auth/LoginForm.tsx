@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 export function LoginForm() {
@@ -19,7 +17,6 @@ export function LoginForm() {
   const [isResetMode, setIsResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const navigate = useNavigate();
-  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +24,22 @@ export function LoginForm() {
     setError("");
 
     try {
-      await signIn(email, password);
-      navigate("/");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        setError(error.message);
+      } else if (data.user) {
+        toast("Login successful", {
+          description: "Welcome to TMH Admin Dashboard",
+        });
+        navigate("/");
+      }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.message || "An error occurred during login");
+      setError("An error occurred during login");
     } finally {
       setIsLoading(false);
     }

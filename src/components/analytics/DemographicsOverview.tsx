@@ -31,44 +31,45 @@ export function DemographicsOverview() {
         setLoading(true);
         
         // Fetch age range distribution
-        const ageRanges = getAgeRangeDistribution();
-        // Convert to the format expected by the chart
-        const ageDataFormatted = ageRanges.labels.map((label, index) => ({
-          age_range: label,
-          user_count: ageRanges.data[index]
-        }));
-        setAgeData(ageDataFormatted);
+        const ageRanges = await getAgeRangeDistribution();
+        setAgeData(ageRanges || []);
         
         // Fetch gender data
-        const genderMoral = getGenderMoralDistribution();
+        const genderMoral = await getGenderMoralDistribution();
         
-        // Process gender data - create a chart-friendly format
+        // Process gender data
+        const maleCounts = {};
+        const femaleCounts = {};
+        
+        // Initialize the counts
+        for (let i = 1; i <= 9; i++) {
+          maleCounts[i] = 0;
+          femaleCounts[i] = 0;
+        }
+        
+        // Fill in actual data
+        genderMoral?.forEach(item => {
+          if (item.gender === 'Male') {
+            maleCounts[item.moral_level] = item.user_count;
+          } else if (item.gender === 'Female') {
+            femaleCounts[item.moral_level] = item.user_count;
+          }
+        });
+        
+        // Create array for chart
         const processedGenderData = [];
         for (let i = 1; i <= 9; i++) {
-          const levelData: any = {
+          processedGenderData.push({
             moral_level: `Level ${i}`,
-            Male: 0,
-            Female: 0
-          };
-          
-          // Find counts for this level
-          genderMoral.forEach(item => {
-            if (item.moral_level === i) {
-              if (item.gender === 'Male') {
-                levelData.Male = item.user_count;
-              } else if (item.gender === 'Female') {
-                levelData.Female = item.user_count;
-              }
-            }
+            Male: maleCounts[i],
+            Female: femaleCounts[i]
           });
-          
-          processedGenderData.push(levelData);
         }
         
         setGenderData(processedGenderData);
         
         // Fetch summary analytics
-        const analyticsSummary = getAnalyticsSummary();
+        const analyticsSummary = await getAnalyticsSummary();
         setSummary(analyticsSummary || {});
       } catch (err: any) {
         console.error("Error fetching analytics data:", err);

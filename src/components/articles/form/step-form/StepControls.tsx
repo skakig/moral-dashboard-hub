@@ -5,18 +5,16 @@ import { Loader2, Wand2 } from "lucide-react";
 import { CardFooter } from "@/components/ui/card";
 
 interface StepControlsProps {
-  isFirstStep?: boolean;
-  isLastStep?: boolean;
-  onPrevious?: () => void;
-  onNext?: () => void;
+  isFirstStep: boolean;
+  isLastStep: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
   onCancel?: () => void;
   onGenerate?: () => void;
-  isLoading?: boolean;
+  isLoading: boolean;
   isGeneratingContent?: boolean;
   submitLabel?: string;
   canAutoGenerate?: boolean;
-  onBack?: () => void;
-  nextStepTitle?: string;
 }
 
 export function StepControls({
@@ -30,8 +28,6 @@ export function StepControls({
   isGeneratingContent = false,
   submitLabel = "Create",
   canAutoGenerate = false,
-  onBack,
-  nextStepTitle,
 }: StepControlsProps) {
   return (
     <CardFooter className="flex justify-between p-6 pt-0">
@@ -40,7 +36,7 @@ export function StepControls({
           <Button
             type="button"
             variant="outline"
-            onClick={onPrevious || onBack} // Use onPrevious if available, otherwise onBack
+            onClick={onPrevious}
             className="mr-2"
           >
             Previous
@@ -90,7 +86,7 @@ export function StepControls({
           </Button>
         ) : (
           <Button type="button" onClick={onNext}>
-            {nextStepTitle ? `Next: ${nextStepTitle}` : "Next"}
+            Next
           </Button>
         )}
       </div>

@@ -1,150 +1,260 @@
-
-import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FunctionMappingSection } from "./FunctionMappingSection";
-import { APIUsageStats } from "./APIUsageStats";
-import { APIRateLimits } from "./APIRateLimits";
+import { BarChart3, Gauge, AlertCircle, RefreshCw, InfoIcon, Key, GitBranch } from "lucide-react";
+import { APIFunctionMapping } from "@/components/settings/api-keys/APIFunctionMapping";
+import { APIUsageStats } from "@/components/settings/APIUsageStats";
+import { APIRateLimits } from "@/components/settings/APIRateLimits";
+import { APIKeysOverview } from "@/components/settings/api-keys/APIKeysOverview";
+import { useAPIData } from "@/components/settings/api-keys/hooks/useAPIData";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function APIKeysSection() {
-  const [activeTab, setActiveTab] = useState("api-keys");
-  
-  // Format usageStats to match the expected interface
-  const usageStats = {
-    byService: {
-      "OpenAI": { requests: 250, successRate: 98.5, cost: 12.50 },
-      "ElevenLabs": { requests: 120, successRate: 95.2, cost: 8.75 },
-      "StableDiffusion": { requests: 85, successRate: 97.0, cost: 5.30 }
-    },
-    byCategory: {
-      "Text Generation": { requests: 150, successRate: 98.0, cost: 7.50 },
-      "Image Generation": { requests: 85, successRate: 97.0, cost: 5.30 },
-      "Voice Generation": { requests: 120, successRate: 95.2, cost: 8.75 },
-      "Analysis": { requests: 100, successRate: 99.0, cost: 5.00 }
+  const { apiKeysLoading, loadError, apiData, hasKeys, reloadApiData } = useAPIData();
+  const [initializingDb, setInitializingDb] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
+  const [initializationAttempted, setInitializationAttempted] = useState(false);
+
+  // Check database schema and initialize needed tables
+  const checkAndInitializeDatabase = async () => {
+    try {
+      setInitializingDb(true);
+      setInitializationError(null);
+      
+      console.log("Checking database schema...");
+      // Call the schema check function
+      const { data: schemaData, error: schemaError } = await supabase.functions.invoke('check-db-schema');
+      
+      if (schemaError) {
+        console.error("Error checking schema:", schemaError);
+        setInitializationError(`Error checking database schema: ${schemaError.message || 'Unknown error'}`);
+        toast.error("Error checking database schema");
+        return;
+      }
+      
+      if (!schemaData) {
+        setInitializationError("No data returned from schema check");
+        toast.error("Error checking database schema: No data returned");
+        return;
+      }
+      
+      console.log("Schema check result:", schemaData);
+      
+      if (schemaData.missingColumns > 0) {
+        // If there are missing columns, initialize the database tables
+        toast.info("Initializing database tables and columns...");
+        console.log("Initializing database tables...");
+        
+        const { data: initData, error: initError } = await supabase.functions.invoke('initialize-db-tables');
+        
+        if (initError) {
+          console.error("Error initializing database:", initError);
+          setInitializationError(`Failed to initialize database tables: ${initError.message || 'Unknown error'}`);
+          toast.error("Failed to initialize database tables");
+          return;
+        }
+        
+        if (!initData) {
+          setInitializationError("No response from database initialization");
+          toast.error("Error initializing database: No response received");
+          return;
+        }
+        
+        console.log("Database initialization result:", initData);
+        
+        if (!initData.success) {
+          setInitializationError(`Database initialization failed: ${initData.error || 'Unknown error'}`);
+          toast.error(`Failed to initialize database: ${initData.error || 'Unknown error'}`);
+          return;
+        }
+        
+        toast.success("Database initialized successfully");
+        setInitializationAttempted(true);
+        // After initialization, reload the data
+        setTimeout(() => reloadApiData(), 1000);
+      } else {
+        console.log("No missing tables or columns detected");
+        setInitializationAttempted(true);
+      }
+      
+    } catch (error: any) {
+      console.error("Exception checking/initializing database:", error);
+      setInitializationError(`Error: ${error.message || 'Unknown error'}`);
+      toast.error(`Error checking/initializing database: ${error.message || 'Unknown error'}`);
+    } finally {
+      setInitializingDb(false);
     }
   };
-  
-  // Format rateLimits to match the expected interface
-  const rateLimits = [
-    { 
-      id: "1", 
-      service_name: "OpenAI", 
-      requests_used: 12,
-      request_limit: 100, 
-      reset_date: new Date(Date.now() + 3600000).toISOString()
-    },
-    { 
-      id: "2", 
-      service_name: "OpenAI", 
-      requests_used: 250,
-      request_limit: 1000, 
-      reset_date: new Date(Date.now() + 86400000).toISOString()
-    },
-    { 
-      id: "3", 
-      service_name: "ElevenLabs", 
-      requests_used: 5,
-      request_limit: 50, 
-      reset_date: new Date(Date.now() + 3600000).toISOString()
-    },
-    { 
-      id: "4", 
-      service_name: "StableDiffusion", 
-      requests_used: 85,
-      request_limit: 300, 
-      reset_date: new Date(Date.now() + 86400000).toISOString()
+
+  // Automatically check database schema and try to initialize if needed
+  useEffect(() => {
+    if (!initializationAttempted) {
+      checkAndInitializeDatabase();
     }
-  ];
-  
+  }, [initializationAttempted]);
+
+  // Automatically refresh data when component mounts to ensure fresh data
+  useEffect(() => {
+    // Add a small delay to ensure database migrations have completed
+    const timer = setTimeout(() => {
+      reloadApiData();
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Add another effect to periodically refresh data
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      console.log("Auto-refreshing API keys data...");
+      reloadApiData();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(refreshInterval);
+  }, []);
+
+  const isEmptyData = !apiData || 
+    (Object.keys(apiData.apiKeysByCategory).length === 0 && 
+     apiData.functionMappings.length === 0 &&
+     apiData.rateLimits.length === 0);
+
+  const handleManualRefresh = () => {
+    toast.info("Refreshing API keys data...");
+    reloadApiData();
+  };
+
   return (
-    <div className="space-y-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="api-keys">API Keys</TabsTrigger>
-          <TabsTrigger value="function-mapping">Function Mapping</TabsTrigger>
-          <TabsTrigger value="usage-stats">Usage & Limits</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="api-keys" className="space-y-4 mt-6">
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <h3 className="text-lg font-medium">OpenAI API Key</h3>
-              <div className="flex items-center gap-2">
-                <input
-                  type="password"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="sk-..."
-                />
-                <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                  Save
-                </button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Used for content generation and AI features.
-              </p>
+    <>
+      {(loadError || initializationError) && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error loading API keys</AlertTitle>
+          <AlertDescription className="flex flex-col gap-2">
+            <p>{loadError || initializationError}</p>
+            <div className="flex gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="self-start"
+                onClick={reloadApiData}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="self-start"
+                onClick={checkAndInitializeDatabase}
+                disabled={initializingDb}
+              >
+                {initializingDb ? "Initializing..." : "Initialize Database"}
+              </Button>
             </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
-            <div className="grid gap-2">
-              <h3 className="text-lg font-medium">Anthropic API Key</h3>
-              <div className="flex items-center gap-2">
-                <input
-                  type="password"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="sk-ant-..."
-                />
-                <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                  Save
-                </button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Used for Claude AI features and moral analysis.
-              </p>
+      {!loadError && !initializationError && isEmptyData && !apiKeysLoading && (
+        <Alert className="mb-4">
+          <InfoIcon className="h-4 w-4" />
+          <AlertTitle>No API Configuration Found</AlertTitle>
+          <AlertDescription>
+            No API keys or configurations have been added yet. Add your first API key to get started.
+            <div className="mt-2">
+              <strong>Tip:</strong> You can add a test key by using the format "TEST_your-key" to verify the system is working.
             </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2"
+              onClick={checkAndInitializeDatabase}
+              disabled={initializingDb}
+            >
+              {initializingDb ? "Initializing..." : "Initialize Database"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
-            <div className="grid gap-2">
-              <h3 className="text-lg font-medium">ElevenLabs API Key</h3>
-              <div className="flex items-center gap-2">
-                <input
-                  type="password"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="..."
-                />
-                <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                  Save
-                </button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Used for voice generation and audio content.
-              </p>
-            </div>
+      <div className="flex justify-end mb-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleManualRefresh}
+          disabled={apiKeysLoading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${apiKeysLoading ? 'animate-spin' : ''}`} />
+          Refresh API Keys Data
+        </Button>
+      </div>
 
-            <div className="grid gap-2">
-              <h3 className="text-lg font-medium">Stability AI Key</h3>
-              <div className="flex items-center gap-2">
-                <input
-                  type="password"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="sk-..."
-                />
-                <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                  Save
-                </button>
+      {apiKeysLoading || initializingDb ? (
+        <div className="flex items-center justify-center p-8">
+          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Loading API keys data...</span>
+        </div>
+      ) : (
+        <Tabs defaultValue="keys" className="w-full">
+          <TabsList className="grid grid-cols-4 mb-4">
+            <TabsTrigger value="keys">
+              <div className="flex items-center gap-1">
+                <Key className="h-4 w-4" />
+                <span className="hidden sm:inline">API Keys</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Used for image generation with Stable Diffusion.
-              </p>
-            </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="function-mapping" className="space-y-4 mt-6">
-          <FunctionMappingSection />
-        </TabsContent>
-        
-        <TabsContent value="usage-stats" className="space-y-4 mt-6">
-          <APIUsageStats usageStats={usageStats} />
-          <APIRateLimits rateLimits={rateLimits} />
-        </TabsContent>
-      </Tabs>
-    </div>
+            </TabsTrigger>
+            <TabsTrigger value="mappings">
+              <div className="flex items-center gap-1">
+                <GitBranch className="h-4 w-4" />
+                <span className="hidden sm:inline">Function Mapping</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="usage">
+              <div className="flex items-center gap-1">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Usage Stats</span>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="limits">
+              <div className="flex items-center gap-1">
+                <Gauge className="h-4 w-4" />
+                <span className="hidden sm:inline">Rate Limits</span>
+              </div>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="keys" className="space-y-4">
+            <APIKeysOverview 
+              apiKeysByCategory={apiData?.apiKeysByCategory || {}}
+              onRefresh={reloadApiData}
+            />
+          </TabsContent>
+          
+          <TabsContent value="mappings">
+            <APIFunctionMapping 
+              functionMappings={apiData?.functionMappings || []}
+              apiKeys={apiData?.apiKeysByCategory || {}}
+              onSuccess={reloadApiData}
+            />
+          </TabsContent>
+          
+          <TabsContent value="usage">
+            <APIUsageStats 
+              usageStats={apiData?.usageStats || { byService: {}, byCategory: {} }}
+              onRefresh={reloadApiData}
+            />
+          </TabsContent>
+          
+          <TabsContent value="limits">
+            <APIRateLimits 
+              rateLimits={apiData?.rateLimits || []}
+              onSuccess={reloadApiData}
+            />
+          </TabsContent>
+        </Tabs>
+      )}
+    </>
   );
 }

@@ -1,17 +1,13 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { Form } from "@/components/ui/form";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 
-// Import types and components
-import { ArticleFormValues, articleFormSchema } from "./step-form/types";
-import { ArticleFormLayout } from "./step-form/ArticleFormLayout";
-import { useArticleFormSteps } from "./step-form/hooks/useArticleFormSteps";
-import { useAutoGenerateOptions } from "./step-form/hooks/useAutoGenerateOptions";
-import { useContentGeneration } from "./step-form/hooks/useContentGeneration";
-
-// Import step components
+// Import components
+import { StepHeader } from "./step-form/StepHeader";
+import { StepControls } from "./step-form/StepControls";
 import {
   ThemeStep,
   PlatformTypeStep,
@@ -23,6 +19,12 @@ import {
   BasicInfoStep
 } from "./step-form/steps";
 
+// Import hooks and types
+import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
+import { useAIGeneration } from "./hooks/useAIGeneration";
+import { useImageGeneration } from "./hooks/useImageGeneration";
+import { ArticleFormValues, articleFormSchema, Step } from "./step-form/types";
+
 export type { ArticleFormValues } from "./step-form/types";
 
 interface StepByStepArticleFormProps {
@@ -31,9 +33,6 @@ interface StepByStepArticleFormProps {
   submitLabel?: string;
   onCancel?: () => void;
   isLoading?: boolean;
-  mode?: 'create' | 'edit';
-  parentFormState?: any; // For sharing form state between views
-  onFormStateChange?: (data: any) => void; // For parent to track form changes
 }
 
 export function StepByStepArticleForm({
@@ -42,15 +41,16 @@ export function StepByStepArticleForm({
   submitLabel = "Create",
   onCancel,
   isLoading = false,
-  mode = 'create',
-  parentFormState,
-  onFormStateChange,
 }: StepByStepArticleFormProps) {
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState("21m00Tcm4TlvDq8ikWAM"); // Default to Rachel
-  const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false);
+  const [autoGenerateContent, setAutoGenerateContent] = useState(true);
+  const [autoGenerateOptions, setAutoGenerateOptions] = useState({
+    voice: false,
+    image: false,
+  });
   
-  // Form setup
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
     defaultValues: {
@@ -70,106 +70,128 @@ export function StepByStepArticleForm({
       theme: "",
       ...initialData,
     },
-    mode: "onSubmit"
+    mode: "onSubmit" // Change to onSubmit to prevent premature validation
   });
-  
-  // Use the parent form state if provided (for sync between wizard and all fields views)
-  useEffect(() => {
-    if (parentFormState) {
-      Object.entries(parentFormState).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          form.setValue(key as any, value);
-        }
-      });
-    }
-  }, [parentFormState, form]);
 
-  // Notify parent of form changes
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      if (onFormStateChange) {
-        onFormStateChange(value);
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [form, onFormStateChange]);
-
-  // Auto-generate options
-  const {
-    autoGenerateContent,
-    setAutoGenerateContent,
-    autoGenerateOptions,
-    updateAutoGenerateOptions
-  } = useAutoGenerateOptions();
-
-  // Watch for auto-generate settings changes
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      // Check if the special _autoGenerate field was set
-      if (value._autoGenerate !== undefined) {
-        setAutoGenerateContent(!!value._autoGenerate);
-      }
-      
-      // Check if options were set
-      if (value._autoGenerateOptions) {
-        updateAutoGenerateOptions(value._autoGenerateOptions);
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [form, setAutoGenerateContent, updateAutoGenerateOptions]);
-
-  // Handle platform changes for content length
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === "platform") {
-        // Set default content length based on platform
-        const platform = value.platform;
-        if (platform === "YouTube") {
-          form.setValue("contentLength", "long");
-        } else if (platform === "Instagram" || platform === "Twitter" || platform === "TikTok") {
-          form.setValue("contentLength", "short");
-        } else if (platform === "Facebook" || platform === "LinkedIn") {
-          form.setValue("contentLength", "medium");
-        }
-      }
-      
-      // Check if we should trigger auto-generation
-      if (shouldAutoGenerate && value.theme && value.platform && value.contentType) {
-        // Only trigger once when these values are set
-        setShouldAutoGenerate(false);
-        
-        // Wait a moment to ensure form values are updated
-        setTimeout(async () => {
-          await handleGenerateContent();
-        }, 500);
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [form, shouldAutoGenerate]);
-
-  // Content generation logic - defined BEFORE it's used in steps
-  const {
-    isGeneratingContent,
-    isGeneratingVoice,
+  const { 
+    generateVoiceContent, 
+    isGenerating: isGeneratingVoice, 
+    audioUrl, 
     isPlaying,
-    audioUrl,
-    handleGenerateContent,
-    handleGenerateVoice,
     togglePlayPause,
     downloadAudio,
     setIsPlaying
-  } = useContentGeneration(
-    form,
-    autoGenerateOptions,
-    selectedVoice,
-    (stepId) => goToStepById(stepId)
-  );
+  } = useVoiceGeneration(form);
+  
+  const { loading: isGeneratingContent, generateContent } = useAIGeneration();
+  const { generateImage, loading: isGeneratingImage } = useImageGeneration();
+
+  const handleGenerateContent = async () => {
+    try {
+      setError(null);
+      
+      // Get the current form values to use as input parameters
+      const theme = form.getValues("theme") || ""; 
+      const contentType = form.getValues("contentType") || "article";
+      const moralLevel = form.getValues("moralLevel") || 5;
+      const platform = form.getValues("platform") || "";
+      const contentLength = form.getValues("contentLength") || "medium";
+      const tone = form.getValues("tone") || "informative";
+      const keywords = form.getValues("seoKeywords") ? 
+        form.getValues("seoKeywords").split(',').map((k: string) => k.trim()) : 
+        [];
+
+      if (!theme) {
+        toast.error("Please enter a theme or description of what you want to generate");
+        return;
+      }
+
+      if (!platform) {
+        toast.error("Please select a platform");
+        return;
+      }
+
+      if (!contentType) {
+        toast.error("Please select a content type");
+        return;
+      }
+
+      // Call the AI generation
+      const content = await generateContent({
+        theme,
+        keywords,
+        contentType,
+        moralLevel: typeof moralLevel === 'string' ? parseInt(moralLevel, 10) : moralLevel,
+        platform,
+        contentLength,
+        tone
+      });
+
+      if (content) {
+        // Update the form values
+        form.setValue("content", content.content, { shouldDirty: true });
+        
+        // Only update title if it's empty or if the current title is the theme
+        if (!form.getValues("title") || form.getValues("title") === theme) {
+          form.setValue("title", content.title, { shouldDirty: true });
+        }
+        
+        // Update meta description
+        if (content.metaDescription) {
+          form.setValue("metaDescription", content.metaDescription, { shouldDirty: true });
+        }
+        
+        // Update keywords if they were generated and not already set
+        if (content.keywords && content.keywords.length > 0) {
+          form.setValue("seoKeywords", content.keywords.join(', '), { shouldDirty: true });
+        }
+
+        // If auto-generate voice is enabled, generate voice content
+        if (autoGenerateOptions.voice) {
+          // Move to content step first to ensure content is available
+          const contentStepIndex = steps.findIndex(step => step.id === 'content');
+          if (contentStepIndex !== -1) {
+            setCurrentStepIndex(contentStepIndex);
+            
+            // Wait a bit for the UI to update before generating voice
+            setTimeout(async () => {
+              await generateVoiceContent(selectedVoice);
+              toast.success("Voice content generated successfully");
+            }, 500);
+          }
+        }
+        
+        // If auto-generate image is enabled, generate featured image
+        if (autoGenerateOptions.image) {
+          const imagePrompt = `Create a high-quality featured image for: ${content.title}. Platform: ${platform}, Content type: ${contentType}`;
+          
+          const imageUrl = await generateImage(imagePrompt, platform);
+          if (imageUrl) {
+            form.setValue("featuredImage", imageUrl, { shouldDirty: true });
+            toast.success("Featured image generated successfully");
+          }
+        }
+
+        // Move to the content step
+        const contentStepIndex = steps.findIndex(step => step.id === 'content');
+        if (contentStepIndex !== -1) {
+          setCurrentStepIndex(contentStepIndex);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error generating content:", error);
+      setError(error.message || "Failed to generate content");
+      toast.error(`Failed to generate content: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  };
+
+  // Function to handle voice generation with the selected voice
+  const handleGenerateVoice = async () => {
+    await generateVoiceContent(selectedVoice);
+  };
 
   // Define steps
-  const steps = [
+  const steps: Step[] = [
     {
       id: 'theme',
       title: 'Theme/Topic',
@@ -181,7 +203,7 @@ export function StepByStepArticleForm({
           autoGenerate={autoGenerateContent} 
           setAutoGenerate={setAutoGenerateContent}
           autoGenerateOptions={autoGenerateOptions}
-          setAutoGenerateOptions={updateAutoGenerateOptions}
+          setAutoGenerateOptions={setAutoGenerateOptions}
         />
       ),
       isRequired: true,
@@ -201,14 +223,8 @@ export function StepByStepArticleForm({
       description: 'Configure the tone, length, and moral level of your content',
       component: (
         <ConfigStep 
-          data={form.getValues()}
-          onDataChange={(data) => {
-            Object.entries(data).forEach(([key, value]) => {
-              form.setValue(key as any, value);
-            });
-          }}
-          onNext={() => goToNextStep()}
-          onBack={() => goToPreviousStep()}
+          form={form} 
+          setContentLength={(value) => form.setValue("contentLength", value)} 
         />
       ),
       isRequired: false,
@@ -221,9 +237,7 @@ export function StepByStepArticleForm({
         <ContentStep 
           form={form} 
           isGenerating={isGeneratingContent} 
-          onGenerate={handleGenerateContent}
-          onNext={() => goToNextStep()}
-          onBack={() => goToPreviousStep()}
+          onGenerate={handleGenerateContent} 
         />
       ),
       isRequired: true,
@@ -253,8 +267,6 @@ export function StepByStepArticleForm({
           togglePlayPause={togglePlayPause}
           setIsPlaying={setIsPlaying}
           downloadAudio={downloadAudio}
-          onNext={() => goToNextStep()}
-          onBack={() => goToPreviousStep()}
         />
       ),
       isRequired: false,
@@ -279,20 +291,51 @@ export function StepByStepArticleForm({
     },
   ];
 
-  // Step navigation
-  const {
-    currentStep,
-    currentStepIndex,
-    isFirstStep,
-    isLastStep,
-    goToNextStep,
-    goToPreviousStep,
-    goToStepById,
-    canAutoGenerate,
-    nextStepTitle
-  } = useArticleFormSteps(form, steps, handleGenerateContent);
+  const currentStep = steps[currentStepIndex];
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === steps.length - 1;
 
-  // Form submission
+  const goToNextStep = () => {
+    // Only validate fields required for the current step
+    if (currentStep.isRequired) {
+      let isValid = true;
+      
+      if (currentStep.id === 'theme' && !form.getValues("theme")) {
+        form.setError("theme", { type: "required", message: "Theme is required" });
+        isValid = false;
+      }
+      
+      if (currentStep.id === 'platform-type') {
+        if (!form.getValues("platform")) {
+          toast.error("Please select a platform");
+          isValid = false;
+        }
+        if (!form.getValues("contentType")) {
+          toast.error("Please select a content type");
+          isValid = false;
+        }
+      }
+      
+      if (currentStep.id === 'content' && !form.getValues("content")) {
+        form.setError("content", { type: "required", message: "Content is required" });
+        isValid = false;
+      }
+      
+      if (currentStep.id === 'basic-info' && !form.getValues("title")) {
+        form.setError("title", { type: "required", message: "Title is required" });
+        isValid = false;
+      }
+      
+      if (!isValid) return;
+    }
+    
+    setCurrentStepIndex(prev => (prev < steps.length - 1 ? prev + 1 : prev));
+  };
+
+  const goToPreviousStep = () => {
+    setCurrentStepIndex(prev => (prev > 0 ? prev - 1 : prev));
+  };
+
   const handleSubmit = async (data: ArticleFormValues) => {
     try {
       // If we have a title but no content, ensure we require content
@@ -304,18 +347,8 @@ export function StepByStepArticleForm({
         return;
       }
       
-      // Convert moralLevel to number if it's a string
-      if (typeof data.moralLevel === 'string') {
-        data.moralLevel = parseInt(data.moralLevel, 10);
-      }
-      
-      // Clean up internal fields used for auto-generation
-      const cleanedData = { ...data };
-      delete cleanedData._autoGenerate;
-      delete cleanedData._autoGenerateOptions;
-      
       if (onFormSubmit) {
-        await onFormSubmit(cleanedData);
+        await onFormSubmit(data);
       }
     } catch (error) {
       console.error("Error submitting article form:", error);
@@ -323,27 +356,44 @@ export function StepByStepArticleForm({
     }
   };
 
+  // Check if we can auto-generate content (when theme, platform, and contentType are filled)
+  const canAutoGenerate = Boolean(form.watch("theme") && form.watch("platform") && form.watch("contentType"));
+
   return (
-    <ArticleFormLayout
-      form={form}
-      title={currentStep.title}
-      description={currentStep.description}
-      progress={((currentStepIndex + 1) / steps.length) * 100}
-      error={error}
-      isFirstStep={isFirstStep}
-      isLastStep={isLastStep}
-      isLoading={isLoading}
-      submitLabel={submitLabel}
-      canAutoGenerate={currentStep.id === 'theme' && canAutoGenerate}
-      isGeneratingContent={isGeneratingContent}
-      onSubmit={handleSubmit}
-      onPrevious={goToPreviousStep}
-      onNext={goToNextStep}
-      onCancel={onCancel}
-      onGenerate={handleGenerateContent}
-      nextStepTitle={nextStepTitle}
-    >
-      {currentStep.component}
-    </ArticleFormLayout>
+    <div className="space-y-8">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+          <Card className="w-full">
+            <StepHeader 
+              title={currentStep.title} 
+              description={currentStep.description} 
+              progress={((currentStepIndex + 1) / steps.length) * 100} 
+            />
+            
+            <CardContent>
+              {error && (
+                <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
+                  {error}
+                </div>
+              )}
+              {currentStep.component}
+            </CardContent>
+            
+            <StepControls 
+              isFirstStep={isFirstStep} 
+              isLastStep={isLastStep} 
+              isLoading={isLoading} 
+              submitLabel={submitLabel}
+              canAutoGenerate={currentStep.id === 'theme' && canAutoGenerate}
+              isGeneratingContent={isGeneratingContent}
+              onPrevious={goToPreviousStep}
+              onNext={goToNextStep}
+              onCancel={onCancel}
+              onGenerate={handleGenerateContent}
+            />
+          </Card>
+        </form>
+      </Form>
+    </div>
   );
 }

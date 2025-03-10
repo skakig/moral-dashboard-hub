@@ -1,22 +1,36 @@
 
-import React from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
-export default function NotFound() {
+const NotFound = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    console.error(
+      "404 Error: User attempted to access non-existent route:",
+      location.pathname
+    );
+  }, [location.pathname]);
+
   return (
-    <AppLayout>
-      <div className="container mx-auto py-16 text-center">
-        <h1 className="text-5xl font-bold mb-6">404</h1>
-        <h2 className="text-2xl font-semibold mb-4">Page Not Found</h2>
-        <p className="text-muted-foreground mb-8">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <Button asChild>
-          <Link to="/">Return to Dashboard</Link>
+    <ThemeProvider defaultTheme="dark">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+        <div className="mb-6 flex items-center justify-center">
+          <div className="h-20 w-20 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-background"></div>
+          </div>
+        </div>
+        <h1 className="text-5xl font-bold mb-4 tmh-gradient-accent bg-clip-text text-transparent">404</h1>
+        <p className="text-xl text-muted-foreground mb-8">Page not found</p>
+        <Button onClick={() => navigate("/")} size="lg">
+          Return to Dashboard
         </Button>
       </div>
-    </AppLayout>
+    </ThemeProvider>
   );
-}
+};
+
+export default NotFound;

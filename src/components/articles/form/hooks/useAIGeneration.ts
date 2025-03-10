@@ -1,78 +1,65 @@
 
 import { useState, useCallback } from 'react';
-import { toast } from 'sonner';
-import { EdgeFunctionService } from '@/services/api/edgeFunctions';
 import { GenerationParams, GeneratedContent } from './ai-generation/types';
+import { debounce } from './ai-generation/debounceUtils';
+import { generateKeywords as generateKeywordsUtil } from './ai-generation/keywordUtils';
+import { generateContent as generateContentUtil } from './ai-generation/contentGenerator';
 
 export function useAIGeneration() {
   const [loading, setLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
 
-  const generateContent = useCallback(async (params: GenerationParams): Promise<GeneratedContent> => {
+  const generateContent = async (params: GenerationParams) => {
     setLoading(true);
-    setError(null);
+    setGenerationProgress(10); // Start progress
     
     try {
-      const result = await EdgeFunctionService.generateContent(params);
+      setGenerationProgress(25); // Update progress
       
-      if (!result || !result.content) {
-        throw new Error('Failed to generate content. Please try again.');
+      const content = await generateContentUtil(params, retryCount, MAX_RETRIES);
+      
+      setGenerationProgress(90); // Almost done
+      
+      // Reset retry count on success
+      setRetryCount(0);
+      
+      if (content) {
+        setGeneratedContent(content);
+        setGenerationProgress(100); // Done
       }
       
-      const content: GeneratedContent = {
-        title: result.title || params.theme || '',
-        content: result.content,
-        metaDescription: result.metaDescription || '',
-        keywords: result.keywords || [],
-      };
-      
-      setGeneratedContent(content);
       return content;
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to generate content';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+    } catch (error) {
+      setGenerationProgress(0); // Reset progress on error
+      return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  // Fix the parameter order in generateKeywords method
-  const generateKeywords = useCallback(async (theme: string, platform: string, contentType: string): Promise<string[]> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Call the edge function to generate keywords
-      // Note: Using an empty string as the second parameter for metaDescription
-      const result = await EdgeFunctionService.generateSEOData(theme, "");
-      
-      if (!result || !result.keywords) {
-        throw new Error('Failed to generate keywords. Please try again.');
-      }
-      
-      return result.keywords;
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to generate keywords';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Create a debounced version of generateContent
+  const debouncedGenerate = useCallback(
+    debounce((params: GenerationParams) => generateContent(params), 1000),
+    []
+  );
 
-  const resetGeneratedContent = useCallback(() => {
-    setGeneratedContent(null);
-  }, []);
+  // Generate SEO keywords based on theme, platform, and content type
+  const generateKeywords = async (theme: string, platform: string, contentType: string) => {
+    return generateKeywordsUtil(theme, platform, contentType);
+  };
+
+  const resetGeneratedContent = () => setGeneratedContent(null);
 
   return {
     loading,
     generatedContent,
     generateContent,
+    debouncedGenerate,
     generateKeywords,
     resetGeneratedContent,
-    error
+    generationProgress
   };
 }

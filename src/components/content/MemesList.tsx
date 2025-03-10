@@ -1,130 +1,73 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Share2 } from "lucide-react";
-import { Meme } from "@/types/meme";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate } from "@/lib/utils";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Meme } from "@/types/content";
 
-interface MemesListProps {
-  memes: Meme[];
-  isLoading: boolean;
-  onEdit: (meme: Meme) => void;
-  onDelete: (id: string) => void;
-  onShare: (meme: Meme) => void;
-}
+export function MemesList() {
+  const { data: memes, isLoading } = useQuery({
+    queryKey: ['memes'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('memes')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(6);
+        
+        if (error) {
+          console.error("Error fetching memes:", error);
+          return [] as Meme[];
+        }
+        
+        return data as Meme[];
+      } catch (err) {
+        console.error("Failed to fetch memes:", err);
+        return [] as Meme[];
+      }
+    },
+  });
 
-export function MemesList({ memes, isLoading, onEdit, onDelete, onShare }: MemesListProps) {
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 p-2">
-            <Skeleton className="w-16 h-16 rounded" />
-            <div className="flex-1">
-              <Skeleton className="h-4 w-3/4 mb-2" />
-              <Skeleton className="h-3 w-1/2" />
-            </div>
-            <div className="flex space-x-1">
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="p-4">
+            <Skeleton className="h-[200px] w-full mb-4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3 mt-2" />
+          </Card>
         ))}
       </div>
     );
   }
 
-  if (memes.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No memes saved yet</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Generate and save your first meme to see it here
-        </p>
-      </div>
-    );
+  if (!memes || memes.length === 0) {
+    return <p className="text-muted-foreground">No memes created yet.</p>;
   }
 
   return (
-    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-      {memes.map((meme) => (
-        <div key={meme.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/10">
-          <img
-            src={meme.imageUrl}
-            alt={`${meme.topText} ${meme.bottomText}`}
-            className="w-16 h-16 object-cover rounded"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/placeholder.svg";
-            }}
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">
-              {meme.topText} {meme.bottomText}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {formatDate(meme.created_at)}
-            </p>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {memes && memes.map((meme) => (
+        <Card key={meme.id} className="overflow-hidden">
+          <img src={meme.image_url} alt={meme.meme_text} className="w-full h-36 object-cover" />
+          <div className="p-3">
+            <p className="text-sm font-medium truncate">{meme.meme_text}</p>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {Array.isArray(meme.platform_tags) && meme.platform_tags.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+              <Badge variant="secondary" className="ml-auto">
+                Score: {typeof meme.engagement_score === 'number' ? meme.engagement_score.toFixed(1) : '0.0'}
+              </Badge>
+            </div>
           </div>
-          <div className="flex space-x-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={() => onEdit(meme)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={() => onShare(meme)}
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete this meme. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={() => onDelete(meme.id)}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

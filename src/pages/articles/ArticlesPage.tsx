@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -10,45 +10,13 @@ import { useThemeFormDialog } from "./hooks/useThemeFormDialog";
 import { useArticles } from "@/hooks/useArticles";
 import { useContentThemes } from "@/hooks/useContentThemes";
 import { Article } from "@/types/articles";
-import { useArticleOperations } from "./hooks/useArticleOperations";
-import { ArticleFormDialog } from "./components/ArticleFormDialog";
-import { supabase } from "@/integrations/supabase/client";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
 
-  // Debug check for Supabase connection
-  useEffect(() => {
-    async function checkArticlesTable() {
-      try {
-        const { data, error, count } = await supabase
-          .from('articles')
-          .select('*', { count: 'exact' })
-          .limit(1);
-        
-        setDebugInfo({ 
-          hasData: Boolean(data?.length), 
-          count,
-          error: error ? error.message : null,
-          sample: data?.[0] || null
-        });
-        
-        if (error) {
-          console.error("Supabase connection error:", error);
-        } else {
-          console.log("Supabase articles table accessible, count:", count);
-        }
-      } catch (err) {
-        console.error("Failed to check articles table:", err);
-        setDebugInfo({ error: String(err) });
-      }
-    }
-    
-    checkArticlesTable();
-  }, []);
-
-  // Fetch articles and themes
+  // Articles functionality
   const { 
     articles, 
     isLoading: articlesLoading, 
@@ -57,9 +25,12 @@ export default function ArticlesPage() {
     statusFilter, 
     setStatusFilter,
     createArticle,
-    updateArticle
+    updateArticle,
+    deleteArticle,
+    generateArticle
   } = useArticles();
 
+  // Themes functionality
   const {
     themes,
     isLoading: themesLoading,
@@ -68,27 +39,20 @@ export default function ArticlesPage() {
     deleteTheme
   } = useContentThemes();
 
-  // Article operations
-  const { 
-    handleViewArticle, 
-    handlePublishArticle, 
-    handleDownloadArticle,
-    deleteArticle
-  } = useArticleOperations();
-
-  // Article form dialog state management
+  // Article form dialog management
   const { 
     formDialogOpen: articleFormDialogOpen, 
     setFormDialogOpen: setArticleFormDialogOpen,
     currentArticle,
     setCurrentArticle,
     handleCreateArticle,
-    handleEditArticle
+    handleEditArticle,
+    renderArticleFormDialog
   } = useArticleFormDialog({
     onSubmit: handleArticleSubmit
   });
 
-  // Theme form dialog state management
+  // Theme form dialog management
   const {
     formDialogOpen: themeFormDialogOpen,
     setFormDialogOpen: setThemeFormDialogOpen,
@@ -101,29 +65,25 @@ export default function ArticlesPage() {
     onSubmit: handleThemeSubmit
   });
 
-  // Form submission handlers
+  // Article submission handler
   async function handleArticleSubmit(data: any) {
     setIsSubmitting(true);
     try {
-      console.log("Submitting article data:", data);
-      
+      // Convert comma-separated keywords string to array
       const formattedData = {
         ...data,
-        seo_keywords: data.seoKeywords ? data.seoKeywords.split(',').map((k: string) => k.trim()) : []
+        seo_keywords: data.seo_keywords ? data.seo_keywords.split(',').map((k: string) => k.trim()) : []
       };
 
       if (currentArticle) {
+        // Update existing article
         await updateArticle.mutateAsync({
           id: currentArticle.id,
           ...formattedData
         });
-        toast.success("Article updated successfully");
       } else {
-        await createArticle.mutateAsync({
-          ...formattedData,
-          category: "general" // Add a default category for new articles
-        });
-        toast.success("Article created successfully");
+        // Create new article
+        await createArticle.mutateAsync(formattedData);
       }
       setArticleFormDialogOpen(false);
     } catch (error) {
@@ -134,23 +94,25 @@ export default function ArticlesPage() {
     }
   }
 
+  // Theme submission handler
   async function handleThemeSubmit(data: any) {
     setIsSubmitting(true);
     try {
+      // Convert comma-separated keywords string to array
       const formattedData = {
         ...data,
         keywords: data.keywords ? data.keywords.split(',').map((k: string) => k.trim()) : []
       };
 
       if (currentTheme) {
+        // Update existing theme
         await updateTheme.mutateAsync({
           id: currentTheme.id,
           ...formattedData
         });
-        toast.success("Theme updated successfully");
       } else {
+        // Create new theme
         await createTheme.mutateAsync(formattedData);
-        toast.success("Theme created successfully");
       }
       setThemeFormDialogOpen(false);
     } catch (error) {
@@ -161,6 +123,110 @@ export default function ArticlesPage() {
     }
   }
 
+  // Handle View action
+  const handleViewArticle = (article: Article) => {
+    // In a real implementation, this would navigate to the article view
+    // For now, just show a toast message
+    toast.info(`Viewing article: ${article.title}`);
+    window.open(`/articles/${article.id}`, '_blank');
+  };
+
+  // Handle Publish action
+  const handlePublishArticle = async (article: Article) => {
+    try {
+      await updateArticle.mutateAsync({
+        id: article.id,
+        status: 'published',
+        publish_date: new Date().toISOString()
+      });
+      toast.success(`Article "${article.title}" has been published`);
+    } catch (error) {
+      console.error('Error publishing article:', error);
+      toast.error('Failed to publish article');
+    }
+  };
+
+  // Handle Download action
+  const handleDownloadArticle = async (article: Article) => {
+    try {
+      toast.info('Preparing content for download...');
+      
+      // Create a new zip file
+      const zip = new JSZip();
+      
+      // Add article content as HTML
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${article.title}</title>
+          <meta name="description" content="${article.meta_description || ''}">
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+            img { max-width: 100%; height: auto; }
+            h1 { color: #333; }
+          </style>
+        </head>
+        <body>
+          <h1>${article.title}</h1>
+          ${article.content}
+        </body>
+        </html>
+      `;
+      zip.file(`${article.title}.html`, htmlContent);
+      
+      // Add text version
+      zip.file(`${article.title}.txt`, `${article.title}\n\n${article.content.replace(/<[^>]*>/g, '')}`);
+      
+      // If there's a featured image, add it
+      if (article.featured_image) {
+        try {
+          const imgResponse = await fetch(article.featured_image);
+          const imgBlob = await imgResponse.blob();
+          zip.file(`images/featured-image.${imgBlob.type.split('/')[1] || 'jpg'}`, imgBlob);
+        } catch (imgError) {
+          console.error('Error fetching featured image:', imgError);
+        }
+      }
+      
+      // If there's voice content, add it
+      if (article.voice_url) {
+        try {
+          const audioResponse = await fetch(article.voice_url);
+          const audioBlob = await audioResponse.blob();
+          zip.file(`audio/${article.voice_file_name || 'voice-content.mp3'}`, audioBlob);
+        } catch (audioError) {
+          console.error('Error fetching voice content:', audioError);
+        }
+      }
+      
+      // Add metadata JSON
+      const metadata = {
+        title: article.title,
+        description: article.meta_description,
+        keywords: article.seo_keywords,
+        platform: article.category,
+        moralLevel: article.moral_level,
+        createdAt: article.created_at,
+        status: article.status
+      };
+      zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+      
+      // Generate the zip file
+      const content = await zip.generateAsync({ type: 'blob' });
+      
+      // Save the zip file
+      saveAs(content, `${article.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_content.zip`);
+      
+      toast.success('Content downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading article content:', error);
+      toast.error('Failed to download content');
+    }
+  };
+
   return (
     <AppLayout>
       <div className="container py-6">
@@ -170,13 +236,6 @@ export default function ArticlesPage() {
             Manage content, monitor performance, and schedule publications
           </p>
         </div>
-        
-        {debugInfo && debugInfo.error && (
-          <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-md">
-            <h3 className="font-semibold">Database Connection Error:</h3>
-            <p>{debugInfo.error}</p>
-          </div>
-        )}
         
         <Tabs defaultValue="articles">
           <TabsList>
@@ -212,14 +271,8 @@ export default function ArticlesPage() {
           </TabsContent>
         </Tabs>
         
-        <ArticleFormDialog
-          open={articleFormDialogOpen}
-          onOpenChange={setArticleFormDialogOpen}
-          currentArticle={currentArticle}
-          onSubmit={handleArticleSubmit}
-          isSubmitting={isSubmitting}
-        />
-        
+        {/* Form Dialogs */}
+        {renderArticleFormDialog()}
         {renderThemeFormDialog(isSubmitting)}
       </div>
     </AppLayout>

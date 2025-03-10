@@ -30,7 +30,7 @@ export function MoralityHeatmap() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data = getCountryMoralDistribution();
+        const data = await getCountryMoralDistribution();
         setCountryData(data || []);
       } catch (err: any) {
         console.error("Error fetching country data:", err);

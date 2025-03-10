@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArticleForm, ArticleFormValues } from "@/components/articles/form";
@@ -16,11 +16,9 @@ export function useArticleFormDialog({
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
 
   const handleCreateArticle = () => {
     setCurrentArticle(null);
-    setFormMode('create');
     setFormDialogOpen(true);
   };
 
@@ -38,7 +36,6 @@ export function useArticleFormDialog({
       id: article.id,
       title: article.title,
       content: article.content,
-      theme: article.title, // Use title as initial theme when editing
       // These fields might not exist in the Article type, but we handle them safely
       excerpt: article.excerpt || '',
       metaDescription: article.meta_description || '',
@@ -50,28 +47,10 @@ export function useArticleFormDialog({
       voiceFileName: article.voice_file_name || '',
       voiceBase64: article.voice_base64 || '',
       moralLevel: article.moral_level || 5,
-      contentType: "article", // Default type
-      platform: article.category || "web", // Use category as platform
-      contentLength: determineContentLength(article.content),
-      tone: "informative", // Default tone
     };
     
     setCurrentArticle(article);
-    setFormMode('edit');
     setFormDialogOpen(true);
-  };
-
-  // Helper function to determine content length based on word count
-  const determineContentLength = (content: string): string => {
-    if (!content) return 'medium';
-    
-    const wordCount = content.split(/\s+/).length;
-    
-    if (wordCount > 5000) return 'comprehensive';
-    if (wordCount > 3000) return 'in-depth';
-    if (wordCount > 1500) return 'long';
-    if (wordCount > 500) return 'medium';
-    return 'short';
   };
 
   const handleFormSubmit = async (data: ArticleFormValues) => {
@@ -82,8 +61,7 @@ export function useArticleFormDialog({
       console.log("Submitting article form:", {
         title: data.title,
         hasVoiceData: Boolean(data.voiceUrl),
-        voiceGenerated: data.voiceGenerated,
-        mode: formMode
+        voiceGenerated: data.voiceGenerated
       });
       
       // If currentArticle exists, add its ID to the data
@@ -110,7 +88,6 @@ export function useArticleFormDialog({
               initialData={currentArticle ? {
                 title: currentArticle.title,
                 content: currentArticle.content,
-                theme: currentArticle.title, // Use title as initial theme
                 // Again, handle properties that might not exist in the Article type
                 excerpt: currentArticle.excerpt || '',
                 metaDescription: currentArticle.meta_description || '',
@@ -121,12 +98,7 @@ export function useArticleFormDialog({
                 voiceFileName: currentArticle.voice_file_name || '',
                 voiceBase64: currentArticle.voice_base64 || '',
                 moralLevel: currentArticle.moral_level || 5,
-                contentType: "article", // Default type
-                platform: currentArticle.category || "web", // Use category as platform
-                contentLength: determineContentLength(currentArticle.content),
-                tone: "informative", // Default tone
               } : undefined}
-              mode={formMode}
               onSubmit={handleFormSubmit}
               onCancel={() => setFormDialogOpen(false)}
               isLoading={isSubmitting}
@@ -142,7 +114,6 @@ export function useArticleFormDialog({
     setFormDialogOpen,
     currentArticle,
     setCurrentArticle,
-    formMode,
     handleCreateArticle,
     handleEditArticle,
     renderArticleFormDialog

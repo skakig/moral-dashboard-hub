@@ -1,46 +1,53 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { default as Dashboard } from "./pages/Index";
-import Login from "./pages/Login";
-import { default as Register } from "./pages/Login"; // Temporary using Login as Register since Register page doesn't exist
-import Settings from "./pages/Settings";
-import ArticlesPage from "./pages/articles/ArticlesPage";
-import ArticleViewPage from "./pages/articles/ArticleViewPage";
-import Demographics from "./pages/Demographics";
-import Affiliates from "./pages/Affiliates";
-import Users from "./pages/Users";
+import { ThemeProvider } from "./components/ThemeProvider";
+import { Toaster } from "./components/ui/toaster";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Import pages
+import Index from "./pages/Index";
 import Assessments from "./pages/Assessments";
-import Trends from "./pages/Trends";
+import Demographics from "./pages/Demographics";
 import AIContent from "./pages/AIContent";
+import AIInsights from "./pages/AIInsights";
+import Settings from "./pages/Settings";
+import UserProfile from "./pages/UserProfile";
+import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
-import { QueryProvider } from "./providers/QueryProvider";
-import { AuthProvider } from "./hooks/useAuthContext";
-import { Toaster } from "sonner";
+import Users from "./pages/Users";
+import ArticlesPage from "./pages/articles";
+import AffiliatesPage from "./pages/Affiliates";
+import Trends from "./pages/Trends";
+
+// Create a client
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <QueryProvider>
-      <AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="light">
         <Router>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/articles" element={<ArticlesPage />} />
-            <Route path="/articles/:id" element={<ArticleViewPage />} />
-            <Route path="/demographics" element={<Demographics />} />
-            <Route path="/affiliates" element={<Affiliates />} />
-            <Route path="/users" element={<Users />} />
+            <Route path="/" element={<Index />} />
             <Route path="/assessments" element={<Assessments />} />
-            <Route path="/trends" element={<Trends />} />
+            <Route path="/demographics" element={<Demographics />} />
             <Route path="/content" element={<AIContent />} />
+            <Route path="/insights" element={<AIInsights />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/articles/*" element={<ArticlesPage />} />
+            <Route path="/affiliates" element={<AffiliatesPage />} />
+            <Route path="/trends" element={<Trends />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <Toaster />
         </Router>
-        <Toaster position="top-right" />
-      </AuthProvider>
-    </QueryProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

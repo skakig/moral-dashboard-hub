@@ -8,13 +8,11 @@ import { useVoiceGeneration } from "./hooks/useVoiceGeneration";
 import { useAIGeneration } from "./hooks/useAIGeneration";
 import { toast } from "sonner";
 
-// Import refactored components
+// Import new refactored components
 import { CopyButtons } from "./components/CopyButtons";
 import { ArticleContentSection } from "./components/ArticleContentSection";
 import { VoiceContentSection } from "./components/VoiceContentSection";
 import { SEOSection } from "./components/SEOSection";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
 
 // Main ArticleFormFields component
 export function ArticleFormFields({ form }) {
@@ -30,12 +28,12 @@ export function ArticleFormFields({ form }) {
     isPlaying,
     togglePlayPause,
     downloadAudio,
-    setIsPlaying,
-    error: voiceError
+    setIsPlaying
   } = useVoiceGeneration(form);
-  const { loading: isGeneratingContent, generateContent, error: contentError } = useAIGeneration();
+  const { loading: isGeneratingContent, generateContent } = useAIGeneration();
   const [error, setError] = useState<string | null>(null);
   const voiceGenerated = form.watch("voiceGenerated") || false;
+  const voiceUrl = form.watch("voiceUrl") || "";
 
   // Preserve form values when selections change
   useEffect(() => {
@@ -48,17 +46,6 @@ export function ArticleFormFields({ form }) {
     
     return () => subscription.unsubscribe();
   }, [form]);
-
-  // Update error state when content or voice generation errors occur
-  useEffect(() => {
-    if (contentError) {
-      setError(`Content generation error: ${contentError}`);
-    } else if (voiceError) {
-      setError(`Voice generation error: ${voiceError}`);
-    } else {
-      setError(null);
-    }
-  }, [contentError, voiceError]);
 
   const handleGenerateContent = async () => {
     try {
@@ -133,23 +120,11 @@ export function ArticleFormFields({ form }) {
 
   // Function to handle voice generation with the selected voice
   const handleGenerateVoice = async () => {
-    try {
-      await generateVoiceContent(selectedVoice);
-    } catch (error: any) {
-      console.error("Error generating voice:", error);
-      toast.error(`Voice generation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
+    await generateVoiceContent(selectedVoice);
   };
 
   return (
     <div className="space-y-4">
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
       <BasicInfoFields form={form} />
       
       <CopyButtons 
@@ -174,7 +149,7 @@ export function ArticleFormFields({ form }) {
       
       <ArticleContentSection 
         form={form}
-        error={contentError}
+        error={error}
         isGeneratingContent={isGeneratingContent}
         handleGenerateContent={handleGenerateContent}
       />

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -29,8 +29,6 @@ const articleFormSchema = z.object({
   voiceBase64: z.string().optional(),
   moralLevel: z.string().or(z.number()).optional().default(5),
   theme: z.string().optional(),
-  _autoGenerate: z.boolean().optional(),
-  _autoGenerateOptions: z.any().optional(),
 });
 
 export type ArticleFormValues = z.infer<typeof articleFormSchema>;
@@ -41,7 +39,6 @@ interface ArticleFormProps {
   submitLabel?: string;
   onCancel?: () => void;
   isLoading?: boolean;
-  mode?: 'create' | 'edit';
 }
 
 export function ArticleForm({
@@ -50,10 +47,8 @@ export function ArticleForm({
   submitLabel = "Create",
   onCancel,
   isLoading = false,
-  mode = 'create',
 }: ArticleFormProps) {
   const [formView, setFormView] = useState<"classic" | "wizard">("wizard");
-  const [sharedFormState, setSharedFormState] = useState<Partial<ArticleFormValues>>(initialData);
 
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
@@ -78,48 +73,16 @@ export function ArticleForm({
     },
   });
 
-  // Update classic form when wizard form changes
-  const handleWizardFormStateChange = (newState: Partial<ArticleFormValues>) => {
-    setSharedFormState(current => ({ ...current, ...newState }));
-  };
-  
-  // Update form values when shared state changes
-  useEffect(() => {
-    if (formView === "classic") {
-      Object.entries(sharedFormState).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          form.setValue(key as any, value);
-        }
-      });
-    }
-  }, [formView, sharedFormState, form]);
-
   async function onSubmit(data: ArticleFormValues) {
     try {
-      // Clean up internal fields
-      const cleanedData = { ...data };
-      delete cleanedData._autoGenerate;
-      delete cleanedData._autoGenerateOptions;
-      
       if (onFormSubmit) {
-        onFormSubmit(cleanedData);
+        onFormSubmit(data);
       }
     } catch (error) {
       console.error("Error submitting article form:", error);
       toast.error("Failed to save article");
     }
   }
-
-  // Update shared state when classic form changes
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      if (formView === "classic") {
-        setSharedFormState(current => ({ ...current, ...value }));
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [form, formView]);
 
   return (
     <div className="space-y-8">
@@ -131,14 +94,11 @@ export function ArticleForm({
         
         <TabsContent value="wizard">
           <StepByStepArticleForm
-            initialData={sharedFormState}
+            initialData={initialData}
             onSubmit={onFormSubmit}
             submitLabel={submitLabel}
             onCancel={onCancel}
             isLoading={isLoading}
-            mode={mode}
-            parentFormState={sharedFormState}
-            onFormStateChange={handleWizardFormStateChange}
           />
         </TabsContent>
         

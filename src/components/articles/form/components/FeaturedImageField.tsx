@@ -1,14 +1,12 @@
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Wand2, Loader2, Copy, RefreshCw, Upload, AlertTriangle } from "lucide-react";
+import { Wand2, Loader2, Copy, RefreshCw } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { useImageGeneration } from "../hooks/useImageGeneration";
 import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FeaturedImageFieldProps {
   form: UseFormReturn<any>;
@@ -17,9 +15,6 @@ interface FeaturedImageFieldProps {
 export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
   const { generateImage, loading } = useImageGeneration();
   const [generating, setGenerating] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; label: string }>({ 
     width: 1200, 
     height: 630, 
@@ -65,11 +60,11 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
 
   const handleGenerateImage = async () => {
     setGenerating(true);
-    setError(null);
     
     try {
       // Use theme or title as prompt
       const theme = form.getValues("theme") || form.getValues("title") || "Featured image";
+      const platform = form.getValues("platform");
       
       // Include content excerpt for better context
       const content = form.getValues("content");
@@ -82,68 +77,20 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
       
       const prompt = `${theme}${contentSummary ? ". Content summary: " + contentSummary : ""}`;
       
-      // Generate image
-      const result = await generateImage(prompt);
+      // Generate image with platform dimensions
+      const result = await generateImage(prompt, platform);
       
       if (result) {
         form.setValue("featuredImage", result, { shouldDirty: true });
         form.trigger("featuredImage");
         toast.success("Image generated successfully");
-      } else {
-        throw new Error("Image generation failed - no result returned");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error generating image:", error);
-      setError(error.message || "Failed to generate image");
-      toast.error("Failed to generate image: " + (error.message || "Unknown error"));
+      toast.error("Failed to generate image");
     } finally {
       setGenerating(false);
     }
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error("Please upload an image file");
-      return;
-    }
-
-    setUploading(true);
-    
-    try {
-      // Convert the file to a data URL
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          const dataUrl = e.target.result as string;
-          form.setValue("featuredImage", dataUrl, { shouldDirty: true });
-          form.trigger("featuredImage");
-          toast.success("Image uploaded successfully");
-        }
-      };
-      
-      reader.onerror = () => {
-        toast.error("Failed to read the image file");
-      };
-      
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Failed to upload image");
-    } finally {
-      setUploading(false);
-      // Reset the input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
   };
 
   const handleCopy = () => {
@@ -188,94 +135,30 @@ export function FeaturedImageField({ form }: FeaturedImageFieldProps) {
                 Copy URL
               </Button>
             </div>
-
-            {error && (
-              <Alert variant="destructive" className="mb-2">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  {error}
-                  <div className="mt-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleGenerateImage}
-                      className="mr-2"
-                    >
-                      Retry Generation
-                    </Button>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            onClick={() => window.open('https://supabase.com/dashboard/project/czljqsxnuylmmfrscski/functions/generate-image/logs', '_blank')}
-                          >
-                            View Logs
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>View edge function logs to troubleshoot</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleGenerateImage}
-                disabled={generating || loading}
-              >
-                {generating || loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : field.value ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Regenerate Image
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="h-4 w-4 mr-2" />
-                    Generate with AI
-                  </>
-                )}
-              </Button>
-
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={triggerFileInput}
-                disabled={uploading}
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Image
-                  </>
-                )}
-              </Button>
-              
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileUpload} 
-                style={{ display: 'none' }} 
-                accept="image/*"
-              />
-            </div>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleGenerateImage}
+              disabled={generating || loading}
+              className="w-full"
+            >
+              {generating || loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : field.value ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Regenerate Image for {imageDimensions.label}
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Generate Image with AI
+                </>
+              )}
+            </Button>
           </div>
           <FormMessage />
           {field.value && (

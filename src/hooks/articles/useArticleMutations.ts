@@ -1,109 +1,42 @@
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ArticleUpdateInput, Article } from "@/types/articles";
+import { ArticleFormValues } from "@/components/articles/form";
+import { mapFormToDbArticle } from "./utils/articleMappers";
+import { useUser } from "@/hooks/useUser";
 
+/**
+ * Hook for article CRUD operations
+ */
 export function useArticleMutations() {
   const queryClient = useQueryClient();
-  
-  // Helper function to normalize values and ensure type compatibility
-  const normalizeArticleData = (articleData: any) => {
-    // Normalize moral level to a number
-    const moralLevel = articleData.moral_level || articleData.moralLevel;
-    const parsedMoralLevel = typeof moralLevel === 'string' 
-      ? parseInt(moralLevel, 10) 
-      : (moralLevel || 5);
-    
-    // Convert keywords from string to array if needed
-    let seoKeywords = articleData.seo_keywords || articleData.seoKeywords || [];
-    if (typeof seoKeywords === 'string') {
-      seoKeywords = seoKeywords.split(',').map((k: string) => k.trim()).filter(Boolean);
-    }
-    
-    // Format the data for database
-    return {
-      content: articleData.content || '', // Ensure content is never undefined/null
-      title: articleData.title || 'Untitled', // Ensure title is never undefined/null
-      moral_level: parsedMoralLevel,
-      seo_keywords: seoKeywords,
-      meta_description: articleData.meta_description || articleData.metaDescription || '',
-      featured_image: articleData.featured_image || articleData.featuredImage || '',
-      voice_url: articleData.voice_url || articleData.voiceUrl || '',
-      voice_generated: articleData.voice_generated || articleData.voiceGenerated || false,
-      voice_file_name: articleData.voice_file_name || articleData.voiceFileName || '',
-      voice_base64: articleData.voice_base64 || articleData.voiceBase64 || '',
-      voice_segments: articleData.voice_segments || articleData.voiceSegments || '',
-      category: articleData.category || 'general',
-      status: articleData.status || 'draft',
-      publish_date: articleData.publish_date || null
-    };
-  };
-  
-  // Create a new article
+  const { user } = useUser();
+
+  // Create new article
   const createArticle = useMutation({
-    mutationFn: async (article: Partial<ArticleUpdateInput> & { category?: string }) => {
-      // Prepare the data for the database
-      const { id, ...articleData } = article;
+    mutationFn: async (article: ArticleFormValues) => {
+      const dbArticle = mapFormToDbArticle(article);
       
-      // Format the data for database
-      const formattedData = normalizeArticleData(articleData);
+      // Log what we're sending to Supabase
+      console.log("Creating article:", {
+        title: dbArticle.title,
+        hasContent: Boolean(dbArticle.content),
+        hasVoiceData: Boolean(dbArticle.voice_url)
+      });
       
-      console.log("Creating article with data:", formattedData);
-      
-      // Handle the excerpt field separately
-      if (articleData.excerpt) {
-        try {
-          const { data, error } = await supabase
-            .from('articles')
-            .insert({
-              ...formattedData,
-              excerpt: articleData.excerpt
-            })
-            .select()
-            .single();
-          
-          if (error) {
-            console.error("Supabase insert error:", error);
-            throw error;
-          }
-          
-          return data;
-        } catch (error) {
-          console.error("Error creating article with excerpt:", error);
-          // Fall back to creating without excerpt if that's the issue
-          if (String(error).includes("column of 'articles'")) {
-            console.log("Trying again without excerpt field");
-            const { data, error: fallbackError } = await supabase
-              .from('articles')
-              .insert(formattedData)
-              .select()
-              .single();
-            
-            if (fallbackError) {
-              console.error("Supabase insert fallback error:", fallbackError);
-              throw fallbackError;
-            }
-            
-            return data;
-          } else {
-            throw error;
-          }
-        }
-      } else {
-        // Standard insert without excerpt
-        const { data, error } = await supabase
-          .from('articles')
-          .insert(formattedData)
-          .select()
-          .single();
-        
-        if (error) {
-          console.error("Supabase insert error:", error);
-          throw error;
-        }
-        
-        return data;
+      const { data, error } = await supabase
+        .from('articles')
+        .insert(dbArticle)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating article:", error);
+        throw new Error(error.message);
       }
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
@@ -111,83 +44,35 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error creating article:", error);
-      toast.error("Failed to create article");
-    }
+      toast.error(`Failed to create article: ${error instanceof Error ? error.message : "Unknown error"}`);
+    },
   });
-  
-  // Update an existing article
+
+  // Update existing article
   const updateArticle = useMutation({
-    mutationFn: async (article: ArticleUpdateInput) => {
-      const { id, ...updateData } = article;
+    mutationFn: async ({ id, ...formValues }: Partial<ArticleFormValues> & { id: string }) => {
+      const dbArticle = mapFormToDbArticle(formValues as ArticleFormValues);
       
-      // Format the data for database
-      const formattedData = normalizeArticleData(updateData);
+      // Log what we're updating in Supabase
+      console.log("Updating article:", {
+        id,
+        title: dbArticle.title,
+        hasVoiceData: Boolean(dbArticle.voice_url)
+      });
       
-      // Handle status update if needed
-      if (updateData.status) {
-        formattedData.status = updateData.status;
-        if (updateData.status === 'published' && !formattedData.publish_date) {
-          formattedData.publish_date = new Date().toISOString();
-        }
+      const { data, error } = await supabase
+        .from('articles')
+        .update(dbArticle)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating article:", error);
+        throw new Error(error.message);
       }
-      
-      console.log("Updating article with ID:", id, "Data:", formattedData);
-      
-      // Handle the excerpt field separately if provided
-      if (updateData.excerpt !== undefined) {
-        try {
-          const { data, error } = await supabase
-            .from('articles')
-            .update({
-              ...formattedData,
-              excerpt: updateData.excerpt
-            })
-            .eq('id', id)
-            .select()
-            .single();
-          
-          if (error) {
-            console.error("Supabase update error with excerpt:", error);
-            if (String(error).includes("column of 'articles'")) {
-              console.log("Trying update without excerpt field");
-              const { data: fallbackData, error: fallbackError } = await supabase
-                .from('articles')
-                .update(formattedData)
-                .eq('id', id)
-                .select()
-                .single();
-              
-              if (fallbackError) {
-                throw fallbackError;
-              }
-              
-              return fallbackData;
-            } else {
-              throw error;
-            }
-          }
-          
-          return data;
-        } catch (error) {
-          console.error("Error with excerpt field:", error);
-          throw error;
-        }
-      } else {
-        // Standard update without excerpt
-        const { data, error } = await supabase
-          .from('articles')
-          .update(formattedData)
-          .eq('id', id)
-          .select()
-          .single();
-        
-        if (error) {
-          console.error("Supabase update error:", error);
-          throw error;
-        }
-        
-        return data;
-      }
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
@@ -195,20 +80,21 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error updating article:", error);
-      toast.error("Failed to update article");
-    }
+      toast.error(`Failed to update article: ${error instanceof Error ? error.message : "Unknown error"}`);
+    },
   });
-  
-  // Delete an article
+
+  // Delete article
   const deleteArticle = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('articles')
         .delete()
         .eq('id', id);
-      
-      if (error) throw error;
-      return id;
+
+      if (error) {
+        throw new Error(error.message);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
@@ -216,13 +102,13 @@ export function useArticleMutations() {
     },
     onError: (error) => {
       console.error("Error deleting article:", error);
-      toast.error("Failed to delete article");
-    }
+      toast.error(`Failed to delete article: ${error instanceof Error ? error.message : "Unknown error"}`);
+    },
   });
 
   return {
     createArticle,
     updateArticle,
-    deleteArticle
+    deleteArticle,
   };
 }

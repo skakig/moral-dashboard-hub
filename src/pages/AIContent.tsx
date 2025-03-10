@@ -1,68 +1,83 @@
 
-import React, { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Video, Image, Calendar } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MemeGenerator } from "@/components/content/MemeGenerator";
 import { VideoGenerator } from "@/components/content/VideoGenerator";
 import { SchedulePlanner } from "@/components/content/SchedulePlanner";
-import { Suspense } from "react";
-
-// Lazy loading components for better performance
-const LazyComponent = ({ component: Component, isActive }: { component: React.ComponentType<any>, isActive: boolean }) => {
-  if (!isActive) {
-    return (
-      <Card>
-        <CardContent className="h-64 flex items-center justify-center">
-          <p className="text-muted-foreground">Select this tab to load the content</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  return (
-    <Suspense fallback={
-      <Card>
-        <CardContent className="h-64 flex items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
-        </CardContent>
-      </Card>
-    }>
-      <Component />
-    </Suspense>
-  );
-};
 
 export default function AIContent() {
-  const [activeTab, setActiveTab] = useState("memes");
-  
   return (
     <AppLayout>
-      <div className="container mx-auto py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">AI Content Management</h1>
-          <p className="text-muted-foreground">
-            Generate, manage, and publish AI-powered content for different platforms
-          </p>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">AI Content Creation</h1>
+            <p className="text-muted-foreground">
+              Generate and manage AI-driven content for social media platforms
+            </p>
+          </div>
         </div>
-        
-        <Tabs defaultValue="memes" onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="memes">Meme Generator</TabsTrigger>
-            <TabsTrigger value="videos">Video Content</TabsTrigger>
-            <TabsTrigger value="scheduler">Content Scheduler</TabsTrigger>
+
+        <Tabs defaultValue="memes" className="space-y-4">
+          <TabsList className="grid grid-cols-3 w-[400px]">
+            <TabsTrigger value="memes" className="flex items-center">
+              <Image className="mr-2 h-4 w-4" />
+              Meme Generator
+            </TabsTrigger>
+            <TabsTrigger value="videos" className="flex items-center">
+              <Video className="mr-2 h-4 w-4" />
+              Video Creator
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="flex items-center">
+              <Calendar className="mr-2 h-4 w-4" />
+              Scheduler
+            </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="memes">
-            <LazyComponent component={MemeGenerator} isActive={activeTab === "memes"} />
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Meme Generator</CardTitle>
+                <CardDescription>
+                  Create engaging memes for social media using AI
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MemeGenerator />
+              </CardContent>
+            </Card>
           </TabsContent>
           
           <TabsContent value="videos">
-            <LazyComponent component={VideoGenerator} isActive={activeTab === "videos"} />
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Video Creator</CardTitle>
+                <CardDescription>
+                  Generate short-form videos with AI voice narration
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <VideoGenerator />
+              </CardContent>
+            </Card>
           </TabsContent>
           
-          <TabsContent value="scheduler">
-            <LazyComponent component={SchedulePlanner} isActive={activeTab === "scheduler"} />
+          <TabsContent value="schedule">
+            <Card>
+              <CardHeader>
+                <CardTitle>Content Schedule Planner</CardTitle>
+                <CardDescription>
+                  Plan and schedule your AI-generated content across platforms
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SchedulePlanner />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

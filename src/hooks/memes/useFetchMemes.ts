@@ -31,19 +31,14 @@ export function useFetchMemes() {
         return;
       }
       
-      // Break the type instantiation by completely separating the query execution 
-      // from its result typing
-      const query = supabase
+      // Use a type assertion approach that avoids deep type instantiation
+      // by completely separating the query from the result handling
+      const { data, error: fetchError } = await supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
         .order('created_at', { ascending: false });
-        
-      // Execute the query and explicitly type the response
-      const response = await query;
-      const data = response.data as MemeDbRecord[] | null;
-      const fetchError = response.error;
-        
+      
       if (fetchError) {
         throw fetchError;
       }
@@ -53,15 +48,11 @@ export function useFetchMemes() {
         return;
       }
       
-      // Transform each database record to a Meme object using a regular for loop
-      // instead of map/functional methods to avoid deep type instantiation
+      // Process each record individually to avoid type recursion
       const transformedMemes: Meme[] = [];
-      
       for (let i = 0; i < data.length; i++) {
-        // Using the mapper function with explicit typing to break recursion
-        const dbRecord = data[i] as MemeDbRecord;
-        const meme = dbRecordToMeme(dbRecord);
-        transformedMemes.push(meme);
+        const record = data[i] as unknown as MemeDbRecord;
+        transformedMemes.push(dbRecordToMeme(record));
       }
       
       setSavedMemes(transformedMemes);

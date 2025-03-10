@@ -31,16 +31,14 @@ export function useFetchMemes() {
         return;
       }
       
-      // Fetch memes for the current user
-      // Use explicit typing to break the deep instantiation
-      const { data, error: fetchError } = await supabase
+      // Fetch memes for the current user with proper type handling
+      const response = await supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
-        .order('created_at', { ascending: false }) as { 
-          data: MemeDbRecord[] | null, 
-          error: any 
-        };
+        .order('created_at', { ascending: false });
+        
+      const { data, error: fetchError } = response;
         
       if (fetchError) {
         throw fetchError;
@@ -57,7 +55,8 @@ export function useFetchMemes() {
       
       for (let i = 0; i < data.length; i++) {
         // Using the mapper function with explicit typing to break recursion
-        const meme = dbRecordToMeme(data[i]);
+        const dbRecord = data[i] as MemeDbRecord;
+        const meme = dbRecordToMeme(dbRecord);
         transformedMemes.push(meme);
       }
       

@@ -46,19 +46,19 @@ export function useFetchMemes() {
         return;
       }
       
-      // Use a simple for loop instead of map to avoid complex type inference
+      // Transform each database record to a Meme object
       const transformedMemes: Meme[] = [];
       
       for (let i = 0; i < data.length; i++) {
-        // Use type assertion and explicit transformation
+        // Using the mapper function to convert each record
         const meme = dbRecordToMeme(data[i]);
         transformedMemes.push(meme);
       }
       
       setSavedMemes(transformedMemes);
       
-    } catch (err: any) {
-      const errorMsg = err.message || 'Failed to load memes';
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to load memes';
       setError(errorMsg);
       logError('Error fetching memes:', err);
     } finally {

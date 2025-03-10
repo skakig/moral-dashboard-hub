@@ -29,16 +29,16 @@ export function useSaveMeme() {
         return null;
       }
       
-      // Prepare meme data for database with explicit typing
-      const memeWithUser = {
+      // Prepare meme data for database using our mapper
+      const memeWithUser: MemeFormData = {
         ...memeData,
         user_id: userId
       };
       
-      // Convert to database format using our mapper
+      // Convert to database format with proper typing
       const dbRecord = memeFormToDbRecord(memeWithUser);
       
-      // Insert into database
+      // Insert into database with properly typed object
       const { data, error: saveError } = await supabase
         .from('memes')
         .insert(dbRecord)
@@ -53,14 +53,14 @@ export function useSaveMeme() {
         throw new Error('No data returned from insert operation');
       }
       
-      // Convert database response to Meme type using our explicit mapper
+      // Convert database response to Meme type
       const newMeme = dbRecordToMeme(data);
       
       toast.success('Meme saved successfully!');
       return newMeme;
       
-    } catch (err: any) {
-      const errorMsg = err.message || 'Failed to save meme';
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to save meme';
       setError(errorMsg);
       toast.error(`Error saving meme: ${errorMsg}`);
       logError('Error saving meme:', err);

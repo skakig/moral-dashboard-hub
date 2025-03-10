@@ -41,19 +41,18 @@ export function useFetchMemes() {
         throw fetchError;
       }
       
-      if (!data || data.length === 0) {
+      if (!data || data.length ===.length === 0) {
         setSavedMemes([]);
         return;
       }
       
-      // Transform each database record to a Meme object using a simple loop
-      // to avoid deep type instantiation
+      // Transform each database record to a Meme object using a regular for loop
+      // instead of map/functional methods to avoid deep type instantiation
       const transformedMemes: Meme[] = [];
       
       for (let i = 0; i < data.length; i++) {
-        // Using the mapper function with explicit casting to avoid type inference issues
-        const record = data[i];
-        const meme = dbRecordToMeme(record);
+        // Using the mapper function with any type to break recursion
+        const meme = dbRecordToMeme(data[i]);
         transformedMemes.push(meme);
       }
       

@@ -1,5 +1,4 @@
-
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, lazy } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { Toaster } from "./components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -37,7 +36,8 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/users" element={<Users />} />
-            <Route path="/articles/*" element={<ArticlesPage />} />
+            <Route path="/articles" element={<ArticlesPage />} />
+            <Route path="/articles/create" element={lazy(() => import("./pages/articles/create/CreateArticlePage"))} />
             <Route path="/affiliates" element={<AffiliatesPage />} />
             <Route path="/trends" element={<Trends />} />
             <Route path="/login" element={<Login />} />

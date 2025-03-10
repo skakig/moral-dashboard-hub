@@ -1,4 +1,3 @@
-
 import { ArticleToolbar } from "@/components/articles/ArticleToolbar";
 import { ArticlesTable } from "@/components/articles/ArticlesTable";
 import { Loader2 } from "lucide-react";
@@ -6,7 +5,7 @@ import { Article } from "@/types/articles";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useArticleMutations } from "@/hooks/articles/useArticleMutations";
-import { mapFormToDbArticle } from "@/hooks/articles/utils/articleMappers";
+import { useNavigate } from "react-router-dom";
 
 interface ArticlesTabProps {
   articles: Article[];
@@ -27,26 +26,23 @@ export function ArticlesTab({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
-  onCreateNew,
   onEdit,
   onDelete
 }: ArticlesTabProps) {
+  const navigate = useNavigate();
   const { updateArticle } = useArticleMutations();
   const [publishingArticle, setPublishingArticle] = useState<string | null>(null);
   const [viewingArticle, setViewingArticle] = useState<Article | null>(null);
 
-  // Handle publishing an article
   const handlePublish = async (article: Article) => {
     try {
       setPublishingArticle(article.id);
       
-      // Create a proper payload for publishing an article
       const publishData = {
         id: article.id,
         publish_date: new Date().toISOString()
       };
       
-      // The mapper will properly format the publish_date and set status to 'published'
       const dbPayload = mapFormToDbArticle(publishData);
       
       await updateArticle.mutateAsync({
@@ -63,9 +59,12 @@ export function ArticlesTab({
     }
   };
 
-  // Handle viewing an article
   const handleView = (article: Article) => {
     setViewingArticle(article);
+  };
+
+  const handleCreateNew = () => {
+    navigate("/articles/create");
   };
 
   return (
@@ -75,7 +74,7 @@ export function ArticlesTab({
         onSearchChange={onSearchChange}
         statusFilter={statusFilter}
         onStatusFilterChange={onStatusFilterChange}
-        onCreateNew={onCreateNew}
+        onCreateNew={handleCreateNew}
       />
       
       {isLoading ? (

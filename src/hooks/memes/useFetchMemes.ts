@@ -46,12 +46,14 @@ export function useFetchMemes() {
         return;
       }
       
-      // Transform each database record to a Meme object
+      // Transform each database record to a Meme object using a simple loop
+      // to avoid deep type instantiation
       const transformedMemes: Meme[] = [];
       
       for (let i = 0; i < data.length; i++) {
-        // Using the mapper function to convert each record
-        const meme = dbRecordToMeme(data[i]);
+        // Using the mapper function with explicit casting to avoid type inference issues
+        const record = data[i];
+        const meme = dbRecordToMeme(record);
         transformedMemes.push(meme);
       }
       

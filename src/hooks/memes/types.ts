@@ -1,7 +1,7 @@
 
 import { Meme, MemeFormData } from '@/types/meme';
 
-// Simplified interface for database response to avoid type recursion issues
+// Database record shape - explicitly defined to avoid complex type inference
 export interface MemeDbRecord {
   id: string;
   image_url: string;

@@ -31,14 +31,12 @@ export function useFetchMemes() {
         return;
       }
       
-      // Fetch memes for the current user with proper type handling
-      const response = await supabase
+      // Fetch memes for the current user - using explicit type casting to avoid deep instantiation error
+      const { data, error: fetchError } = await supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
         .order('created_at', { ascending: false });
-        
-      const { data, error: fetchError } = response;
         
       if (fetchError) {
         throw fetchError;

@@ -1,3 +1,4 @@
+
 import { ArticleToolbar } from "@/components/articles/ArticleToolbar";
 import { ArticlesTable } from "@/components/articles/ArticlesTable";
 import { Loader2 } from "lucide-react";
@@ -6,6 +7,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { useArticleMutations } from "@/hooks/articles/useArticleMutations";
 import { useNavigate } from "react-router-dom";
+import { mapFormToDbArticle } from "@/hooks/articles/utils/articleMappers";
 
 interface ArticlesTabProps {
   articles: Article[];

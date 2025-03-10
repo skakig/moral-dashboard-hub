@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Meme, MemeFormData } from '@/types/meme';
 import { toast } from 'sonner';
 
-// Define an explicit interface for database responses to avoid type recursion
+// Define a simpler interface for database responses to avoid type recursion
 interface MemeDbRecord {
   id: string;
   image_url: string;
@@ -72,8 +72,8 @@ export function useMemeStorage() {
         throw new Error('No data returned from insert operation');
       }
       
-      // Explicitly cast to our defined database record type
-      const dbRecord = data as unknown as MemeDbRecord;
+      // Type assertion to our simple record type
+      const dbRecord = data as MemeDbRecord;
       
       // Manually construct a Meme object from the database response
       let newMeme: Meme = {
@@ -129,7 +129,7 @@ export function useMemeStorage() {
         return;
       }
       
-      // Fetch memes for the current user
+      // Fetch memes for the current user - using type any for the data to avoid recursion
       const { data, error } = await supabase
         .from('memes')
         .select('*')
@@ -148,9 +148,10 @@ export function useMemeStorage() {
       // Process data and transform to Meme array
       const memes: Meme[] = [];
       
-      // Explicitly process each item, using our defined type
+      // Explicitly process each item with type assertion
       for (const item of data) {
-        const dbRecord = item as unknown as MemeDbRecord;
+        // Type assertion to avoid recursion issues
+        const dbRecord = item as any as MemeDbRecord;
         
         const meme: Meme = {
           id: dbRecord.id,

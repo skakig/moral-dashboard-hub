@@ -25,6 +25,7 @@ export function useFetchMemes() {
       const { data: authData } = await supabase.auth.getUser();
       
       if (!authData.user) {
+        // Not authenticated, return empty array
         setSavedMemes([]);
         return;
       }
@@ -45,12 +46,13 @@ export function useFetchMemes() {
         return;
       }
       
-      // Transform raw database records to frontend Meme objects
-      // Explicit transformation to break circular type references
+      // Use a simple for loop instead of map to avoid complex type inference
       const transformedMemes: Meme[] = [];
       
-      for (const item of data) {
-        transformedMemes.push(dbRecordToMeme(item));
+      for (let i = 0; i < data.length; i++) {
+        // Use type assertion and explicit transformation
+        const meme = dbRecordToMeme(data[i]);
+        transformedMemes.push(meme);
       }
       
       setSavedMemes(transformedMemes);

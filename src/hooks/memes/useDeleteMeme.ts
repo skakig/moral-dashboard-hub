@@ -17,6 +17,7 @@ export function useDeleteMeme() {
   const deleteMeme = async (id: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      setError(null);
       
       const { error: deleteError } = await supabase
         .from('memes')

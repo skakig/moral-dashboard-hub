@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Meme } from '@/types/meme';
 import { logError } from './utils/errorLogger';
 import { dbRecordToMeme } from './utils/memeMappers';
-import { MemeDbRecord } from './types';
+import { fetchUserMemes } from './utils/fetchUserMemes';
 
 /**
  * Hook for fetching user's saved memes from Supabase
@@ -31,47 +31,11 @@ export function useFetchMemes() {
         return;
       }
       
-      // Execute query without type annotations here to prevent deep type instantiation
-      const response = await supabase
-        .from('memes')
-        .select('*')
-        .eq('user_id', authData.user.id)
-        .order('created_at', { ascending: false });
+      // Fetch memes with the utility function that handles typing properly
+      const memeRecords = await fetchUserMemes(authData.user.id);
       
-      // Destructure after the query completes
-      const { data, error: fetchError } = response;
-      
-      if (fetchError) {
-        throw fetchError;
-      }
-      
-      if (!data || data.length === 0) {
-        setSavedMemes([]);
-        return;
-      }
-      
-      // Process each record individually using a standard for loop to avoid type recursion
-      const transformedMemes: Meme[] = [];
-      
-      // Use explicit any casting to completely bypass TypeScript's type checking here
-      // This is a pragmatic solution for working with Supabase's complex types
-      const safeData = data as any[];
-      
-      for (let i = 0; i < safeData.length; i++) {
-        // Transform each record individually
-        const record: MemeDbRecord = {
-          id: safeData[i].id,
-          image_url: safeData[i].image_url,
-          meme_text: safeData[i].meme_text,
-          platform_tags: safeData[i].platform_tags,
-          created_at: safeData[i].created_at,
-          user_id: safeData[i].user_id,
-          prompt: safeData[i].prompt,
-          engagement_score: safeData[i].engagement_score
-        };
-        
-        transformedMemes.push(dbRecordToMeme(record));
-      }
+      // Transform records using existing mapper function
+      const transformedMemes = memeRecords.map(record => dbRecordToMeme(record));
       
       setSavedMemes(transformedMemes);
       

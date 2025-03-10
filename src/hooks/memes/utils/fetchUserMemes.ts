@@ -5,29 +5,25 @@ import { logError } from './errorLogger';
 
 /**
  * Fetches meme records for a specific user from Supabase
- * Using explicit type handling to avoid TypeScript's excessive type inference
+ * Using a simpler type handling approach to avoid TypeScript's excessive type inference
  */
 export async function fetchUserMemes(userId: string): Promise<MemeDbRecord[]> {
   try {
-    // First check which columns actually exist in the memes table
-    const { data, error } = await supabase
+    // Simplify the query and avoid complex type inference
+    const result = await supabase
       .from('memes')
       .select('id, image_url, meme_text, platform_tags, created_at, user_id, engagement_score')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
       
-    if (error) {
-      throw error;
+    if (result.error) {
+      throw result.error;
     }
     
-    // Handle the null case explicitly
-    if (!data) {
-      return [];
-    }
+    // Use a direct approach for handling the data
+    // By returning an empty array if no data, or the data cast to the required type
+    return (result.data || []) as MemeDbRecord[];
     
-    // Use a type assertion that breaks the deep inference chain
-    // by first casting to unknown then to our target type
-    return (data as unknown) as MemeDbRecord[];
   } catch (error) {
     logError('Error fetching user memes:', error);
     throw error;

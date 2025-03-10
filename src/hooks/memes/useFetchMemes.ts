@@ -31,12 +31,15 @@ export function useFetchMemes() {
         return;
       }
       
-      // Use type assertion to break the deep type instantiation
-      const { data, error: fetchError } = await supabase
+      // Breaking the type instantiation by using any for the query result
+      // and then properly typing the data afterward
+      const response: any = await supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
-        .order('created_at', { ascending: false }) as { data: MemeDbRecord[] | null, error: any };
+        .order('created_at', { ascending: false });
+        
+      const { data, error: fetchError } = response;
         
       if (fetchError) {
         throw fetchError;

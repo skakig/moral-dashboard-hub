@@ -31,13 +31,18 @@ export function useFetchMemes() {
         return;
       }
       
-      // Breaking the type instantiation by using any for the query result
-      // and then properly typing the data afterward
-      const { data, error: fetchError } = await supabase
+      // Break the type instantiation by completely separating the query execution 
+      // from its result typing
+      const query = supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
-        .order('created_at', { ascending: false }) as any;
+        .order('created_at', { ascending: false });
+        
+      // Execute the query and explicitly type the response
+      const response = await query;
+      const data = response.data as MemeDbRecord[] | null;
+      const fetchError = response.error;
         
       if (fetchError) {
         throw fetchError;

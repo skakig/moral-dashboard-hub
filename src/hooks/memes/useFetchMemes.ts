@@ -31,10 +31,10 @@ export function useFetchMemes() {
         return;
       }
       
-      // Fetch memes with the utility function that handles typing properly
+      // Fetch memes with the utility function
       const memeRecords = await fetchUserMemes(authData.user.id);
       
-      // Transform records using existing mapper function
+      // Transform records safely using map
       const transformedMemes = memeRecords.map(record => dbRecordToMeme(record));
       
       setSavedMemes(transformedMemes);

@@ -9,6 +9,7 @@ import { useArticleFormDialog } from "./hooks/useArticleFormDialog";
 import { useThemeFormDialog } from "./hooks/useThemeFormDialog";
 import { useArticles } from "@/hooks/useArticles";
 import { useContentThemes } from "@/hooks/useContentThemes";
+import { useArticleVersions } from "@/hooks/articles/useArticleVersions";
 
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +27,9 @@ export default function ArticlesPage() {
     deleteArticle,
     generateArticle
   } = useArticles();
+
+  // Version control for articles
+  const { createVersion } = useArticleVersions();
 
   // Themes functionality
   const {
@@ -72,15 +76,33 @@ export default function ArticlesPage() {
         seo_keywords: data.seo_keywords ? data.seo_keywords.split(',').map((k: string) => k.trim()) : []
       };
 
+      let result;
       if (currentArticle) {
         // Update existing article
-        await updateArticle.mutateAsync({
+        result = await updateArticle.mutateAsync({
           id: currentArticle.id,
           ...formattedData
         });
+        toast.success("Article updated successfully");
+
+        // Create a version after successful update
+        if (result) {
+          createVersion({
+            ...currentArticle,
+            title: data.title,
+            content: data.content,
+            meta_description: data.metaDescription,
+            featured_image: data.featuredImage,
+            voice_url: data.voiceUrl,
+            voice_generated: data.voiceGenerated,
+            voice_file_name: data.voiceFileName,
+            voice_base64: data.voiceBase64,
+          });
+        }
       } else {
         // Create new article
-        await createArticle.mutateAsync(formattedData);
+        result = await createArticle.mutateAsync(formattedData);
+        toast.success("Article created successfully");
       }
       setArticleFormDialogOpen(false);
     } catch (error) {

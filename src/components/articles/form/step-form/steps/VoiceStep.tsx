@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Mic, Loader2, Play, Pause, Download, Volume2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArticleFormValues } from "../../StepByStepArticleForm";
 import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 
 // Voice options with IDs from ElevenLabs
 const voiceOptions = [
@@ -47,6 +48,14 @@ export function VoiceStep({
   const [volume, setVolume] = React.useState(1);
   const audioRef = React.useRef<HTMLAudioElement>(null);
 
+  // Load existing voice content if available when component mounts
+  useEffect(() => {
+    const voiceUrl = form.watch("voiceUrl");
+    if (voiceUrl && audioRef.current) {
+      audioRef.current.src = voiceUrl;
+    }
+  }, [form]);
+
   // Update volume when slider changes
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
@@ -54,6 +63,25 @@ export function VoiceStep({
     if (audioRef.current) {
       audioRef.current.volume = newVolume;
     }
+  };
+
+  // Directly handle audio events
+  const handleAudioPlay = () => {
+    setIsPlaying(true);
+  };
+
+  const handleAudioPause = () => {
+    setIsPlaying(false);
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+  };
+
+  const handleAudioError = (e: React.SyntheticEvent<HTMLAudioElement>) => {
+    console.error("Audio playback error:", e);
+    toast.error("Error playing audio file");
+    setIsPlaying(false);
   };
 
   return (
@@ -119,7 +147,7 @@ export function VoiceStep({
             )}
           </div>
           
-          {form.watch("voiceGenerated") && audioUrl && (
+          {form.watch("voiceGenerated") && (form.watch("voiceUrl") || audioUrl) && (
             <div className="mt-4 p-4 border rounded-lg bg-muted/30">
               <div className="flex flex-col space-y-3">
                 <div className="flex items-center space-x-2">
@@ -137,11 +165,12 @@ export function VoiceStep({
                 <audio 
                   ref={audioRef}
                   controls 
-                  src={audioUrl} 
+                  src={audioUrl || form.watch("voiceUrl")} 
                   className="w-full" 
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
+                  onPlay={handleAudioPlay}
+                  onPause={handleAudioPause}
+                  onEnded={handleAudioEnded}
+                  onError={handleAudioError}
                 />
               </div>
               

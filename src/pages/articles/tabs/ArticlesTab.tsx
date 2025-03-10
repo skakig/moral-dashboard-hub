@@ -6,6 +6,7 @@ import { Article } from "@/types/articles";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useArticleMutations } from "@/hooks/articles/useArticleMutations";
+import { mapFormToDbArticle } from "@/hooks/articles/utils/articleMappers";
 
 interface ArticlesTabProps {
   articles: Article[];
@@ -32,20 +33,26 @@ export function ArticlesTab({
 }: ArticlesTabProps) {
   const { updateArticle } = useArticleMutations();
   const [publishingArticle, setPublishingArticle] = useState<string | null>(null);
+  const [viewingArticle, setViewingArticle] = useState<Article | null>(null);
 
   // Handle publishing an article
   const handlePublish = async (article: Article) => {
     try {
       setPublishingArticle(article.id);
       
-      // Instead of directly setting status in the mutation, we need to use the proper form field mapping
-      // Using "as any" here as a temporary workaround to bypass the type check
-      // A better solution would be to update the type definitions or the mapper function
+      // Create a proper payload for publishing an article
+      const publishData = {
+        id: article.id,
+        publish_date: new Date().toISOString()
+      };
+      
+      // The mapper will properly format the publish_date and set status to 'published'
+      const dbPayload = mapFormToDbArticle(publishData);
+      
       await updateArticle.mutateAsync({
         id: article.id,
-        // These fields will be mapped to the DB columns by mapFormToDbArticle
-        publish_date: new Date().toISOString()
-      } as any);
+        ...dbPayload
+      });
       
       toast.success(`"${article.title}" has been published successfully`);
     } catch (error) {
@@ -58,8 +65,7 @@ export function ArticlesTab({
 
   // Handle viewing an article
   const handleView = (article: Article) => {
-    // Normally this would navigate to a public view or open the article in a new tab
-    // For now, we'll just use the preview dialog in ArticlesTable
+    setViewingArticle(article);
   };
 
   return (
@@ -83,6 +89,8 @@ export function ArticlesTab({
           onDelete={onDelete}
           onPublish={handlePublish}
           onView={handleView}
+          viewingArticle={viewingArticle}
+          setViewingArticle={setViewingArticle}
         />
       )}
       

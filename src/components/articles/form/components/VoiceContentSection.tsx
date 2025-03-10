@@ -1,11 +1,12 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Mic, Loader2, Download, Play, Pause, Volume2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UseFormReturn } from "react-hook-form";
 import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 
 // Voice options with IDs from ElevenLabs
 export const voiceOptions = [
@@ -48,6 +49,14 @@ export function VoiceContentSection({
   const [volume, setVolume] = React.useState(1);
   const audioRef = React.useRef<HTMLAudioElement>(null);
 
+  // Ensure we load existing voice content if available
+  useEffect(() => {
+    const voiceUrl = form.getValues("voiceUrl");
+    if (voiceUrl && audioRef.current && audioRef.current.src !== voiceUrl) {
+      audioRef.current.src = voiceUrl;
+    }
+  }, [form]);
+
   // Update volume when slider changes
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
@@ -55,6 +64,25 @@ export function VoiceContentSection({
     if (audioRef.current) {
       audioRef.current.volume = newVolume;
     }
+  };
+
+  // Handle audio events
+  const handleAudioPlay = () => {
+    setIsPlaying(true);
+  };
+
+  const handleAudioPause = () => {
+    setIsPlaying(false);
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+  };
+
+  const handleAudioError = (e: React.SyntheticEvent<HTMLAudioElement>) => {
+    console.error("Audio playback error:", e);
+    toast.error("Error playing audio file");
+    setIsPlaying(false);
   };
 
   return (
@@ -124,7 +152,7 @@ export function VoiceContentSection({
               )}
             </div>
             
-            {voiceGenerated && audioUrl && (
+            {voiceGenerated && (audioUrl || form.getValues("voiceUrl")) && (
               <div className="mt-4 p-4 border rounded-lg bg-muted/30">
                 <div className="flex flex-col space-y-3">
                   <div className="flex items-center space-x-2">
@@ -142,11 +170,12 @@ export function VoiceContentSection({
                   <audio 
                     ref={audioRef}
                     controls 
-                    src={audioUrl} 
+                    src={audioUrl || form.getValues("voiceUrl")} 
                     className="w-full" 
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                    onEnded={() => setIsPlaying(false)}
+                    onPlay={handleAudioPlay}
+                    onPause={handleAudioPause}
+                    onEnded={handleAudioEnded}
+                    onError={handleAudioError}
                   />
                 </div>
                 

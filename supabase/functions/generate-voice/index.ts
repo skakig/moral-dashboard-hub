@@ -119,15 +119,19 @@ serve(async (req) => {
       });
 
       if (!openAiResponse.ok) {
-        const errorText = await openAiResponse.text();
         let errorMessage = `OpenAI API error: ${openAiResponse.status} ${openAiResponse.statusText}`;
         
         try {
-          const errorJson = JSON.parse(errorText);
+          const errorJson = await openAiResponse.json();
           errorMessage = errorJson.error?.message || errorMessage;
         } catch (e) {
-          // Use text if we can't parse JSON
-          errorMessage = `${errorMessage} - ${errorText.substring(0, 300)}`;
+          // If it's not JSON, try to get the text
+          try {
+            const errorText = await openAiResponse.text();
+            errorMessage = `${errorMessage} - ${errorText.substring(0, 300)}`;
+          } catch (textError) {
+            // Unable to get error details, use the default message
+          }
         }
         
         console.error("OpenAI API error:", errorMessage);

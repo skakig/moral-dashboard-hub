@@ -10,6 +10,7 @@ import { ArticleFormFields } from "./ArticleFormFields";
 import { StepByStepArticleForm } from "./StepByStepArticleForm";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { History } from "lucide-react";
 
 // Article form schema
 const articleFormSchema = z.object({
@@ -38,7 +39,9 @@ interface ArticleFormProps {
   onSubmit?: (values: ArticleFormValues) => void;
   submitLabel?: string;
   onCancel?: () => void;
+  onRevert?: () => void;
   isLoading?: boolean;
+  isEditing?: boolean;
 }
 
 export function ArticleForm({
@@ -46,7 +49,9 @@ export function ArticleForm({
   onSubmit: onFormSubmit,
   submitLabel = "Create",
   onCancel,
+  onRevert,
   isLoading = false,
+  isEditing = false,
 }: ArticleFormProps) {
   const [formView, setFormView] = useState<"classic" | "wizard">("wizard");
 
@@ -84,43 +89,68 @@ export function ArticleForm({
     }
   }
 
+  const handleRevert = () => {
+    if (onRevert) {
+      // First confirm with the user
+      if (window.confirm("Are you sure you want to revert to the previous version? All current changes will be lost.")) {
+        onRevert();
+        toast.info("Reverted to previous version");
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
-      <Tabs defaultValue="wizard" onValueChange={(value) => setFormView(value as "classic" | "wizard")}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="wizard">Step-by-Step</TabsTrigger>
-          <TabsTrigger value="classic">All Fields</TabsTrigger>
-        </TabsList>
+      <div className="flex justify-between">
+        <Tabs defaultValue="wizard" onValueChange={(value) => setFormView(value as "classic" | "wizard")}>
+          <TabsList className="mb-6">
+            <TabsTrigger value="wizard">Step-by-Step</TabsTrigger>
+            <TabsTrigger value="classic">All Fields</TabsTrigger>
+          </TabsList>
+        </Tabs>
         
-        <TabsContent value="wizard">
-          <StepByStepArticleForm
-            initialData={initialData}
-            onSubmit={onFormSubmit}
-            submitLabel={submitLabel}
-            onCancel={onCancel}
-            isLoading={isLoading}
-          />
-        </TabsContent>
-        
-        <TabsContent value="classic">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <ArticleFormFields form={form} />
+        {isEditing && onRevert && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleRevert}
+            className="mb-6 flex items-center gap-2"
+          >
+            <History className="h-4 w-4" />
+            Revert to Previous
+          </Button>
+        )}
+      </div>
+      
+      <TabsContent value="wizard" className="mt-0">
+        <StepByStepArticleForm
+          initialData={initialData}
+          onSubmit={onFormSubmit}
+          submitLabel={submitLabel}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      </TabsContent>
+      
+      <TabsContent value="classic" className="mt-0">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <ArticleFormFields form={form} />
 
-              <div className="flex items-center justify-between">
-                {onCancel && (
-                  <Button type="button" variant="outline" onClick={onCancel}>
-                    Cancel
-                  </Button>
-                )}
-                <Button type="submit" disabled={isLoading}>
-                  {submitLabel}
+            <div className="flex items-center justify-between">
+              {onCancel && (
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Cancel
                 </Button>
-              </div>
-            </form>
-          </Form>
-        </TabsContent>
-      </Tabs>
+              )}
+              <Button type="submit" disabled={isLoading}>
+                {submitLabel}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </TabsContent>
     </div>
   );
 }

@@ -34,8 +34,10 @@ import {
   Download,
   FileAudio
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 
 interface ArticlesTableProps {
   articles: Article[];
@@ -43,6 +45,8 @@ interface ArticlesTableProps {
   onDelete: (articleId: string) => void;
   onPublish?: (article: Article) => void;
   onView?: (article: Article) => void;
+  viewingArticle?: Article | null;
+  setViewingArticle?: (article: Article | null) => void;
 }
 
 export function ArticlesTable({ 
@@ -50,14 +54,33 @@ export function ArticlesTable({
   onEdit, 
   onDelete,
   onPublish,
-  onView
+  onView,
+  viewingArticle,
+  setViewingArticle
 }: ArticlesTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<Article | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const audioRef = useState<HTMLAudioElement | null>(null);
+  const [audioVolume, setAudioVolume] = useState(1);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Update preview article when viewingArticle changes (for external control)
+  useEffect(() => {
+    if (viewingArticle) {
+      setPreviewArticle(viewingArticle);
+      setPreviewDialogOpen(true);
+    }
+  }, [viewingArticle]);
+
+  // Clean up audio when dialog closes
+  useEffect(() => {
+    if (!previewDialogOpen && audioRef.current) {
+      audioRef.current.pause();
+      setIsAudioPlaying(false);
+    }
+  }, [previewDialogOpen]);
 
   const handleDeleteClick = (article: Article) => {
     setArticleToDelete(article);
@@ -81,6 +104,18 @@ export function ArticlesTable({
     }
   };
 
+  const handleDialogClose = () => {
+    setPreviewDialogOpen(false);
+    if (setViewingArticle) {
+      setViewingArticle(null);
+    }
+    // Make sure audio stops when dialog closes
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsAudioPlaying(false);
+    }
+  };
+
   const handlePublishClick = (article: Article) => {
     if (onPublish) {
       onPublish(article);
@@ -88,20 +123,65 @@ export function ArticlesTable({
   };
 
   const toggleAudioPlayback = () => {
-    if (!previewArticle?.voice_url) return;
+    if (!previewArticle?.voice_url) {
+      toast.error("No audio available");
+      return;
+    }
     
-    if (audioRef[0]) {
+    if (audioRef.current) {
       if (isAudioPlaying) {
-        audioRef[0].pause();
+        audioRef.current.pause();
+        setIsAudioPlaying(false);
       } else {
-        audioRef[0].play();
+        // Ensure the audio source is set correctly
+        if (audioRef.current.src !== previewArticle.voice_url) {
+          audioRef.current.src = previewArticle.voice_url;
+        }
+        
+        audioRef.current.play().catch(error => {
+          console.error("Audio playback error:", error);
+          toast.error("Failed to play audio");
+        });
+        setIsAudioPlaying(true);
       }
-      setIsAudioPlaying(!isAudioPlaying);
     }
   };
 
   const handleAudioEnded = () => {
     setIsAudioPlaying(false);
+  };
+
+  const handleAudioError = () => {
+    toast.error("Error playing audio file");
+    setIsAudioPlaying(false);
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0];
+    setAudioVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  };
+
+  const downloadAudio = () => {
+    if (!previewArticle?.voice_url) {
+      toast.error("No audio available to download");
+      return;
+    }
+    
+    try {
+      const a = document.createElement('a');
+      a.href = previewArticle.voice_url;
+      a.download = previewArticle.voice_file_name || 'voice-content.mp3';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success('Audio file downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading audio:', error);
+      toast.error('Failed to download audio file');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -203,7 +283,7 @@ export function ArticlesTable({
                           Publish Now
                         </DropdownMenuItem>
                       )}
-                      {article.voice_generated && (
+                      {article.voice_generated && article.voice_url && (
                         <DropdownMenuItem onClick={() => {
                           setPreviewArticle(article);
                           setPreviewDialogOpen(true);
@@ -254,7 +334,7 @@ export function ArticlesTable({
       </Dialog>
 
       {/* Article Preview Dialog */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+      <Dialog open={previewDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{previewArticle?.title}</DialogTitle>
@@ -272,26 +352,52 @@ export function ArticlesTable({
 
           {previewArticle?.voice_url && (
             <div className="mb-4 p-3 bg-muted rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={toggleAudioPlayback}
-                  className="flex items-center space-x-1"
-                >
-                  {isAudioPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  <span>{isAudioPlaying ? "Pause" : "Play"} Audio</span>
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {previewArticle.voice_file_name || "audio.mp3"}
-                </span>
+              <div className="flex flex-col space-y-3">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={toggleAudioPlayback}
+                    className="flex items-center space-x-1"
+                  >
+                    {isAudioPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    <span>{isAudioPlaying ? "Pause" : "Play"} Audio</span>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={downloadAudio}
+                    className="flex items-center space-x-1"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Download</span>
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {previewArticle.voice_file_name || "audio.mp3"}
+                  </span>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Volume className="w-4 h-4 text-muted-foreground" />
+                  <Slider
+                    value={[audioVolume]} 
+                    min={0} 
+                    max={1} 
+                    step={0.01}
+                    onValueChange={handleVolumeChange}
+                    className="w-32" 
+                  />
+                </div>
+                
+                <audio 
+                  ref={audioRef}
+                  controls 
+                  src={previewArticle.voice_url} 
+                  className="w-full" 
+                  onEnded={handleAudioEnded}
+                  onError={handleAudioError}
+                />
               </div>
-              <audio 
-                ref={(el) => audioRef[0] = el}
-                src={previewArticle.voice_url} 
-                onEnded={handleAudioEnded}
-                className="hidden" 
-              />
             </div>
           )}
 
@@ -302,12 +408,12 @@ export function ArticlesTable({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
+            <Button variant="outline" onClick={handleDialogClose}>
               Close
             </Button>
             {previewArticle && (
               <Button variant="default" onClick={() => {
-                setPreviewDialogOpen(false);
+                handleDialogClose();
                 onEdit(previewArticle);
               }}>
                 <FileEdit className="mr-2 h-4 w-4" />

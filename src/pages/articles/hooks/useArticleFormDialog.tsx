@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArticleForm, ArticleFormValues } from "@/components/articles/form";
@@ -16,9 +16,18 @@ export function useArticleFormDialog({
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previousArticleVersion, setPreviousArticleVersion] = useState<Article | null>(null);
+
+  // When an article is loaded for editing, store the previous version for version control
+  useEffect(() => {
+    if (currentArticle && currentArticle !== previousArticleVersion) {
+      setPreviousArticleVersion(currentArticle);
+    }
+  }, [currentArticle, previousArticleVersion]);
 
   const handleCreateArticle = () => {
     setCurrentArticle(null);
+    setPreviousArticleVersion(null);
     setFormDialogOpen(true);
   };
 
@@ -36,21 +45,32 @@ export function useArticleFormDialog({
       id: article.id,
       title: article.title,
       content: article.content,
-      // These fields might not exist in the Article type, but we handle them safely
       excerpt: article.excerpt || '',
       metaDescription: article.meta_description || '',
       featuredImage: article.featured_image || '',
       seoKeywords: Array.isArray(article.seo_keywords) ? article.seo_keywords.join(', ') : '',
-      // Add voice fields with safe fallbacks
       voiceUrl: article.voice_url || '',
       voiceGenerated: article.voice_generated || false,
       voiceFileName: article.voice_file_name || '',
       voiceBase64: article.voice_base64 || '',
       moralLevel: article.moral_level || 5,
+      platform: article.category || '',
+      contentType: '',  // Default to empty if not provided
+      contentLength: 'medium', // Default to medium if not provided
+      tone: 'informative', // Default to informative if not provided
     };
     
     setCurrentArticle(article);
     setFormDialogOpen(true);
+  };
+
+  const handleRevertChanges = () => {
+    if (previousArticleVersion) {
+      setCurrentArticle(previousArticleVersion);
+      toast.success("Reverted to previous version of the article");
+    } else {
+      toast.error("No previous version available to revert to");
+    }
   };
 
   const handleFormSubmit = async (data: ArticleFormValues) => {
@@ -71,6 +91,24 @@ export function useArticleFormDialog({
         
       await onSubmit(submitData);
       setFormDialogOpen(false);
+      
+      // Update the previous version after successful save
+      if (currentArticle) {
+        setPreviousArticleVersion({
+          ...currentArticle,
+          title: data.title,
+          content: data.content || '',
+          meta_description: data.metaDescription || '',
+          featured_image: data.featuredImage || '',
+          seo_keywords: data.seoKeywords ? data.seoKeywords.split(',').map(k => k.trim()).filter(Boolean) : [],
+          voice_url: data.voiceUrl || '',
+          voice_generated: data.voiceGenerated || false,
+          voice_file_name: data.voiceFileName || '',
+          voice_base64: data.voiceBase64 || '',
+          moral_level: data.moralLevel ? Number(data.moralLevel) : 5,
+          category: data.platform || 'General',
+        });
+      }
     } catch (error) {
       console.error("Error saving article:", error);
       toast.error("Failed to save article");
@@ -88,7 +126,6 @@ export function useArticleFormDialog({
               initialData={currentArticle ? {
                 title: currentArticle.title,
                 content: currentArticle.content,
-                // Again, handle properties that might not exist in the Article type
                 excerpt: currentArticle.excerpt || '',
                 metaDescription: currentArticle.meta_description || '',
                 featuredImage: currentArticle.featured_image || '',
@@ -98,10 +135,17 @@ export function useArticleFormDialog({
                 voiceFileName: currentArticle.voice_file_name || '',
                 voiceBase64: currentArticle.voice_base64 || '',
                 moralLevel: currentArticle.moral_level || 5,
+                platform: currentArticle.category || '',
+                contentType: '',
+                contentLength: 'medium',
+                tone: 'informative',
+                theme: '',
               } : undefined}
               onSubmit={handleFormSubmit}
               onCancel={() => setFormDialogOpen(false)}
+              onRevert={previousArticleVersion ? handleRevertChanges : undefined}
               isLoading={isSubmitting}
+              isEditing={Boolean(currentArticle)}
             />
           </div>
         </ScrollArea>

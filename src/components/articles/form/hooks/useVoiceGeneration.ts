@@ -21,38 +21,30 @@ export function useVoiceGeneration(form: any) {
     try {
       // First, reset any existing voice content
       setAudioUrl(null);
-      form.setValue('voiceGenerated', false, { shouldDirty: true });
-      form.setValue('voiceUrl', '', { shouldDirty: true });
-      form.setValue('voiceFileName', '', { shouldDirty: true });
-      form.setValue('voiceBase64', '', { shouldDirty: true });
+      form.setValue('voiceGenerated', false);
+      form.setValue('voiceUrl', '');
+      form.setValue('voiceFileName', '');
+      form.setValue('voiceBase64', '');
       
       toast.info('Generating voice content...');
 
       // Extract only text from content (remove markdown formatting)
       const plainText = content.replace(/\[.*?\]|\*\*|#/g, '').trim();
       
-      // Structure the request payload properly
-      const payload = {
-        text: plainText,
-        voiceId: voiceId
-      };
-
-      console.log('Sending voice generation request with payload:', payload);
-      
-      // Use the edge function service to generate voice
+      // Generate voice using the edge function service
       const result = await EdgeFunctionService.generateVoice(plainText, voiceId);
       
       if (!result) {
-        toast.error('Failed to generate voice content. Please try again later.');
+        toast.error('Failed to generate voice content.');
         return;
       }
 
       // Set the audio URL and update form values
       setAudioUrl(result.audioUrl);
-      form.setValue('voiceGenerated', true, { shouldDirty: true });
-      form.setValue('voiceUrl', result.audioUrl, { shouldDirty: true });
-      form.setValue('voiceFileName', result.fileName || `voice_${Date.now()}.mp3`, { shouldDirty: true });
-      form.setValue('voiceBase64', result.base64Audio, { shouldDirty: true });
+      form.setValue('voiceGenerated', true);
+      form.setValue('voiceUrl', result.audioUrl);
+      form.setValue('voiceFileName', result.fileName || `voice_${Date.now()}.mp3`);
+      form.setValue('voiceBase64', result.base64Audio);
 
       // Mark the form as dirty to ensure the updated values are saved
       form.trigger('voiceGenerated');
@@ -64,7 +56,7 @@ export function useVoiceGeneration(form: any) {
       console.log("Voice generation successful - service:", result.service || "unknown");
     } catch (error: any) {
       console.error('Error generating voice content:', error);
-      toast.error(error.message || 'Failed to generate voice content. Please try again later.');
+      toast.error(error.message || 'Failed to generate voice content.');
     } finally {
       setIsGenerating(false);
     }

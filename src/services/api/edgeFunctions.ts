@@ -1,26 +1,14 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-/**
- * Generic type for edge function responses
- */
 interface EdgeFunctionResponse<T> {
   data?: T;
   error?: string;
   details?: string;
 }
 
-/**
- * Service for handling edge function calls with consistent error handling
- */
 export class EdgeFunctionService {
-  /**
-   * Calls a Supabase edge function with robust error handling
-   * @param functionName Name of the edge function
-   * @param payload Request payload
-   * @param options Options for the function call
-   * @returns Response data or null if there was an error
-   */
   static async callFunction<T>(
     functionName: string, 
     payload: any, 
@@ -48,36 +36,30 @@ export class EdgeFunctionService {
           toast.warning(`Retrying... (Attempt ${currentAttempt}/${retries + 1})`);
         }
         
-        console.log(`Calling edge function ${functionName} (Attempt ${currentAttempt}/${retries + 1})...`);
+        console.log(`Calling edge function ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, payload);
         
         const response = await supabase.functions.invoke<EdgeFunctionResponse<T>>(
           functionName,
           { 
-            body: payload,
-            headers: {
-              'Content-Type': 'application/json'
-            }
+            body: payload
           }
         );
         
-        // Handle HTTP errors
         if (response.error) {
           console.error(`Edge function HTTP error (${functionName}):`, response.error);
           throw new Error(response.error.message || `Failed to call ${functionName}`);
         }
         
-        // Handle function errors from the response body
         if (response.data?.error) {
           console.error(`Function response error (${functionName}):`, response.data.error, response.data.details || '');
           throw new Error(response.data.error);
         }
         
-        console.log(`Edge function ${functionName} call successful`);
+        console.log(`Edge function ${functionName} response:`, response.data);
         return response.data as T;
       } catch (error: any) {
         console.error(`Error in ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, error);
         
-        // If we've used all retries, throw the error
         if (currentAttempt > retries) {
           if (!silent) {
             toast.error(customErrorMessage || `Failed to run ${functionName}: ${error.message}`);
@@ -85,7 +67,6 @@ export class EdgeFunctionService {
           throw error;
         }
         
-        // Otherwise wait before retrying
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
     }
@@ -93,9 +74,6 @@ export class EdgeFunctionService {
     return null;
   }
 
-  /**
-   * Generate speech from text using the voice generation edge function
-   */
   static async generateVoice(text: string, voiceId: string) {
     console.log('Calling generateVoice with:', { text, voiceId });
     
@@ -111,18 +89,15 @@ export class EdgeFunctionService {
         { 
           retries: 2,
           retryDelay: 1000,
-          customErrorMessage: 'Voice generation failed. Please try again later or contact support.'
+          customErrorMessage: 'Voice generation failed. Please try again later.'
         }
       );
     } catch (error) {
       console.error("Voice generation error:", error);
-      throw error; // Re-throw to be handled by the component
+      throw error;
     }
   }
 
-  /**
-   * Generate an image using the image generation edge function
-   */
   static async generateImage(prompt: string) {
     console.log('Calling generateImage with prompt:', prompt);
     
@@ -135,7 +110,7 @@ export class EdgeFunctionService {
         { 
           retries: 2,
           retryDelay: 1000,
-          customErrorMessage: 'Image generation failed. Please try again later or contact support.'
+          customErrorMessage: 'Image generation failed. Please try again later.'
         }
       );
     } catch (error) {
@@ -144,9 +119,6 @@ export class EdgeFunctionService {
     }
   }
 
-  /**
-   * Generate article content using the article generation edge function
-   */
   static async generateArticle(params: {
     theme: string;
     keywords?: string[];
@@ -165,7 +137,7 @@ export class EdgeFunctionService {
       'generate-article',
       params,
       { 
-        customErrorMessage: 'Content generation failed. Please try again later or contact support.'
+        customErrorMessage: 'Content generation failed. Please try again later.'
       }
     );
   }

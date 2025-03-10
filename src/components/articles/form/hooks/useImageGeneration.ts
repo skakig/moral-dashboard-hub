@@ -17,12 +17,8 @@ export function useImageGeneration() {
     
     try {
       toast.info('Generating image...');
-      console.log('Sending image generation request with prompt:', prompt);
-
-      // Structure the request payload properly
-      const payload = { prompt: prompt };
-
-      // Generate image using the edge function service
+      console.log('Generating image with prompt:', prompt);
+      
       const result = await EdgeFunctionService.generateImage(prompt);
       
       if (!result) {
@@ -34,7 +30,7 @@ export function useImageGeneration() {
       return result.image;
     } catch (error: any) {
       console.error('Error generating image:', error);
-      // The error is already handled by the service
+      toast.error(error.message || 'Failed to generate image');
       return null;
     } finally {
       setLoading(false);

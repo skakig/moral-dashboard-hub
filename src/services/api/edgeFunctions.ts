@@ -48,23 +48,31 @@ export class EdgeFunctionService {
           toast.warning(`Retrying... (Attempt ${currentAttempt}/${retries + 1})`);
         }
         
+        console.log(`Calling edge function ${functionName} (Attempt ${currentAttempt}/${retries + 1})...`);
+        
         const response = await supabase.functions.invoke<EdgeFunctionResponse<T>>(
           functionName,
-          { body: payload }
+          { 
+            body: payload,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
         );
         
         // Handle HTTP errors
         if (response.error) {
-          console.error(`Edge function error (${functionName}):`, response.error);
+          console.error(`Edge function HTTP error (${functionName}):`, response.error);
           throw new Error(response.error.message || `Failed to call ${functionName}`);
         }
         
         // Handle function errors from the response body
         if (response.data?.error) {
-          console.error(`Function response error (${functionName}):`, response.data.error);
+          console.error(`Function response error (${functionName}):`, response.data.error, response.data.details || '');
           throw new Error(response.data.error);
         }
         
+        console.log(`Edge function ${functionName} call successful`);
         return response.data as T;
       } catch (error: any) {
         console.error(`Error in ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, error);
@@ -74,7 +82,7 @@ export class EdgeFunctionService {
           if (!silent) {
             toast.error(customErrorMessage || `Failed to run ${functionName}: ${error.message}`);
           }
-          return null;
+          throw error;
         }
         
         // Otherwise wait before retrying
@@ -89,18 +97,23 @@ export class EdgeFunctionService {
    * Generate speech from text using the voice generation edge function
    */
   static async generateVoice(text: string, voiceId: string) {
-    return this.callFunction<{
-      audioUrl: string;
-      fileName: string;
-      base64Audio: string;
-      service: string;
-    }>(
-      'generate-voice',
-      { text, voiceId },
-      { 
-        customErrorMessage: 'Voice generation failed. Please try again later or contact support.'
-      }
-    );
+    try {
+      return await this.callFunction<{
+        audioUrl: string;
+        fileName: string;
+        base64Audio: string;
+        service: string;
+      }>(
+        'generate-voice',
+        { text, voiceId },
+        { 
+          customErrorMessage: 'Voice generation failed. Please try again later or contact support.'
+        }
+      );
+    } catch (error) {
+      console.error("Voice generation error:", error);
+      throw error; // Re-throw to be handled by the component
+    }
   }
 
   /**

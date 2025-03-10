@@ -16,13 +16,17 @@ serve(async (req) => {
   }
 
   try {
-    const openAIApiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("OPEN_AI_TMH");
+    // Get API keys from environment variables
+    const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
     const elevenLabsApiKey = Deno.env.get("ELEVENLABS_API_KEY");
 
+    // Check if at least one API key is available
     if (!openAIApiKey && !elevenLabsApiKey) {
+      console.error("Missing API keys: Both OpenAI and ElevenLabs keys are not configured");
       throw new Error("API keys not configured. Please set either OPENAI_API_KEY or ELEVENLABS_API_KEY.");
     }
 
+    // Parse request data
     const requestData = await req.json().catch(e => {
       console.error("Error parsing JSON:", e);
       throw new Error("Invalid request format");
@@ -45,7 +49,7 @@ serve(async (req) => {
         console.log("Attempting to use ElevenLabs API...");
         
         // Use ElevenLabs API
-        const elevenLabsResponse = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + (voiceId || "21m00Tcm4TlvDq8ikWAM"), {
+        const elevenLabsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId || "21m00Tcm4TlvDq8ikWAM"}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -59,14 +63,11 @@ serve(async (req) => {
               similarity_boost: 0.75,
             },
           }),
-        }).catch(e => {
-          console.error("ElevenLabs network error:", e);
-          throw new Error("Network error contacting ElevenLabs");
         });
 
         if (!elevenLabsResponse.ok) {
-          const errorData = await elevenLabsResponse.text();
-          console.error("ElevenLabs API error:", errorData);
+          const errorText = await elevenLabsResponse.text();
+          console.error(`ElevenLabs API error (${elevenLabsResponse.status}): ${errorText}`);
           throw new Error(`ElevenLabs API error: ${elevenLabsResponse.status} ${elevenLabsResponse.statusText}`);
         }
 
@@ -113,9 +114,6 @@ serve(async (req) => {
           voice: openAiVoice,
           response_format: "mp3",
         }),
-      }).catch(e => {
-        console.error("OpenAI network error:", e);
-        throw new Error("Network error contacting OpenAI");
       });
 
       if (!openAiResponse.ok) {
@@ -160,6 +158,8 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Voice generation error:", error);
+    
+    // Return a structured error response
     return new Response(
       JSON.stringify({ 
         error: error.message || "Failed to generate voice content",

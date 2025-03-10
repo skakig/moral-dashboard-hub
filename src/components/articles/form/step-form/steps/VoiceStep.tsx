@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -46,12 +46,13 @@ export function VoiceStep({
   downloadAudio
 }: VoiceStepProps) {
   const [volume, setVolume] = React.useState(1);
-  const audioRef = React.useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Load existing voice content if available when component mounts
   useEffect(() => {
     const voiceUrl = form.watch("voiceUrl");
     if (voiceUrl && audioRef.current) {
+      console.log("Setting audio source to:", voiceUrl);
       audioRef.current.src = voiceUrl;
     }
   }, [form]);
@@ -67,14 +68,17 @@ export function VoiceStep({
 
   // Directly handle audio events
   const handleAudioPlay = () => {
+    console.log("Audio playing");
     setIsPlaying(true);
   };
 
   const handleAudioPause = () => {
+    console.log("Audio paused");
     setIsPlaying(false);
   };
 
   const handleAudioEnded = () => {
+    console.log("Audio ended");
     setIsPlaying(false);
   };
 
@@ -83,6 +87,9 @@ export function VoiceStep({
     toast.error("Error playing audio file");
     setIsPlaying(false);
   };
+
+  const currentVoiceUrl = audioUrl || form.watch("voiceUrl");
+  const hasVoiceContent = form.watch("voiceGenerated") || Boolean(currentVoiceUrl);
 
   return (
     <div className="space-y-4">
@@ -118,12 +125,12 @@ export function VoiceStep({
               className="flex items-center gap-2"
             >
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-              {form.watch("voiceGenerated") ? "Regenerate Voice" : "Generate Voice Content"}
+              {hasVoiceContent ? "Regenerate Voice" : "Generate Voice Content"}
             </Button>
             
-            {form.watch("voiceGenerated") && (
+            {hasVoiceContent && (
               <>
-                <span className="text-sm text-green-600">Voice content generated!</span>
+                <span className="text-sm text-green-600">Voice content available</span>
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -147,7 +154,7 @@ export function VoiceStep({
             )}
           </div>
           
-          {form.watch("voiceGenerated") && (form.watch("voiceUrl") || audioUrl) && (
+          {hasVoiceContent && currentVoiceUrl && (
             <div className="mt-4 p-4 border rounded-lg bg-muted/30">
               <div className="flex flex-col space-y-3">
                 <div className="flex items-center space-x-2">
@@ -165,7 +172,7 @@ export function VoiceStep({
                 <audio 
                   ref={audioRef}
                   controls 
-                  src={audioUrl || form.watch("voiceUrl")} 
+                  src={currentVoiceUrl} 
                   className="w-full" 
                   onPlay={handleAudioPlay}
                   onPause={handleAudioPause}

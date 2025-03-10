@@ -35,6 +35,7 @@ export function useVoiceGeneration(form: any) {
       const result = await EdgeFunctionService.generateVoice(plainText, voiceId);
       
       if (!result) {
+        toast.error('Failed to generate voice content. Please try again later.');
         return;
       }
 
@@ -55,32 +56,44 @@ export function useVoiceGeneration(form: any) {
       console.log("Voice generation successful - service:", result.service || "unknown");
     } catch (error: any) {
       console.error('Error generating voice content:', error);
-      // The error is already handled by the service
+      toast.error(error.message || 'Failed to generate voice content. Please try again later.');
     } finally {
       setIsGenerating(false);
     }
   };
 
   const togglePlayPause = () => {
-    if (!audioUrl) return;
+    if (!audioUrl && !form.getValues('voiceUrl')) {
+      toast.error('No audio available to play');
+      return;
+    }
     
     const audioElement = document.querySelector('audio');
     if (audioElement) {
       if (isPlaying) {
         audioElement.pause();
       } else {
-        audioElement.play();
+        audioElement.play().catch(error => {
+          console.error('Audio playback error:', error);
+          toast.error('Error playing audio');
+        });
       }
       setIsPlaying(!isPlaying);
+    } else {
+      toast.error('Audio player not found');
     }
   };
 
   const downloadAudio = () => {
-    if (!audioUrl) return;
+    const url = audioUrl || form.getValues('voiceUrl');
+    if (!url) {
+      toast.error('No audio available to download');
+      return;
+    }
     
     try {
       const a = document.createElement('a');
-      a.href = audioUrl;
+      a.href = url;
       a.download = form.getValues('voiceFileName') || 'voice-content.mp3';
       document.body.appendChild(a);
       a.click();

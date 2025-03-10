@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Mic, Loader2, Download, Play, Pause, Volume2 } from "lucide-react";
@@ -47,12 +47,13 @@ export function VoiceContentSection({
   downloadAudio
 }: VoiceContentSectionProps) {
   const [volume, setVolume] = React.useState(1);
-  const audioRef = React.useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Ensure we load existing voice content if available
   useEffect(() => {
     const voiceUrl = form.getValues("voiceUrl");
     if (voiceUrl && audioRef.current && audioRef.current.src !== voiceUrl) {
+      console.log("Setting audio source to:", voiceUrl);
       audioRef.current.src = voiceUrl;
     }
   }, [form]);
@@ -68,14 +69,17 @@ export function VoiceContentSection({
 
   // Handle audio events
   const handleAudioPlay = () => {
+    console.log("Audio playing");
     setIsPlaying(true);
   };
 
   const handleAudioPause = () => {
+    console.log("Audio paused");
     setIsPlaying(false);
   };
 
   const handleAudioEnded = () => {
+    console.log("Audio ended");
     setIsPlaying(false);
   };
 
@@ -84,6 +88,9 @@ export function VoiceContentSection({
     toast.error("Error playing audio file");
     setIsPlaying(false);
   };
+
+  const currentVoiceUrl = audioUrl || form.getValues("voiceUrl");
+  const hasVoiceContent = voiceGenerated || Boolean(currentVoiceUrl);
 
   return (
     <FormField
@@ -126,9 +133,9 @@ export function VoiceContentSection({
                 {voiceGenerated ? "Regenerate Voice" : "Generate Voice Content"}
               </Button>
               
-              {voiceGenerated && (
+              {hasVoiceContent && (
                 <>
-                  <span className="text-sm text-green-600">Voice content generated!</span>
+                  <span className="text-sm text-green-600">Voice content available</span>
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -152,7 +159,7 @@ export function VoiceContentSection({
               )}
             </div>
             
-            {voiceGenerated && (audioUrl || form.getValues("voiceUrl")) && (
+            {hasVoiceContent && currentVoiceUrl && (
               <div className="mt-4 p-4 border rounded-lg bg-muted/30">
                 <div className="flex flex-col space-y-3">
                   <div className="flex items-center space-x-2">
@@ -170,7 +177,7 @@ export function VoiceContentSection({
                   <audio 
                     ref={audioRef}
                     controls 
-                    src={audioUrl || form.getValues("voiceUrl")} 
+                    src={currentVoiceUrl} 
                     className="w-full" 
                     onPlay={handleAudioPlay}
                     onPause={handleAudioPause}

@@ -2,14 +2,14 @@
 import { Meme, MemeFormData } from '@/types/meme';
 
 // Simplified interface for database response to avoid type recursion issues
-export interface MemeDbResponse {
+export interface MemeDbRecord {
   id: string;
-  prompt: string;
   image_url: string;
   meme_text: string;
   platform_tags?: string[];
   created_at: string;
   user_id?: string;
+  prompt?: string;
   engagement_score?: number;
 }
 

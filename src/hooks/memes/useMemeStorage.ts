@@ -72,7 +72,7 @@ export function useMemeStorage() {
         throw new Error('No data returned from insert operation');
       }
       
-      // Type assertion to our simple record type
+      // Simply cast the data directly to prevent deep type instantiation
       const dbRecord = data as MemeDbRecord;
       
       // Manually construct a Meme object from the database response
@@ -129,7 +129,7 @@ export function useMemeStorage() {
         return;
       }
       
-      // Fetch memes for the current user - using type any for the data to avoid recursion
+      // Fetch memes for the current user
       const { data, error } = await supabase
         .from('memes')
         .select('*')
@@ -148,10 +148,10 @@ export function useMemeStorage() {
       // Process data and transform to Meme array
       const memes: Meme[] = [];
       
-      // Explicitly process each item with type assertion
+      // Use direct type casting to avoid deep recursion
       for (const item of data) {
-        // Type assertion to avoid recursion issues
-        const dbRecord = item as any as MemeDbRecord;
+        // Simple direct cast to prevent deep type instantiation
+        const dbRecord = item as MemeDbRecord;
         
         const meme: Meme = {
           id: dbRecord.id,

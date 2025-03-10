@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Meme } from '@/types/meme';
 import { logError } from './utils/errorLogger';
 import { dbRecordToMeme } from './utils/memeMappers';
+import { MemeDbRecord } from './types';
 
 /**
  * Hook for fetching user's saved memes from Supabase
@@ -31,11 +32,15 @@ export function useFetchMemes() {
       }
       
       // Fetch memes for the current user
+      // Use explicit typing to break the deep instantiation
       const { data, error: fetchError } = await supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as { 
+          data: MemeDbRecord[] | null, 
+          error: any 
+        };
         
       if (fetchError) {
         throw fetchError;
@@ -51,7 +56,7 @@ export function useFetchMemes() {
       const transformedMemes: Meme[] = [];
       
       for (let i = 0; i < data.length; i++) {
-        // Using the mapper function with any type to break recursion
+        // Using the mapper function with explicit typing to break recursion
         const meme = dbRecordToMeme(data[i]);
         transformedMemes.push(meme);
       }

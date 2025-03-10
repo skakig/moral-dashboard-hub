@@ -31,12 +31,12 @@ export function useFetchMemes() {
         return;
       }
       
-      // Fetch memes for the current user - using explicit type casting to avoid deep instantiation error
+      // Use type assertion to break the deep type instantiation
       const { data, error: fetchError } = await supabase
         .from('memes')
         .select('*')
         .eq('user_id', authData.user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as { data: MemeDbRecord[] | null, error: any };
         
       if (fetchError) {
         throw fetchError;

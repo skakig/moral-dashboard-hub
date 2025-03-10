@@ -42,10 +42,9 @@ export function useFetchMemes() {
       // Process data and transform to Meme array
       const memes: Meme[] = [];
       
-      // Manual type mapping to avoid type recursion issues
       for (const item of data) {
-        // Use any as an intermediate type to avoid deep recursion
-        const dbRecord = item as any as MemeDbRecord;
+        // Use a simple casting approach to avoid type recursion issues
+        const dbRecord = item as any;
         
         const meme: Meme = {
           id: dbRecord.id,

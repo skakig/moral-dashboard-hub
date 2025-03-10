@@ -17,6 +17,10 @@ export function useImageGeneration() {
     
     try {
       toast.info('Generating image...');
+      console.log('Sending image generation request with prompt:', prompt);
+
+      // Structure the request payload properly
+      const payload = { prompt: prompt };
 
       // Generate image using the edge function service
       const result = await EdgeFunctionService.generateImage(prompt);

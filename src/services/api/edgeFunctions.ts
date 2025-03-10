@@ -97,6 +97,8 @@ export class EdgeFunctionService {
    * Generate speech from text using the voice generation edge function
    */
   static async generateVoice(text: string, voiceId: string) {
+    console.log('Calling generateVoice with:', { text, voiceId });
+    
     try {
       return await this.callFunction<{
         audioUrl: string;
@@ -107,6 +109,8 @@ export class EdgeFunctionService {
         'generate-voice',
         { text, voiceId },
         { 
+          retries: 2,
+          retryDelay: 1000,
           customErrorMessage: 'Voice generation failed. Please try again later or contact support.'
         }
       );
@@ -120,15 +124,24 @@ export class EdgeFunctionService {
    * Generate an image using the image generation edge function
    */
   static async generateImage(prompt: string) {
-    return this.callFunction<{
-      image: string;
-    }>(
-      'generate-image',
-      { prompt },
-      { 
-        customErrorMessage: 'Image generation failed. Please try again later or contact support.'
-      }
-    );
+    console.log('Calling generateImage with prompt:', prompt);
+    
+    try {
+      return await this.callFunction<{
+        image: string;
+      }>(
+        'generate-image',
+        { prompt },
+        { 
+          retries: 2,
+          retryDelay: 1000,
+          customErrorMessage: 'Image generation failed. Please try again later or contact support.'
+        }
+      );
+    } catch (error) {
+      console.error("Image generation error:", error);
+      throw error;
+    }
   }
 
   /**

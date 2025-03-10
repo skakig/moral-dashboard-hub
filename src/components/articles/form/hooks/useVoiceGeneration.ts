@@ -31,6 +31,14 @@ export function useVoiceGeneration(form: any) {
       // Extract only text from content (remove markdown formatting)
       const plainText = content.replace(/\[.*?\]|\*\*|#/g, '').trim();
       
+      // Structure the request payload properly
+      const payload = {
+        text: plainText,
+        voiceId: voiceId
+      };
+
+      console.log('Sending voice generation request with payload:', payload);
+      
       // Use the edge function service to generate voice
       const result = await EdgeFunctionService.generateVoice(plainText, voiceId);
       

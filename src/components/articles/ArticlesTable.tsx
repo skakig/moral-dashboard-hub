@@ -30,6 +30,8 @@ import {
   ExternalLink,
   Volume,
   Play,
+  Pause,
+  Download,
   FileAudio
 } from "lucide-react";
 import { useState } from "react";

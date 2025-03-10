@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Meme, MemeFormData } from '@/types/meme';
 import { toast } from 'sonner';
-import { MemeDbRecord } from './types';
+import { logError } from './utils/errorLogger';
 
 export function useSaveMeme() {
   const [isSaving, setIsSaving] = useState(false);
@@ -84,15 +84,17 @@ export function useSaveMeme() {
           newMeme.bottomText = parsed?.bottomText || "";
         }
       } catch (e) {
-        console.error("Error parsing meme text:", e);
+        logError("Error parsing meme text:", e);
       }
       
       toast.success('Meme saved successfully!');
       return newMeme;
       
     } catch (err: any) {
-      setError(err.message || 'Failed to save meme');
-      toast.error(`Error saving meme: ${err.message}`);
+      const errorMsg = err.message || 'Failed to save meme';
+      setError(errorMsg);
+      toast.error(`Error saving meme: ${errorMsg}`);
+      logError('Error saving meme:', err);
       return null;
     } finally {
       setIsSaving(false);

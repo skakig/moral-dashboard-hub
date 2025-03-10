@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logError } from './utils/errorLogger';
 
 export function useDeleteMeme() {
   const [isLoading, setIsLoading] = useState(false);
@@ -25,8 +26,10 @@ export function useDeleteMeme() {
       return true;
       
     } catch (err: any) {
-      setError(err.message || 'Failed to delete meme');
-      toast.error(`Error deleting meme: ${err.message}`);
+      const errorMsg = err.message || 'Failed to delete meme';
+      setError(errorMsg);
+      toast.error(`Error deleting meme: ${errorMsg}`);
+      logError('Error deleting meme:', err);
       return false;
     } finally {
       setIsLoading(false);

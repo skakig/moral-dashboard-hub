@@ -2,8 +2,11 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Meme } from '@/types/meme';
-import { MemeDbRecord } from './types';
+import { logError } from './utils/errorLogger';
 
+/**
+ * Hook for fetching user's saved memes from Supabase
+ */
 export function useFetchMemes() {
   const [savedMemes, setSavedMemes] = useState<Meme[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,9 +46,10 @@ export function useFetchMemes() {
       const memes: Meme[] = [];
       
       for (const item of data) {
-        // Use a simple casting approach to avoid type recursion issues
+        // Use a simple type assertion to avoid complex type mappings
         const dbRecord = item as any;
         
+        // Explicitly construct a properly typed Meme object
         const meme: Meme = {
           id: dbRecord.id,
           prompt: dbRecord.prompt || "",
@@ -67,7 +71,7 @@ export function useFetchMemes() {
             meme.bottomText = parsed?.bottomText || "";
           }
         } catch (e) {
-          console.error("Error parsing meme text for meme ID:", dbRecord.id, e);
+          logError("Error parsing meme text for meme ID:", dbRecord.id, e);
         }
         
         memes.push(meme);
@@ -76,8 +80,9 @@ export function useFetchMemes() {
       setSavedMemes(memes);
       
     } catch (err: any) {
-      setError(err.message || 'Failed to load memes');
-      console.error('Error fetching memes:', err);
+      const errorMsg = err.message || 'Failed to load memes';
+      setError(errorMsg);
+      logError('Error fetching memes:', err);
     } finally {
       setIsLoading(false);
     }

@@ -7,3 +7,4 @@ export * from './types';
 export * from './useSaveMeme';
 export * from './useFetchMemes';
 export * from './useDeleteMeme';
+export * from './utils/errorLogger';

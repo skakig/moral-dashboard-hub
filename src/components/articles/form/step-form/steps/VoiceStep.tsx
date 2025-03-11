@@ -1,35 +1,27 @@
 
-import React, { useEffect, useRef } from "react";
-import { UseFormReturn } from "react-hook-form";
-import { FormLabel, FormControl } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { Mic, Loader2, Play, Pause, Download, Volume2 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArticleFormValues } from "../../StepByStepArticleForm";
-import { Slider } from "@/components/ui/slider";
-import { toast } from "sonner";
-
-// Voice options with IDs from ElevenLabs
-const voiceOptions = [
-  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel (Default)" },
-  { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi" },
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
-  { id: "MF3mGyEYCl7XYWbV9V6O", name: "Adam" },
-  { id: "TxGEqnHWrfWFTfGW9XjX", name: "Josh" },
-  { id: "VR6AewLTigWG4xSOukaG", name: "Nicole" },
-  { id: "pNInz6obpgDQGcFmaJgB", name: "Sam" },
-];
+import React, { useEffect } from 'react';
+import { FormLabel } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Loader2, Wand2, Play, Pause, Volume2, Download } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { UseFormReturn } from 'react-hook-form';
 
 interface VoiceStepProps {
-  form: UseFormReturn<ArticleFormValues>;
+  form: UseFormReturn<any>;
   selectedVoice: string;
-  setSelectedVoice: (value: string) => void;
+  setSelectedVoice: (voiceId: string) => void;
   isGenerating: boolean;
   isPlaying: boolean;
   audioUrl: string | null;
-  onGenerate: () => Promise<void>;
+  onGenerate: () => void;
   togglePlayPause: () => void;
-  setIsPlaying: (value: boolean) => void;
+  setIsPlaying: (isPlaying: boolean) => void;
   downloadAudio: () => void;
 }
 
@@ -43,153 +35,121 @@ export function VoiceStep({
   onGenerate,
   togglePlayPause,
   setIsPlaying,
-  downloadAudio
+  downloadAudio,
 }: VoiceStepProps) {
-  const [volume, setVolume] = React.useState(1);
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  // Load existing voice content if available when component mounts
-  useEffect(() => {
-    const voiceUrl = form.watch("voiceUrl");
-    if (voiceUrl && audioRef.current) {
-      console.log("Setting audio source to:", voiceUrl);
-      audioRef.current.src = voiceUrl;
-    }
-  }, [form]);
-
-  // Update volume when slider changes
-  const handleVolumeChange = (value: number[]) => {
-    const newVolume = value[0];
-    setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
-    }
-  };
-
-  // Directly handle audio events
-  const handleAudioPlay = () => {
-    console.log("Audio playing");
-    setIsPlaying(true);
-  };
-
-  const handleAudioPause = () => {
-    console.log("Audio paused");
-    setIsPlaying(false);
-  };
-
+  const voiceGenerated = form.watch('voiceGenerated') || false;
+  const formVoiceUrl = form.watch('voiceUrl') || '';
+  
+  // Handle audio element events
   const handleAudioEnded = () => {
-    console.log("Audio ended");
     setIsPlaying(false);
   };
 
-  const handleAudioError = (e: React.SyntheticEvent<HTMLAudioElement>) => {
-    console.error("Audio playback error:", e);
-    toast.error("Error playing audio file");
-    setIsPlaying(false);
-  };
+  // Get the current audio URL (either from state or form)
+  const currentAudioUrl = audioUrl || formVoiceUrl;
 
-  const currentVoiceUrl = audioUrl || form.watch("voiceUrl");
-  const hasVoiceContent = form.watch("voiceGenerated") || Boolean(currentVoiceUrl);
+  // Add event listeners when audio element is available
+  useEffect(() => {
+    const audioElement = document.querySelector('audio');
+    if (audioElement) {
+      audioElement.addEventListener('ended', handleAudioEnded);
+      audioElement.addEventListener('pause', () => setIsPlaying(false));
+      audioElement.addEventListener('play', () => setIsPlaying(true));
+      
+      return () => {
+        audioElement.removeEventListener('ended', handleAudioEnded);
+        audioElement.removeEventListener('pause', () => setIsPlaying(false));
+        audioElement.removeEventListener('play', () => setIsPlaying(true));
+      };
+    }
+  }, [setIsPlaying]);
 
   return (
     <div className="space-y-4">
-      {form.watch("content") ? (
-        <div className="flex flex-col space-y-4">
-          <div className="flex items-center space-x-3">
-            <FormLabel className="min-w-24">Voice Style:</FormLabel>
-            <Select 
-              value={selectedVoice} 
-              onValueChange={setSelectedVoice}
-            >
-              <FormControl>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select voice style" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {voiceOptions.map(voice => (
-                  <SelectItem key={voice.id} value={voice.id}>
-                    {voice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onGenerate}
-              disabled={isGenerating}
-              className="flex items-center gap-2"
-            >
-              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-              {hasVoiceContent ? "Regenerate Voice" : "Generate Voice Content"}
-            </Button>
-            
-            {hasVoiceContent && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <FormLabel>Voice Selection</FormLabel>
+          <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a voice" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="21m00Tcm4TlvDq8ikWAM">Rachel (Female)</SelectItem>
+              <SelectItem value="AZnzlk1XvdvUeBnXmlld">Domi (Female)</SelectItem>
+              <SelectItem value="EXAVITQu4vr4xnSDxMaL">Bella (Female)</SelectItem>
+              <SelectItem value="ErXwobaYiN019PkySvjV">Antoni (Male)</SelectItem>
+              <SelectItem value="MF3mGyEYCl7XYWbV9V6O">Elli (Female)</SelectItem>
+              <SelectItem value="TxGEqnHWrfWFTfGW9XjX">Josh (Male)</SelectItem>
+              <SelectItem value="VR6AewLTigWG4xSOukaG">Arnold (Male)</SelectItem>
+              <SelectItem value="pNInz6obpgDQGcFmaJgB">Adam (Male)</SelectItem>
+              <SelectItem value="yoZ06aMxZJJ28mfd3POQ">Sam (Male)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onGenerate}
+            disabled={isGenerating || !form.getValues('content')}
+          >
+            {isGenerating ? (
               <>
-                <span className="text-sm text-green-600">Voice content available</span>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={togglePlayPause}
-                  className="flex items-center gap-2"
-                >
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  {isPlaying ? "Pause" : "Play"}
-                </Button>
-                
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={downloadAudio}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Download
-                </Button>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Generate Voice
               </>
             )}
-          </div>
-          
-          {hasVoiceContent && currentVoiceUrl && (
-            <div className="mt-4 p-4 border rounded-lg bg-muted/30">
-              <div className="flex flex-col space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Volume2 className="w-4 h-4 text-muted-foreground" />
-                  <Slider
-                    value={[volume]} 
-                    min={0} 
-                    max={1} 
-                    step={0.01}
-                    onValueChange={handleVolumeChange}
-                    className="w-32" 
-                  />
-                </div>
-                
-                <audio 
-                  ref={audioRef}
-                  controls 
-                  src={currentVoiceUrl} 
-                  className="w-full" 
-                  onPlay={handleAudioPlay}
-                  onPause={handleAudioPause}
-                  onEnded={handleAudioEnded}
-                  onError={handleAudioError}
-                />
-              </div>
-              
-              <div className="text-xs text-muted-foreground mt-3">
-                {form.watch("voiceFileName") || "voice-file.mp3"}
-              </div>
-            </div>
+          </Button>
+
+          {voiceGenerated && !isGenerating && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-10 p-0"
+                onClick={togglePlayPause}
+                disabled={!currentAudioUrl}
+              >
+                {isPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-10 p-0"
+                onClick={downloadAudio}
+                disabled={!currentAudioUrl}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </>
           )}
         </div>
-      ) : (
-        <div className="text-muted-foreground">
-          Please add content before generating voice.
+      </div>
+
+      {currentAudioUrl && (
+        <div className="p-4 bg-muted rounded-md">
+          <div className="flex items-center gap-2">
+            <Volume2 className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              {isPlaying ? 'Playing audio...' : 'Audio ready to play'}
+            </p>
+          </div>
+          <audio
+            src={currentAudioUrl}
+            className="w-full hidden"
+            controls
+          />
         </div>
       )}
     </div>

@@ -48,9 +48,11 @@ export function useArticleFetch() {
     },
     staleTime: 30000, // 30 seconds before refetching
     retry: 2, // Retry failed requests 2 times
-    onError: (error) => {
-      console.error("Error in articles query:", error);
-      toast.error("Failed to load articles");
+    meta: {
+      onError: (error: Error) => {
+        console.error("Error in articles query:", error);
+        toast.error("Failed to load articles");
+      }
     }
   });
 

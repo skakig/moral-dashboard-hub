@@ -18,6 +18,7 @@ export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [retryCount, setRetryCount] = useState(0); // Track retry attempts
+  const [lastSaveTime, setLastSaveTime] = useState<number | null>(null); // Track when the last save occurred
 
   // Articles functionality
   const { 
@@ -94,6 +95,18 @@ export default function ArticlesPage() {
     }
   }, [articlesError, retryCount]);
 
+  // Effect to refresh articles after a save operation
+  useEffect(() => {
+    if (lastSaveTime) {
+      const refreshTimer = setTimeout(() => {
+        console.log("Refreshing articles after save operation...");
+        fetchArticlesWithErrorHandling();
+      }, 1500); // Wait for Supabase to complete the transaction
+      
+      return () => clearTimeout(refreshTimer);
+    }
+  }, [lastSaveTime]);
+
   // Handle manual refresh with error handling
   const fetchArticlesWithErrorHandling = async () => {
     setIsRefreshing(true);
@@ -164,11 +177,8 @@ export default function ArticlesPage() {
       // Close the form dialog
       setArticleFormDialogOpen(false);
       
-      // Explicitly trigger a refetch of articles after a short delay
-      setTimeout(() => {
-        console.log("Refetching articles after save...");
-        fetchArticlesWithErrorHandling();
-      }, 1000);
+      // Track the save time to trigger a refresh
+      setLastSaveTime(Date.now());
       
     } catch (error) {
       console.error('Error saving article:', error);

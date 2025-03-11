@@ -66,17 +66,17 @@ export function useArticleFetch() {
           dataQuery = dataQuery.eq('status', statusFilter);
         }
 
-        // Order by most recent first
-        dataQuery = dataQuery.order('created_at', { ascending: false });
+        // Order by most recent first (updated_at to prioritize recently edited)
+        dataQuery = dataQuery.order('updated_at', { ascending: false });
         
-        // Apply a stricter limit to prevent timeouts
-        dataQuery = dataQuery.limit(10);
+        // Apply a reasonable limit to prevent timeouts
+        dataQuery = dataQuery.limit(20); // Increased from 10 to show more recent articles
 
         // Execute the query with a timeout
         const { data, error: dataError } = await Promise.race([
           dataQuery,
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout - trying to fetch too much data')), 5000)
+            setTimeout(() => reject(new Error('Query timeout - trying to fetch too much data')), 8000)
           )
         ]) as any;
 
@@ -95,7 +95,7 @@ export function useArticleFetch() {
         throw error;
       }
     },
-    staleTime: 30000, // 30 seconds before refetching
+    staleTime: 10000, // 10 seconds before refetching (reduced from 30)
     retry: 1, // Reduced retries to prevent excessive attempts on timeout
     meta: {
       onError: (error: Error) => {

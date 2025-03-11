@@ -5,12 +5,17 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useArticleMutations } from "@/hooks/articles/useArticleMutations";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function CreateArticlePage() {
   const navigate = useNavigate();
   const { createArticle } = useArticleMutations();
+  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
   
   const handleSubmit = async (data: any) => {
+    setIsSaving(true);
     try {
       // Convert comma-separated keywords string to array
       const formattedData = {
@@ -18,12 +23,25 @@ export default function CreateArticlePage() {
         seo_keywords: data.seoKeywords ? data.seoKeywords.split(',').map((k: string) => k.trim()) : []
       };
 
+      console.log("Creating article from standalone page:", {
+        title: formattedData.title,
+        hasContent: Boolean(formattedData.content)
+      });
+
       await createArticle.mutateAsync(formattedData);
       toast.success("Article created successfully");
-      navigate("/articles"); // Return to articles list
+      
+      // Invalidate the articles query to ensure the list is refreshed
+      await queryClient.invalidateQueries({ queryKey: ['articles'] });
+      
+      // Give Supabase a moment to complete the transaction
+      setTimeout(() => {
+        navigate("/articles"); // Return to articles list
+      }, 1000);
     } catch (error) {
       console.error('Error saving article:', error);
-      toast.error('Failed to save article');
+      toast.error('Failed to save article: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      setIsSaving(false);
     }
   };
 
@@ -37,7 +55,11 @@ export default function CreateArticlePage() {
               Create a new article with AI assistance
             </p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/articles")}>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/articles")}
+            disabled={isSaving}
+          >
             Cancel
           </Button>
         </div>
@@ -47,6 +69,7 @@ export default function CreateArticlePage() {
             onSubmit={handleSubmit}
             submitLabel="Create Article"
             onCancel={() => navigate("/articles")}
+            isSubmitting={isSaving}
           />
         </div>
       </div>

@@ -85,6 +85,10 @@ export class EdgeFunctionService {
 
   static async generateVoice(text: string, voiceId: string) {
     try {
+      if (!text || text.trim() === '') {
+        throw new Error("Text content is required for voice generation");
+      }
+      
       return await this.callFunction<{
         audioUrl: string;
         fileName: string;

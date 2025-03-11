@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { EdgeFunctionService } from '@/services/api/edgeFunctions';
 
@@ -7,6 +7,18 @@ export function useVoiceGeneration(form: any) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+
+  // Initialize audio element on mount
+  useEffect(() => {
+    return () => {
+      // Cleanup audio on unmount
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.src = '';
+      }
+    };
+  }, [audioElement]);
 
   const generateVoiceContent = async (voiceId: string) => {
     const content = form.getValues('content');
@@ -60,24 +72,43 @@ export function useVoiceGeneration(form: any) {
   };
 
   const togglePlayPause = () => {
-    if (!audioUrl && !form.getValues('voiceUrl')) {
+    const url = audioUrl || form.getValues('voiceUrl');
+    
+    if (!url) {
       toast.error('No audio available to play');
       return;
     }
     
-    const audioElement = document.querySelector('audio');
-    if (audioElement) {
+    try {
+      // Get or create an audio element
+      let audio = audioElement;
+      
+      if (!audio) {
+        audio = new Audio(url);
+        setAudioElement(audio);
+        
+        // Add event listeners
+        audio.addEventListener('ended', () => setIsPlaying(false));
+        audio.addEventListener('pause', () => setIsPlaying(false));
+        audio.addEventListener('play', () => setIsPlaying(true));
+      }
+      
       if (isPlaying) {
-        audioElement.pause();
+        audio.pause();
       } else {
-        audioElement.play().catch(error => {
+        // Set the source again in case it changed
+        if (audio.src !== url) {
+          audio.src = url;
+        }
+        
+        audio.play().catch(error => {
           console.error('Audio playback error:', error);
           toast.error('Error playing audio');
         });
       }
-      setIsPlaying(!isPlaying);
-    } else {
-      toast.error('Audio player not found');
+    } catch (error) {
+      console.error('Audio control error:', error);
+      toast.error('Failed to control audio playback');
     }
   };
 

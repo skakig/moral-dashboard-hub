@@ -36,7 +36,13 @@ serve(async (req) => {
     }
 
     // Simple text processing - convert to string and limit length
-    const processedText = String(text).substring(0, 5000);
+    // Use a simple substring to avoid any potential stack issues
+    let processedText = "";
+    if (typeof text === 'string') {
+      processedText = text.substring(0, 5000);
+    } else {
+      processedText = String(text).substring(0, 5000);
+    }
     
     console.log(`Generating voice with ElevenLabs: length=${processedText.length}, voiceId=${voiceId || "21m00Tcm4TlvDq8ikWAM"}`);
     
@@ -77,7 +83,16 @@ serve(async (req) => {
     
     // Process the audio response
     const audioArrayBuffer = await response.arrayBuffer();
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
+    const audioUint8Array = new Uint8Array(audioArrayBuffer);
+    
+    // Convert to base64 without using btoa (which can cause stack issues with large files)
+    let binary = '';
+    const bytes = new Uint8Array(audioArrayBuffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Audio = btoa(binary);
 
     const fileName = `voice_${Date.now()}.mp3`;
 

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -34,38 +35,20 @@ serve(async (req) => {
       throw new Error("Text is required");
     }
 
-    // Process text - keep it simple to avoid recursion
-    let processedText = text;
+    // Simple text processing - just convert to string and limit length
+    let processedText = typeof text === 'object' ? JSON.stringify(text) : String(text);
     
-    // If text is an object, handle it appropriately
-    if (typeof processedText === 'object') {
-      try {
-        if (processedText.content) {
-          processedText = processedText.content;
-        } else {
-          processedText = JSON.stringify(processedText);
-        }
-      } catch (e) {
-        console.error("Error processing text object:", e);
-        processedText = "Error processing content.";
-      }
-    }
-
-    // Convert to string if somehow it's not a string
-    processedText = String(processedText);
-
-    // Simple sanitization - remove markdown
-    processedText = processedText.replace(/```[\s\S]*?```/g, ''); // Remove code blocks
-    processedText = processedText.replace(/\*\*/g, ''); // Remove bold formatting
+    // Remove markdown and sanitize
+    processedText = processedText.replace(/```[\s\S]*?```/g, '');
+    processedText = processedText.replace(/\*\*/g, '');
     
-    // Limit text length to prevent timeouts
+    // Limit text length
     const maxLength = 4000;
     if (processedText.length > maxLength) {
-      console.log(`Text length (${processedText.length}) exceeds maximum. Trimming...`);
       processedText = processedText.substring(0, maxLength) + "...";
     }
     
-    console.log(`Generating voice for text (length: ${processedText.length}) with voice ID: ${voiceId || "21m00Tcm4TlvDq8ikWAM"}`);
+    console.log(`Generating voice with ElevenLabs: length=${processedText.length}, voiceId=${voiceId || "21m00Tcm4TlvDq8ikWAM"}`);
     
     // Call ElevenLabs API
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId || "21m00Tcm4TlvDq8ikWAM"}`, {
@@ -84,10 +67,20 @@ serve(async (req) => {
       }),
     });
 
+    // Handle API response errors
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`ElevenLabs API error (${response.status}): ${errorText}`);
-      throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `ElevenLabs API error: ${response.status} ${response.statusText}`,
+          details: errorText
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400
+        }
+      );
     }
 
     console.log("ElevenLabs response received successfully");

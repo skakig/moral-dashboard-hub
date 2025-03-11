@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -84,10 +83,7 @@ export class EdgeFunctionService {
   }
 
   static async generateVoice(text: string, voiceId: string) {
-    console.log('Calling generateVoice:', { textLength: text.length, voiceId });
-    
     try {
-      // For voice generation, we'll use only 1 retry to avoid recursive issues
       return await this.callFunction<{
         audioUrl: string;
         fileName: string;

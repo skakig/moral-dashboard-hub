@@ -19,7 +19,7 @@ export function useVoiceGeneration(form: any) {
     setIsGenerating(true);
     
     try {
-      // First, reset any existing voice content
+      // Reset any existing voice content
       setAudioUrl(null);
       form.setValue('voiceGenerated', false);
       form.setValue('voiceUrl', '');
@@ -27,9 +27,8 @@ export function useVoiceGeneration(form: any) {
       form.setValue('voiceBase64', '');
       
       toast.info('Generating voice content...');
-
-      // Use the content directly - let the edge function handle processing
-      // This avoids recursive issues with JSON stringification
+      
+      // Send only the text content to avoid circular references
       const result = await EdgeFunctionService.generateVoice(content, voiceId);
       
       if (!result) {
@@ -51,7 +50,7 @@ export function useVoiceGeneration(form: any) {
       form.trigger('voiceBase64');
       
       toast.success('Voice generation complete!');
-      console.log("Voice generation successful - using ElevenLabs");
+      console.log("Voice generation successful");
     } catch (error: any) {
       console.error('Error generating voice content:', error);
       toast.error(error.message || 'Failed to generate voice content.');

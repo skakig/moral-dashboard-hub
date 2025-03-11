@@ -46,11 +46,6 @@ export function VoiceContentSection({
   setIsPlaying,
   downloadAudio,
 }: VoiceContentSectionProps) {
-  // Handle audio element events
-  const handleAudioEnded = () => {
-    setIsPlaying(false);
-  };
-
   // Get the current audio URL (either from state or form)
   const currentAudioUrl = audioUrl || form.watch("voiceUrl");
   
@@ -146,7 +141,7 @@ export function VoiceContentSection({
           </div>
           <audio
             src={currentAudioUrl}
-            onEnded={handleAudioEnded}
+            onEnded={() => setIsPlaying(false)}
             onPause={() => setIsPlaying(false)}
             onPlay={() => setIsPlaying(true)}
             className="w-full mt-2"

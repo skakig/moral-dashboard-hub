@@ -31,14 +31,39 @@ serve(async (req) => {
       throw new Error("Invalid request format");
     });
     
-    const { text, voiceId } = requestData;
+    let { text, voiceId } = requestData;
 
     if (!text) {
       throw new Error("Text is required");
     }
 
+    // Ensure text is a string and handle potential JSON objects
+    if (typeof text === 'object') {
+      try {
+        // If text is an object, try to extract content property or stringify it
+        if (text.content) {
+          text = text.content;
+        } else {
+          text = JSON.stringify(text);
+        }
+      } catch (e) {
+        console.error("Error processing text object:", e);
+        text = "Error processing content.";
+      }
+    }
+
+    // Simple text processing - extract plain text content
+    // Remove markdown and code formatting
+    text = text.replace(/```[\s\S]*?```/g, ''); // Remove code blocks
+    text = text.replace(/\[.*?\]/g, ''); // Remove markdown links
+    text = text.replace(/\*\*/g, ''); // Remove bold formatting
+    text = text.replace(/\\n/g, ' '); // Replace escaped newlines
+
     // Trim the text if it's too long - prevents API timeouts
-    const trimmedText = text.length > 4000 ? text.substring(0, 4000) + "..." : text;
+    const maxLength = 4000;
+    const trimmedText = text.length > maxLength 
+      ? text.substring(0, maxLength) + "..." 
+      : text;
     
     console.log(`Generating voice for text (length: ${trimmedText.length}) with voice ID: ${voiceId || "default"}`);
     

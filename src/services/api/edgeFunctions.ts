@@ -75,7 +75,7 @@ export class EdgeFunctionService {
   }
 
   static async generateVoice(text: string, voiceId: string) {
-    console.log('Calling generateVoice with:', { text, voiceId });
+    console.log('Calling generateVoice with:', { textLength: text.length, voiceId });
     
     try {
       return await this.callFunction<{
@@ -87,7 +87,7 @@ export class EdgeFunctionService {
         'generate-voice',
         { text, voiceId },
         { 
-          retries: 2,
+          retries: 1, // Reduced retries to avoid potential recursive issues
           retryDelay: 1000,
           customErrorMessage: 'Voice generation failed. Please try again later.'
         }

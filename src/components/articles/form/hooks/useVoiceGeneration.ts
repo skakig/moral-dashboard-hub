@@ -28,8 +28,9 @@ export function useVoiceGeneration(form: any) {
       
       toast.info('Generating voice content...');
 
-      // Extract only text from content (remove markdown formatting)
-      const plainText = content.replace(/\[.*?\]|\*\*|#/g, '').trim();
+      // Extract plain text from content (simplified for clarity)
+      // This helps avoid recursive issues
+      const plainText = content;
       
       // Generate voice using the edge function service
       const result = await EdgeFunctionService.generateVoice(plainText, voiceId);

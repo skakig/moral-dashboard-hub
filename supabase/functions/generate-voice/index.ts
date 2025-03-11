@@ -35,18 +35,8 @@ serve(async (req) => {
       throw new Error("Text is required");
     }
 
-    // Simple text processing - just convert to string and limit length
-    let processedText = typeof text === 'object' ? JSON.stringify(text) : String(text);
-    
-    // Remove markdown and sanitize
-    processedText = processedText.replace(/```[\s\S]*?```/g, '');
-    processedText = processedText.replace(/\*\*/g, '');
-    
-    // Limit text length
-    const maxLength = 4000;
-    if (processedText.length > maxLength) {
-      processedText = processedText.substring(0, maxLength) + "...";
-    }
+    // Simple text processing - convert to string and limit length
+    const processedText = String(text).substring(0, 5000);
     
     console.log(`Generating voice with ElevenLabs: length=${processedText.length}, voiceId=${voiceId || "21m00Tcm4TlvDq8ikWAM"}`);
     

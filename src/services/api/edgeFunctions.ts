@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,7 +20,7 @@ export class EdgeFunctionService {
     } = {}
   ): Promise<T | null> {
     const { 
-      retries = 2, 
+      retries = 1, 
       retryDelay = 1000, 
       silent = false,
       customErrorMessage

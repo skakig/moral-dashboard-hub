@@ -28,7 +28,7 @@ export function useVoiceGeneration(form: any) {
       
       toast.info('Generating voice content...');
       
-      // Send only the text content to avoid circular references
+      // Call the edge function to generate voice
       const result = await EdgeFunctionService.generateVoice(content, voiceId);
       
       if (!result) {

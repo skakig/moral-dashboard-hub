@@ -53,7 +53,7 @@ export function useVoiceGeneration(form: any) {
       form.trigger('voiceBase64');
       
       toast.success('Voice generation complete!');
-      console.log("Voice generation successful - service:", result.service || "unknown");
+      console.log("Voice generation successful - using ElevenLabs");
     } catch (error: any) {
       console.error('Error generating voice content:', error);
       toast.error(error.message || 'Failed to generate voice content.');

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
@@ -26,56 +25,57 @@ serve(async (req) => {
     }
 
     // Parse request data
-    const requestData = await req.json().catch(e => {
-      console.error("Error parsing JSON:", e);
-      throw new Error("Invalid request format");
-    });
+    const requestData = await req.json();
     
-    let { text, voiceId } = requestData;
+    // Extract text and voiceId, with validation
+    const { text, voiceId } = requestData;
 
     if (!text) {
       throw new Error("Text is required");
     }
 
-    // Ensure text is a string and handle potential JSON objects
-    if (typeof text === 'object') {
+    // Process text - keep it simple to avoid recursion
+    let processedText = text;
+    
+    // If text is an object, handle it appropriately
+    if (typeof processedText === 'object') {
       try {
-        // If text is an object, try to extract content property or stringify it
-        if (text.content) {
-          text = text.content;
+        if (processedText.content) {
+          processedText = processedText.content;
         } else {
-          text = JSON.stringify(text);
+          processedText = JSON.stringify(processedText);
         }
       } catch (e) {
         console.error("Error processing text object:", e);
-        text = "Error processing content.";
+        processedText = "Error processing content.";
       }
     }
 
-    // Simple text processing - extract plain text content
-    // Remove markdown and code formatting
-    text = text.replace(/```[\s\S]*?```/g, ''); // Remove code blocks
-    text = text.replace(/\[.*?\]/g, ''); // Remove markdown links
-    text = text.replace(/\*\*/g, ''); // Remove bold formatting
-    text = text.replace(/\\n/g, ' '); // Replace escaped newlines
+    // Convert to string if somehow it's not a string
+    processedText = String(processedText);
 
-    // Trim the text if it's too long - prevents API timeouts
+    // Simple sanitization - remove markdown
+    processedText = processedText.replace(/```[\s\S]*?```/g, ''); // Remove code blocks
+    processedText = processedText.replace(/\*\*/g, ''); // Remove bold formatting
+    
+    // Limit text length to prevent timeouts
     const maxLength = 4000;
-    const trimmedText = text.length > maxLength 
-      ? text.substring(0, maxLength) + "..." 
-      : text;
+    if (processedText.length > maxLength) {
+      console.log(`Text length (${processedText.length}) exceeds maximum. Trimming...`);
+      processedText = processedText.substring(0, maxLength) + "...";
+    }
     
-    console.log(`Generating voice for text (length: ${trimmedText.length}) with voice ID: ${voiceId || "default"}`);
+    console.log(`Generating voice for text (length: ${processedText.length}) with voice ID: ${voiceId || "21m00Tcm4TlvDq8ikWAM"}`);
     
-    // Use ElevenLabs API
-    const elevenLabsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId || "21m00Tcm4TlvDq8ikWAM"}`, {
+    // Call ElevenLabs API
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId || "21m00Tcm4TlvDq8ikWAM"}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "xi-api-key": elevenLabsApiKey,
       },
       body: JSON.stringify({
-        text: trimmedText,
+        text: processedText,
         model_id: "eleven_multilingual_v2",
         voice_settings: {
           stability: 0.5,
@@ -84,19 +84,21 @@ serve(async (req) => {
       }),
     });
 
-    if (!elevenLabsResponse.ok) {
-      const errorText = await elevenLabsResponse.text();
-      console.error(`ElevenLabs API error (${elevenLabsResponse.status}): ${errorText}`);
-      throw new Error(`ElevenLabs API error: ${elevenLabsResponse.status} ${elevenLabsResponse.statusText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`ElevenLabs API error (${response.status}): ${errorText}`);
+      throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
     }
 
     console.log("ElevenLabs response received successfully");
     
-    const audioArrayBuffer = await elevenLabsResponse.arrayBuffer();
+    // Process the audio response
+    const audioArrayBuffer = await response.arrayBuffer();
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioArrayBuffer)));
 
     const fileName = `voice_${Date.now()}.mp3`;
 
+    // Return the processed audio
     return new Response(
       JSON.stringify({
         audioUrl: `data:audio/mpeg;base64,${base64Audio}`,

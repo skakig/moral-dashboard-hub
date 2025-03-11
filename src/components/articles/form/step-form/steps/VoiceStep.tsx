@@ -40,11 +40,6 @@ export function VoiceStep({
   const voiceGenerated = form.watch('voiceGenerated') || false;
   const formVoiceUrl = form.watch('voiceUrl') || '';
   
-  // Handle audio element events
-  const handleAudioEnded = () => {
-    setIsPlaying(false);
-  };
-
   // Get the current audio URL (either from state or form)
   const currentAudioUrl = audioUrl || formVoiceUrl;
 
@@ -52,14 +47,18 @@ export function VoiceStep({
   useEffect(() => {
     const audioElement = document.querySelector('audio');
     if (audioElement) {
-      audioElement.addEventListener('ended', handleAudioEnded);
-      audioElement.addEventListener('pause', () => setIsPlaying(false));
-      audioElement.addEventListener('play', () => setIsPlaying(true));
+      const handleEnded = () => setIsPlaying(false);
+      const handlePause = () => setIsPlaying(false);
+      const handlePlay = () => setIsPlaying(true);
+      
+      audioElement.addEventListener('ended', handleEnded);
+      audioElement.addEventListener('pause', handlePause);
+      audioElement.addEventListener('play', handlePlay);
       
       return () => {
-        audioElement.removeEventListener('ended', handleAudioEnded);
-        audioElement.removeEventListener('pause', () => setIsPlaying(false));
-        audioElement.removeEventListener('play', () => setIsPlaying(true));
+        audioElement.removeEventListener('ended', handleEnded);
+        audioElement.removeEventListener('pause', handlePause);
+        audioElement.removeEventListener('play', handlePlay);
       };
     }
   }, [setIsPlaying]);
@@ -147,7 +146,7 @@ export function VoiceStep({
           </div>
           <audio
             src={currentAudioUrl}
-            className="w-full hidden"
+            className="w-full mt-2"
             controls
           />
         </div>

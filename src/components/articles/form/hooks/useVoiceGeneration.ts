@@ -28,12 +28,9 @@ export function useVoiceGeneration(form: any) {
       
       toast.info('Generating voice content...');
 
-      // Extract plain text from content (simplified for clarity)
-      // This helps avoid recursive issues
-      const plainText = content;
-      
-      // Generate voice using the edge function service
-      const result = await EdgeFunctionService.generateVoice(plainText, voiceId);
+      // Use the content directly - let the edge function handle processing
+      // This avoids recursive issues with JSON stringification
+      const result = await EdgeFunctionService.generateVoice(content, voiceId);
       
       if (!result) {
         toast.error('Failed to generate voice content.');

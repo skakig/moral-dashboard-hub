@@ -36,7 +36,11 @@ export class EdgeFunctionService {
           toast.warning(`Retrying... (Attempt ${currentAttempt}/${retries + 1})`);
         }
         
-        console.log(`Calling edge function ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, payload);
+        console.log(`Calling edge function ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, 
+          functionName === 'generate-voice' 
+            ? { voiceId: payload.voiceId, textLength: payload.text?.length || 0 } 
+            : payload
+        );
         
         const response = await supabase.functions.invoke<EdgeFunctionResponse<T>>(
           functionName,
@@ -55,7 +59,12 @@ export class EdgeFunctionService {
           throw new Error(response.data.error);
         }
         
-        console.log(`Edge function ${functionName} response:`, response.data);
+        console.log(`Edge function ${functionName} response:`, 
+          functionName === 'generate-voice' 
+            ? { success: true, audioUrlLength: (response.data as any)?.audioUrl?.length || 0 }
+            : response.data
+        );
+        
         return response.data as T;
       } catch (error: any) {
         console.error(`Error in ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, error);
@@ -75,9 +84,10 @@ export class EdgeFunctionService {
   }
 
   static async generateVoice(text: string, voiceId: string) {
-    console.log('Calling generateVoice with:', { textLength: text.length, voiceId });
+    console.log('Calling generateVoice:', { textLength: text.length, voiceId });
     
     try {
+      // For voice generation, we'll use only 1 retry to avoid recursive issues
       return await this.callFunction<{
         audioUrl: string;
         fileName: string;
@@ -87,7 +97,7 @@ export class EdgeFunctionService {
         'generate-voice',
         { text, voiceId },
         { 
-          retries: 1, // Reduced retries to avoid potential recursive issues
+          retries: 1,
           retryDelay: 1000,
           customErrorMessage: 'Voice generation failed. Please try again later.'
         }

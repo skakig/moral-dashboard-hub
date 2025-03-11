@@ -149,7 +149,7 @@ export function VoiceContentSection({
             onEnded={handleAudioEnded}
             onPause={() => setIsPlaying(false)}
             onPlay={() => setIsPlaying(true)}
-            className="hidden"
+            className="w-full mt-2"
             controls
           />
         </div>

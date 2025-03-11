@@ -35,7 +35,7 @@ export function useArticleMutations() {
             ...dbArticle,
             voice_base64: null, // Temporarily set to null
           })
-          .select()
+          .select('id, title')
           .single();
 
         if (error) {
@@ -45,14 +45,18 @@ export function useArticleMutations() {
         
         // Now update the voice_base64 field separately
         if (data) {
-          const { error: updateError } = await supabase
-            .from('articles')
-            .update({ voice_base64: dbArticle.voice_base64 })
-            .eq('id', data.id);
-            
-          if (updateError) {
-            console.error("Error updating voice data:", updateError);
-            // We don't throw here as the article is created, just log the error
+          try {
+            const { error: updateError } = await supabase
+              .from('articles')
+              .update({ voice_base64: dbArticle.voice_base64 })
+              .eq('id', data.id);
+              
+            if (updateError) {
+              console.error("Error updating voice data:", updateError);
+              // We don't throw here as the article is created, just log the error
+            }
+          } catch (err) {
+            console.error("Error in voice data update:", err);
           }
         }
         
@@ -62,7 +66,7 @@ export function useArticleMutations() {
         const { data, error } = await supabase
           .from('articles')
           .insert(dbArticle)
-          .select()
+          .select('id, title')
           .single();
 
         if (error) {
@@ -73,13 +77,13 @@ export function useArticleMutations() {
         return data;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
-      toast.success("Article created successfully");
+      toast.success(`Article "${data?.title || 'New article'}" created successfully`);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error creating article:", error);
-      toast.error("Failed to create article");
+      toast.error(`Failed to create article: ${error.message}`);
     },
   });
 
@@ -109,7 +113,7 @@ export function useArticleMutations() {
           .from('articles')
           .update(articleWithoutVoiceData)
           .eq('id', id)
-          .select()
+          .select('id, title')
           .single();
 
         if (error) {
@@ -118,14 +122,18 @@ export function useArticleMutations() {
         }
         
         // Now update the voice_base64 field separately
-        const { error: updateError } = await supabase
-          .from('articles')
-          .update({ voice_base64: voiceBase64 })
-          .eq('id', id);
-          
-        if (updateError) {
-          console.error("Error updating voice data:", updateError);
-          // We don't throw here as the article is updated, just log the error
+        try {
+          const { error: updateError } = await supabase
+            .from('articles')
+            .update({ voice_base64: voiceBase64 })
+            .eq('id', id);
+            
+          if (updateError) {
+            console.error("Error updating voice data:", updateError);
+            // We don't throw here as the article is updated, just log the error
+          }
+        } catch (err) {
+          console.error("Error in voice data update:", err);
         }
         
         return data;
@@ -135,7 +143,7 @@ export function useArticleMutations() {
           .from('articles')
           .update(dbArticle)
           .eq('id', id)
-          .select()
+          .select('id, title')
           .single();
 
         if (error) {
@@ -146,19 +154,20 @@ export function useArticleMutations() {
         return data;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
-      toast.success("Article updated successfully");
+      toast.success(`Article "${data?.title || 'Article'}" updated successfully`);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error updating article:", error);
-      toast.error("Failed to update article");
+      toast.error(`Failed to update article: ${error.message}`);
     },
   });
 
   // Delete article
   const deleteArticle = useMutation({
     mutationFn: async (id: string) => {
+      console.log("Deleting article with ID:", id);
       const { error } = await supabase
         .from('articles')
         .delete()
@@ -167,14 +176,15 @@ export function useArticleMutations() {
       if (error) {
         throw new Error(error.message);
       }
+      return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
       toast.success("Article deleted successfully");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error deleting article:", error);
-      toast.error("Failed to delete article");
+      toast.error(`Failed to delete article: ${error.message}`);
     },
   });
 

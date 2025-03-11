@@ -1,13 +1,14 @@
 
 import { ArticleToolbar } from "@/components/articles/ArticleToolbar";
 import { ArticlesTable } from "@/components/articles/ArticlesTable";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { Article } from "@/types/articles";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useArticleMutations } from "@/hooks/articles/useArticleMutations";
 import { useNavigate } from "react-router-dom";
 import { mapFormToDbArticle } from "@/hooks/articles/utils/articleMappers";
+import { Button } from "@/components/ui/button";
 
 interface ArticlesTabProps {
   articles: Article[];
@@ -19,6 +20,7 @@ interface ArticlesTabProps {
   onCreateNew: () => void;
   onEdit: (article: Article) => void;
   onDelete: (articleId: string) => void;
+  onRefresh?: () => void;
 }
 
 export function ArticlesTab({
@@ -29,12 +31,15 @@ export function ArticlesTab({
   statusFilter,
   onStatusFilterChange,
   onEdit,
-  onDelete
+  onDelete,
+  onCreateNew,
+  onRefresh
 }: ArticlesTabProps) {
   const navigate = useNavigate();
   const { updateArticle } = useArticleMutations();
   const [publishingArticle, setPublishingArticle] = useState<string | null>(null);
   const [viewingArticle, setViewingArticle] = useState<Article | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handlePublish = async (article: Article) => {
     try {
@@ -42,7 +47,8 @@ export function ArticlesTab({
       
       const publishData = {
         id: article.id,
-        publish_date: new Date().toISOString()
+        publish_date: new Date().toISOString(),
+        status: 'published'
       };
       
       const dbPayload = mapFormToDbArticle(publishData);
@@ -66,22 +72,60 @@ export function ArticlesTab({
   };
 
   const handleCreateNew = () => {
-    navigate("/articles/create");
+    onCreateNew ? onCreateNew() : navigate("/articles/create");
+  };
+
+  const handleRefresh = async () => {
+    if (onRefresh && !isRefreshing) {
+      setIsRefreshing(true);
+      try {
+        await onRefresh();
+        toast.success("Articles refreshed");
+      } catch (error) {
+        console.error("Error refreshing articles:", error);
+        toast.error("Failed to refresh articles");
+      } finally {
+        setIsRefreshing(false);
+      }
+    }
   };
 
   return (
     <>
-      <ArticleToolbar
-        searchTerm={searchTerm}
-        onSearchChange={onSearchChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={onStatusFilterChange}
-        onCreateNew={handleCreateNew}
-      />
+      <div className="flex justify-between items-center mb-4">
+        <ArticleToolbar
+          searchTerm={searchTerm}
+          onSearchChange={onSearchChange}
+          statusFilter={statusFilter}
+          onStatusFilterChange={onStatusFilterChange}
+          onCreateNew={handleCreateNew}
+        />
+        
+        {onRefresh && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={isLoading || isRefreshing}
+            className="ml-4"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        )}
+      </div>
       
       {isLoading ? (
         <div className="flex justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : articles.length === 0 ? (
+        <div className="text-center py-10 border rounded-lg">
+          <p className="text-muted-foreground mb-4">No articles found</p>
+          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh Articles
+          </Button>
         </div>
       ) : (
         <ArticlesTable

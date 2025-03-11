@@ -18,6 +18,7 @@ export default function ArticlesPage() {
   const { 
     articles, 
     isLoading: articlesLoading, 
+    error: articlesError,
     searchTerm, 
     setSearchTerm, 
     statusFilter, 
@@ -70,9 +71,26 @@ export default function ArticlesPage() {
 
   // Effect to refresh articles when coming to this page
   useEffect(() => {
+    console.log("ArticlesPage mounted, fetching articles...");
     // Invalidate and refetch articles when the component mounts
-    refetch();
+    const fetchArticles = async () => {
+      try {
+        await refetch();
+      } catch (err) {
+        console.error("Error refetching articles:", err);
+      }
+    };
+    
+    fetchArticles();
   }, [refetch]);
+
+  // Display error if articles failed to load
+  useEffect(() => {
+    if (articlesError) {
+      console.error("Articles fetch error:", articlesError);
+      toast.error(`Failed to load articles: ${articlesError instanceof Error ? articlesError.message : 'Unknown error'}`);
+    }
+  }, [articlesError]);
 
   // Article submission handler
   async function handleArticleSubmit(data: any) {
@@ -118,7 +136,6 @@ export default function ArticlesPage() {
         refetch();
       }, 1000);
       
-      setArticleFormDialogOpen(false);
     } catch (error) {
       console.error('Error saving article:', error);
       toast.error('Failed to save article');
@@ -183,6 +200,7 @@ export default function ArticlesPage() {
               onCreateNew={handleCreateArticle}
               onEdit={handleEditArticle}
               onDelete={deleteArticle.mutate}
+              onRefresh={refetch}
             />
           </TabsContent>
           

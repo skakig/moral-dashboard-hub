@@ -18,6 +18,7 @@ export function useArticleFormDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previousArticleVersion, setPreviousArticleVersion] = useState<Article | null>(null);
   const formSubmittedRef = useRef(false);
+  const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // When an article is loaded for editing, store the previous version for version control
   useEffect(() => {
@@ -30,8 +31,23 @@ export function useArticleFormDialog({
   useEffect(() => {
     if (!formDialogOpen) {
       formSubmittedRef.current = false;
+      
+      // Clear any pending timeouts
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
+      }
     }
   }, [formDialogOpen]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCreateArticle = () => {
     setCurrentArticle(null);
@@ -115,7 +131,12 @@ export function useArticleFormDialog({
       await onSubmit(submitData);
       
       // Set timeout before closing dialog to prevent multiple submissions
-      setTimeout(() => {
+      // and to allow time for the server to process the request
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+      
+      submitTimeoutRef.current = setTimeout(() => {
         setFormDialogOpen(false);
       
         // Update the previous version after successful save
@@ -135,7 +156,9 @@ export function useArticleFormDialog({
             category: data.platform || 'General',
           });
         }
-      }, 500);
+        
+        submitTimeoutRef.current = null;
+      }, 1000);
     } catch (error) {
       console.error("Error saving article:", error);
       toast.error("Failed to save article");

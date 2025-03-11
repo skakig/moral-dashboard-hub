@@ -23,18 +23,55 @@ export function useArticleMutations() {
         hasVoiceData: Boolean(dbArticle.voice_url)
       });
       
-      const { data, error } = await supabase
-        .from('articles')
-        .insert(dbArticle)
-        .select()
-        .single();
+      // Check for large voice_base64 data and handle it accordingly
+      const hasLargeVoiceData = dbArticle.voice_base64 && dbArticle.voice_base64.length > 500000;
+      
+      if (hasLargeVoiceData) {
+        console.log("Detected large voice data, using chunked approach");
+        // For large voice data, we'll store it separately to avoid timeout issues
+        const { data, error } = await supabase
+          .from('articles')
+          .insert({
+            ...dbArticle,
+            voice_base64: null, // Temporarily set to null
+          })
+          .select()
+          .single();
 
-      if (error) {
-        console.error("Error creating article:", error);
-        throw new Error(error.message);
+        if (error) {
+          console.error("Error creating article:", error);
+          throw new Error(error.message);
+        }
+        
+        // Now update the voice_base64 field separately
+        if (data) {
+          const { error: updateError } = await supabase
+            .from('articles')
+            .update({ voice_base64: dbArticle.voice_base64 })
+            .eq('id', data.id);
+            
+          if (updateError) {
+            console.error("Error updating voice data:", updateError);
+            // We don't throw here as the article is created, just log the error
+          }
+        }
+        
+        return data;
+      } else {
+        // For normal-sized articles, use standard approach
+        const { data, error } = await supabase
+          .from('articles')
+          .insert(dbArticle)
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error creating article:", error);
+          throw new Error(error.message);
+        }
+
+        return data;
       }
-
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
@@ -58,19 +95,56 @@ export function useArticleMutations() {
         hasVoiceData: Boolean(dbArticle.voice_url)
       });
       
-      const { data, error } = await supabase
-        .from('articles')
-        .update(dbArticle)
-        .eq('id', id)
-        .select()
-        .single();
+      // Check for large voice_base64 data and handle it accordingly
+      const hasLargeVoiceData = dbArticle.voice_base64 && dbArticle.voice_base64.length > 500000;
+      
+      if (hasLargeVoiceData) {
+        console.log("Detected large voice data, using chunked approach for update");
+        // For large voice data, we'll update it separately to avoid timeout issues
+        const voiceBase64 = dbArticle.voice_base64;
+        const articleWithoutVoiceData = { ...dbArticle, voice_base64: null };
+        
+        // First update without the large voice data
+        const { data, error } = await supabase
+          .from('articles')
+          .update(articleWithoutVoiceData)
+          .eq('id', id)
+          .select()
+          .single();
 
-      if (error) {
-        console.error("Error updating article:", error);
-        throw new Error(error.message);
+        if (error) {
+          console.error("Error updating article:", error);
+          throw new Error(error.message);
+        }
+        
+        // Now update the voice_base64 field separately
+        const { error: updateError } = await supabase
+          .from('articles')
+          .update({ voice_base64: voiceBase64 })
+          .eq('id', id);
+          
+        if (updateError) {
+          console.error("Error updating voice data:", updateError);
+          // We don't throw here as the article is updated, just log the error
+        }
+        
+        return data;
+      } else {
+        // For normal-sized articles, use standard approach
+        const { data, error } = await supabase
+          .from('articles')
+          .update(dbArticle)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error updating article:", error);
+          throw new Error(error.message);
+        }
+
+        return data;
       }
-
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });

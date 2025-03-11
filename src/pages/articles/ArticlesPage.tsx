@@ -25,7 +25,8 @@ export default function ArticlesPage() {
     createArticle,
     updateArticle,
     deleteArticle,
-    generateArticle
+    generateArticle,
+    refetch
   } = useArticles();
 
   // Version control for articles
@@ -48,7 +49,8 @@ export default function ArticlesPage() {
     setCurrentArticle,
     handleCreateArticle,
     handleEditArticle,
-    renderArticleFormDialog
+    renderArticleFormDialog,
+    isSubmitting: isDialogSubmitting
   } = useArticleFormDialog({
     onSubmit: handleArticleSubmit
   });
@@ -65,6 +67,12 @@ export default function ArticlesPage() {
   } = useThemeFormDialog({
     onSubmit: handleThemeSubmit
   });
+
+  // Effect to refresh articles when coming to this page
+  useEffect(() => {
+    // Invalidate and refetch articles when the component mounts
+    refetch();
+  }, [refetch]);
 
   // Article submission handler
   async function handleArticleSubmit(data: any) {
@@ -104,6 +112,12 @@ export default function ArticlesPage() {
         result = await createArticle.mutateAsync(formattedData);
         toast.success("Article created successfully");
       }
+      
+      // Explicitly trigger a refetch of articles
+      setTimeout(() => {
+        refetch();
+      }, 1000);
+      
       setArticleFormDialogOpen(false);
     } catch (error) {
       console.error('Error saving article:', error);

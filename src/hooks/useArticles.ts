@@ -8,7 +8,7 @@ import { useArticleGeneration } from "./articles/useArticleGeneration";
  */
 export function useArticles() {
   // Use the specialized hooks
-  const { articles, isLoading, error, searchTerm, setSearchTerm, statusFilter, setStatusFilter } = 
+  const { articles, isLoading, error, searchTerm, setSearchTerm, statusFilter, setStatusFilter, refetch } = 
     useArticleFetch();
   
   const { createArticle, updateArticle, deleteArticle } = useArticleMutations();
@@ -25,6 +25,7 @@ export function useArticles() {
     setSearchTerm,
     statusFilter,
     setStatusFilter,
+    refetch,
     
     // From useArticleMutations
     createArticle,

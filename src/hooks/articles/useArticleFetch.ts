@@ -13,9 +13,12 @@ export function useArticleFetch() {
   const [statusFilter, setStatusFilter] = useState('all');
 
   // Fetch articles from Supabase
-  const { data: articles, isLoading, error } = useQuery({
+  const { data: articles, isLoading, error, refetch } = useQuery({
     queryKey: ['articles', searchTerm, statusFilter],
     queryFn: async () => {
+      // Log the fetch attempt for debugging
+      console.log("Fetching articles with filters:", { searchTerm, statusFilter });
+      
       let query = supabase
         .from('articles')
         .select('*');
@@ -30,25 +33,35 @@ export function useArticleFetch() {
         query = query.eq('status', statusFilter);
       }
 
+      // Fetch results
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         console.error("Error fetching articles:", error);
-        toast.error("Failed to load articles");
-        return [];
+        throw error;
       }
 
+      // Log the number of articles retrieved
+      console.log(`Retrieved ${data?.length || 0} articles from Supabase`);
+      
       return data as Article[];
     },
+    staleTime: 30000, // 30 seconds before refetching
+    retry: 2, // Retry failed requests 2 times
+    onError: (error) => {
+      console.error("Error in articles query:", error);
+      toast.error("Failed to load articles");
+    }
   });
 
   return {
-    articles,
+    articles: articles || [],
     isLoading,
     error,
     searchTerm,
     setSearchTerm,
     statusFilter,
     setStatusFilter,
+    refetch,
   };
 }

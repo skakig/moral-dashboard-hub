@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArticleForm, ArticleFormValues } from "@/components/articles/form";
@@ -17,7 +17,8 @@ export function useArticleFormDialog({
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previousArticleVersion, setPreviousArticleVersion] = useState<Article | null>(null);
-
+  const formSubmittedRef = useRef(false);
+  
   // When an article is loaded for editing, store the previous version for version control
   useEffect(() => {
     if (currentArticle && currentArticle !== previousArticleVersion) {
@@ -25,9 +26,17 @@ export function useArticleFormDialog({
     }
   }, [currentArticle, previousArticleVersion]);
 
+  // Reset submission state when dialog closes
+  useEffect(() => {
+    if (!formDialogOpen) {
+      formSubmittedRef.current = false;
+    }
+  }, [formDialogOpen]);
+
   const handleCreateArticle = () => {
     setCurrentArticle(null);
     setPreviousArticleVersion(null);
+    formSubmittedRef.current = false;
     setFormDialogOpen(true);
   };
 
@@ -61,6 +70,7 @@ export function useArticleFormDialog({
     };
     
     setCurrentArticle(article);
+    formSubmittedRef.current = false;
     setFormDialogOpen(true);
   };
 
@@ -74,7 +84,14 @@ export function useArticleFormDialog({
   };
 
   const handleFormSubmit = async (data: ArticleFormValues) => {
+    // Prevent duplicate submissions
+    if (formSubmittedRef.current || isSubmitting) {
+      console.log("Preventing duplicate submission");
+      return;
+    }
+    
     try {
+      formSubmittedRef.current = true;
       setIsSubmitting(true);
       
       // Log what we're about to submit
@@ -84,41 +101,57 @@ export function useArticleFormDialog({
         voiceGenerated: data.voiceGenerated
       });
       
+      // Show pending notification for large articles
+      const hasLargeVoiceData = data.voiceBase64 && data.voiceBase64.length > 500000;
+      if (hasLargeVoiceData) {
+        toast.info("Processing large voice data. This may take a moment...");
+      }
+      
       // If currentArticle exists, add its ID to the data
       const submitData = currentArticle 
         ? { ...data, id: currentArticle.id } 
         : data;
         
       await onSubmit(submitData);
-      setFormDialogOpen(false);
       
-      // Update the previous version after successful save
-      if (currentArticle) {
-        setPreviousArticleVersion({
-          ...currentArticle,
-          title: data.title,
-          content: data.content || '',
-          meta_description: data.metaDescription || '',
-          featured_image: data.featuredImage || '',
-          seo_keywords: data.seoKeywords ? data.seoKeywords.split(',').map(k => k.trim()).filter(Boolean) : [],
-          voice_url: data.voiceUrl || '',
-          voice_generated: data.voiceGenerated || false,
-          voice_file_name: data.voiceFileName || '',
-          voice_base64: data.voiceBase64 || '',
-          moral_level: data.moralLevel ? Number(data.moralLevel) : 5,
-          category: data.platform || 'General',
-        });
-      }
+      // Set timeout before closing dialog to prevent multiple submissions
+      setTimeout(() => {
+        setFormDialogOpen(false);
+      
+        // Update the previous version after successful save
+        if (currentArticle) {
+          setPreviousArticleVersion({
+            ...currentArticle,
+            title: data.title,
+            content: data.content || '',
+            meta_description: data.metaDescription || '',
+            featured_image: data.featuredImage || '',
+            seo_keywords: data.seoKeywords ? data.seoKeywords.split(',').map(k => k.trim()).filter(Boolean) : [],
+            voice_url: data.voiceUrl || '',
+            voice_generated: data.voiceGenerated || false,
+            voice_file_name: data.voiceFileName || '',
+            voice_base64: data.voiceBase64 || '',
+            moral_level: data.moralLevel ? Number(data.moralLevel) : 5,
+            category: data.platform || 'General',
+          });
+        }
+      }, 500);
     } catch (error) {
       console.error("Error saving article:", error);
       toast.error("Failed to save article");
+      // Reset submission flag on error so user can try again
+      formSubmittedRef.current = false;
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const renderArticleFormDialog = () => (
-    <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
+    <Dialog open={formDialogOpen} onOpenChange={(open) => {
+      // Prevent closing the dialog during submission
+      if (isSubmitting) return;
+      setFormDialogOpen(open);
+    }}>
       <DialogContent className="max-w-4xl">
         <ScrollArea className="max-h-[80vh]">
           <div className="p-1">
@@ -142,7 +175,12 @@ export function useArticleFormDialog({
                 theme: '',
               } : undefined}
               onSubmit={handleFormSubmit}
-              onCancel={() => setFormDialogOpen(false)}
+              onCancel={() => {
+                // Only allow cancellation if not submitting
+                if (!isSubmitting) {
+                  setFormDialogOpen(false);
+                }
+              }}
               onRevert={previousArticleVersion ? handleRevertChanges : undefined}
               isLoading={isSubmitting}
               isEditing={Boolean(currentArticle)}
@@ -160,6 +198,7 @@ export function useArticleFormDialog({
     setCurrentArticle,
     handleCreateArticle,
     handleEditArticle,
-    renderArticleFormDialog
+    renderArticleFormDialog,
+    isSubmitting
   };
 }

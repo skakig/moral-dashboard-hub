@@ -10,9 +10,13 @@ import { useThemeFormDialog } from "./hooks/useThemeFormDialog";
 import { useArticles } from "@/hooks/useArticles";
 import { useContentThemes } from "@/hooks/useContentThemes";
 import { useArticleVersions } from "@/hooks/articles/useArticleVersions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Articles functionality
   const { 
@@ -73,16 +77,21 @@ export default function ArticlesPage() {
   useEffect(() => {
     console.log("ArticlesPage mounted, fetching articles...");
     // Invalidate and refetch articles when the component mounts
-    const fetchArticles = async () => {
-      try {
-        await refetch();
-      } catch (err) {
-        console.error("Error refetching articles:", err);
-      }
-    };
-    
-    fetchArticles();
-  }, [refetch]);
+    fetchArticlesWithErrorHandling();
+  }, []);
+
+  // Handle manual refresh with error handling
+  const fetchArticlesWithErrorHandling = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      console.log("Articles refetched successfully");
+    } catch (err) {
+      console.error("Error refetching articles:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Display error if articles failed to load
   useEffect(() => {
@@ -131,9 +140,9 @@ export default function ArticlesPage() {
         toast.success("Article created successfully");
       }
       
-      // Explicitly trigger a refetch of articles
+      // Explicitly trigger a refetch of articles after a short delay
       setTimeout(() => {
-        refetch();
+        fetchArticlesWithErrorHandling();
       }, 1000);
       
     } catch (error) {
@@ -183,6 +192,24 @@ export default function ArticlesPage() {
           </p>
         </div>
         
+        {articlesError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>Failed to load articles: {articlesError instanceof Error ? articlesError.message : 'Unknown error'}</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchArticlesWithErrorHandling}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Tabs defaultValue="articles">
           <TabsList>
             <TabsTrigger value="articles">Articles</TabsTrigger>
@@ -200,7 +227,7 @@ export default function ArticlesPage() {
               onCreateNew={handleCreateArticle}
               onEdit={handleEditArticle}
               onDelete={deleteArticle.mutate}
-              onRefresh={refetch}
+              onRefresh={fetchArticlesWithErrorHandling}
             />
           </TabsContent>
           

@@ -127,16 +127,26 @@ export function useArticleFormDialog({
       const submitData = currentArticle 
         ? { ...data, id: currentArticle.id } 
         : data;
-        
-      await onSubmit(submitData);
       
-      // Set timeout before closing dialog to prevent multiple submissions
-      // and to allow time for the server to process the request
+      // Use a Promise with timeout to prevent hanging submissions
+      const submitPromise = onSubmit(submitData);
+      const timeoutPromise = new Promise((_, reject) => {
+        submitTimeoutRef.current = setTimeout(() => {
+          reject(new Error("Form submission timed out"));
+        }, 30000); // 30 second timeout for large data
+      });
+      
+      // Race the submission against the timeout
+      await Promise.race([submitPromise, timeoutPromise]);
+      
+      // Clear the timeout if submission was successful
       if (submitTimeoutRef.current) {
         clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
       }
       
-      submitTimeoutRef.current = setTimeout(() => {
+      // Set a short delay before closing dialog to prevent UI glitches
+      setTimeout(() => {
         setFormDialogOpen(false);
       
         // Update the previous version after successful save
@@ -156,12 +166,16 @@ export function useArticleFormDialog({
             category: data.platform || 'General',
           });
         }
-        
-        submitTimeoutRef.current = null;
-      }, 1000);
+      }, 500);
     } catch (error) {
+      // Clear the timeout if submission failed
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+        submitTimeoutRef.current = null;
+      }
+      
       console.error("Error saving article:", error);
-      toast.error("Failed to save article");
+      toast.error(`Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`);
       // Reset submission flag on error so user can try again
       formSubmittedRef.current = false;
     } finally {

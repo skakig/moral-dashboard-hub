@@ -20,13 +20,21 @@ export function useArticleFetch() {
       console.log("Fetching articles with filters:", { searchTerm, statusFilter });
       
       try {
+        // Select only the essential columns initially to reduce payload size and query time
+        // This is crucial for preventing timeouts
+        const essentialColumns = [
+          'id', 'title', 'category', 'status', 
+          'featured_image', 'publish_date', 'created_at', 
+          'updated_at', 'view_count', 'voice_generated'
+        ].join(',');
+
         let query = supabase
           .from('articles')
-          .select('id, title, content, category, status, seo_keywords, meta_description, featured_image, publish_date, created_at, updated_at, view_count, engagement_score, voice_url, voice_generated, voice_file_name, moral_level');
+          .select(essentialColumns);
 
         // Apply search filter if provided
         if (searchTerm) {
-          query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`);
+          query = query.ilike('title', `%${searchTerm}%`);
         }
 
         // Apply status filter if provided
@@ -34,11 +42,19 @@ export function useArticleFetch() {
           query = query.eq('status', statusFilter);
         }
 
-        // Add limit to prevent timeouts 
-        query = query.order('created_at', { ascending: false }).limit(50);
+        // Order by most recent first
+        query = query.order('created_at', { ascending: false });
+        
+        // Strict limit to prevent timeouts - we'll paginate if needed later
+        query = query.limit(20);
 
-        // Fetch results
-        const { data, error } = await query;
+        // Execute the query with a timeout
+        const { data, error } = await Promise.race([
+          query,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Query timeout')), 8000)
+          )
+        ]) as any;
 
         if (error) {
           console.error("Error fetching articles:", error);
@@ -46,7 +62,7 @@ export function useArticleFetch() {
         }
 
         // Log the number of articles retrieved
-        console.log(`Retrieved ${data?.length || 0} articles from Supabase`);
+        console.log(`Successfully retrieved ${data?.length || 0} articles from Supabase`);
         
         return data as Article[];
       } catch (error: any) {
@@ -56,8 +72,9 @@ export function useArticleFetch() {
       }
     },
     staleTime: 30000, // 30 seconds before refetching
-    retry: 2, // Retry failed requests 2 times
+    retry: 1, // Reduced retries to prevent excessive attempts on timeout
     meta: {
+      // This is the proper way to handle errors in React Query v5+
       onError: (error: Error) => {
         console.error("Error in articles query:", error);
         toast.error("Failed to load articles: " + error.message);

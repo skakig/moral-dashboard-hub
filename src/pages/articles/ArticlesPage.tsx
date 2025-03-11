@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [retryCount, setRetryCount] = useState(0); // Track retry attempts
 
   // Articles functionality
   const { 
@@ -80,6 +81,19 @@ export default function ArticlesPage() {
     fetchArticlesWithErrorHandling();
   }, []);
 
+  // Auto-retry on errors, with controlled retry count
+  useEffect(() => {
+    if (articlesError && retryCount < 2) {
+      const timer = setTimeout(() => {
+        console.log(`Auto-retrying fetch (attempt ${retryCount + 1})...`);
+        setRetryCount(prev => prev + 1);
+        fetchArticlesWithErrorHandling();
+      }, 2000); // Wait 2 seconds before retrying
+      
+      return () => clearTimeout(timer);
+    }
+  }, [articlesError, retryCount]);
+
   // Handle manual refresh with error handling
   const fetchArticlesWithErrorHandling = async () => {
     setIsRefreshing(true);
@@ -111,6 +125,13 @@ export default function ArticlesPage() {
         seo_keywords: data.seo_keywords ? data.seo_keywords.split(',').map((k: string) => k.trim()) : []
       };
 
+      // Log what we're trying to save
+      console.log("Saving article:", { 
+        title: formattedData.title,
+        hasContent: Boolean(formattedData.content),
+        isUpdate: Boolean(currentArticle)
+      });
+
       let result;
       if (currentArticle) {
         // Update existing article
@@ -140,14 +161,18 @@ export default function ArticlesPage() {
         toast.success("Article created successfully");
       }
       
+      // Close the form dialog
+      setArticleFormDialogOpen(false);
+      
       // Explicitly trigger a refetch of articles after a short delay
       setTimeout(() => {
+        console.log("Refetching articles after save...");
         fetchArticlesWithErrorHandling();
       }, 1000);
       
     } catch (error) {
       console.error('Error saving article:', error);
-      toast.error('Failed to save article');
+      toast.error('Failed to save article: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsSubmitting(false);
     }

@@ -59,6 +59,13 @@ export function ArticlesTab({
       });
       
       toast.success(`"${article.title}" has been published successfully`);
+      
+      // Refresh the list after publishing
+      if (onRefresh) {
+        setTimeout(() => {
+          onRefresh();
+        }, 500);
+      }
     } catch (error) {
       console.error("Error publishing article:", error);
       toast.error("Failed to publish the article");

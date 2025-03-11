@@ -21,11 +21,13 @@ export function useArticleMutations() {
         console.log("Creating article:", {
           title: dbArticle.title,
           hasContent: Boolean(dbArticle.content),
-          hasVoiceData: Boolean(dbArticle.voice_url)
+          hasVoiceData: Boolean(dbArticle.voice_url),
+          contentLength: dbArticle.content?.length || 0,
+          voiceDataSize: dbArticle.voice_base64 ? Math.round(dbArticle.voice_base64.length / 1024) + 'KB' : 'none'
         });
         
         // Check for large voice_base64 data and handle it accordingly
-        const hasLargeVoiceData = dbArticle.voice_base64 && dbArticle.voice_base64.length > 500000;
+        const hasLargeVoiceData = dbArticle.voice_base64 && dbArticle.voice_base64.length > 100000;
         let data;
         
         if (hasLargeVoiceData) {
@@ -44,7 +46,7 @@ export function useArticleMutations() {
 
           if (error) {
             console.error("Error creating article:", error);
-            throw new Error(error.message);
+            throw new Error(`Failed to create article: ${error.message}`);
           }
           
           data = articleData;
@@ -52,20 +54,48 @@ export function useArticleMutations() {
           if (data) {
             console.log(`Article created successfully (ID: ${data.id}), now adding voice data separately`);
             try {
-              // Update with just the voice data in a separate operation
-              const { error: updateError } = await supabase
-                .from('articles')
-                .update({ voice_base64: voiceData })
-                .eq('id', data.id);
+              // Update with the voice data in chunks if it's extremely large
+              if (voiceData && voiceData.length > 500000) {
+                console.log("Voice data is extremely large, proceeding with extra caution");
                 
-              if (updateError) {
-                console.error("Error updating voice data:", updateError);
-                // We log but don't throw as the article is created
+                // Use RPC or direct SQL for large data if available
+                // For now, we'll try the direct update with a longer timeout
+                const updatePromise = supabase
+                  .from('articles')
+                  .update({ voice_base64: voiceData })
+                  .eq('id', data.id);
+                  
+                const { error: updateError } = await Promise.race([
+                  updatePromise,
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Voice data update timeout')), 15000)
+                  )
+                ]) as any;
+                
+                if (updateError) {
+                  console.error("Error updating voice data:", updateError);
+                  // We log but don't throw as the article is created
+                  toast.warning("Article created but voice data couldn't be saved fully");
+                } else {
+                  console.log("Voice data added successfully");
+                }
               } else {
-                console.log("Voice data added successfully");
+                // Normal update for moderate-sized voice data
+                const { error: updateError } = await supabase
+                  .from('articles')
+                  .update({ voice_base64: voiceData })
+                  .eq('id', data.id);
+                  
+                if (updateError) {
+                  console.error("Error updating voice data:", updateError);
+                  // We log but don't throw as the article is created
+                } else {
+                  console.log("Voice data added successfully");
+                }
               }
             } catch (err) {
               console.error("Error in voice data update:", err);
+              toast.warning("Article created but voice data couldn't be saved fully");
             }
           }
         } else {
@@ -79,7 +109,7 @@ export function useArticleMutations() {
 
           if (error) {
             console.error("Error creating article:", error);
-            throw new Error(error.message);
+            throw new Error(`Failed to create article: ${error.message}`);
           }
           
           data = articleData;
@@ -112,11 +142,12 @@ export function useArticleMutations() {
         console.log("Updating article:", {
           id,
           title: dbArticle.title,
-          hasVoiceData: Boolean(dbArticle.voice_url)
+          hasVoiceData: Boolean(dbArticle.voice_url),
+          voiceDataSize: dbArticle.voice_base64 ? Math.round(dbArticle.voice_base64.length / 1024) + 'KB' : 'none'
         });
         
         // Check for large voice_base64 data and handle it accordingly
-        const hasLargeVoiceData = dbArticle.voice_base64 && dbArticle.voice_base64.length > 500000;
+        const hasLargeVoiceData = dbArticle.voice_base64 && dbArticle.voice_base64.length > 100000;
         let data;
         
         if (hasLargeVoiceData) {
@@ -135,7 +166,7 @@ export function useArticleMutations() {
 
           if (error) {
             console.error("Error updating article:", error);
-            throw new Error(error.message);
+            throw new Error(`Failed to update article: ${error.message}`);
           }
           
           data = articleData;
@@ -144,19 +175,46 @@ export function useArticleMutations() {
           if (data) {
             console.log(`Article updated successfully (ID: ${data.id}), now updating voice data separately`);
             try {
-              const { error: updateError } = await supabase
-                .from('articles')
-                .update({ voice_base64: voiceBase64 })
-                .eq('id', id);
+              // Handle extremely large voice data with extra caution
+              if (voiceBase64 && voiceBase64.length > 500000) {
+                console.log("Voice data is extremely large, proceeding with extra caution");
                 
-              if (updateError) {
-                console.error("Error updating voice data:", updateError);
-                // We log but don't throw as the article is updated
+                // Use longer timeout for large data
+                const updatePromise = supabase
+                  .from('articles')
+                  .update({ voice_base64: voiceBase64 })
+                  .eq('id', id);
+                  
+                const { error: updateError } = await Promise.race([
+                  updatePromise,
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Voice data update timeout')), 15000)
+                  )
+                ]) as any;
+                
+                if (updateError) {
+                  console.error("Error updating voice data:", updateError);
+                  toast.warning("Article updated but voice data couldn't be saved fully");
+                } else {
+                  console.log("Voice data updated successfully");
+                }
               } else {
-                console.log("Voice data updated successfully");
+                // Normal update for moderate-sized voice data
+                const { error: updateError } = await supabase
+                  .from('articles')
+                  .update({ voice_base64: voiceBase64 })
+                  .eq('id', id);
+                  
+                if (updateError) {
+                  console.error("Error updating voice data:", updateError);
+                  toast.warning("Article updated but voice data couldn't be saved fully");
+                } else {
+                  console.log("Voice data updated successfully");
+                }
               }
             } catch (err) {
               console.error("Error in voice data update:", err);
+              toast.warning("Article updated but voice data couldn't be saved fully");
             }
           }
         } else {
@@ -171,7 +229,7 @@ export function useArticleMutations() {
 
           if (error) {
             console.error("Error updating article:", error);
-            throw new Error(error.message);
+            throw new Error(`Failed to update article: ${error.message}`);
           }
           
           data = articleData;
@@ -205,7 +263,7 @@ export function useArticleMutations() {
 
       if (error) {
         console.error("Error deleting article:", error);
-        throw new Error(error.message);
+        throw new Error(`Failed to delete article: ${error.message}`);
       }
       return id;
     },

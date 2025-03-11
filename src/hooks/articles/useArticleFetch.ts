@@ -20,45 +20,69 @@ export function useArticleFetch() {
       console.log("Fetching articles with filters:", { searchTerm, statusFilter });
       
       try {
-        // Select only the essential columns initially to reduce payload size and query time
-        // This is crucial for preventing timeouts
+        // First, get just the IDs to determine the total count - this avoids timeouts on large datasets
+        let countQuery = supabase
+          .from('articles')
+          .select('id', { count: 'exact' });
+        
+        // Apply search filter if provided
+        if (searchTerm) {
+          countQuery = countQuery.ilike('title', `%${searchTerm}%`);
+        }
+
+        // Apply status filter if provided
+        if (statusFilter !== 'all') {
+          countQuery = countQuery.eq('status', statusFilter);
+        }
+        
+        const { count, error: countError } = await countQuery;
+        
+        if (countError) {
+          console.error("Error counting articles:", countError);
+          throw countError;
+        }
+        
+        console.log(`Total matching articles count: ${count || 0}`);
+        
+        // Now fetch a smaller set of articles with all necessary data
+        // Select only the essential columns
         const essentialColumns = [
           'id', 'title', 'category', 'status', 
           'featured_image', 'publish_date', 'created_at', 
           'updated_at', 'view_count', 'voice_generated'
         ].join(',');
 
-        let query = supabase
+        let dataQuery = supabase
           .from('articles')
           .select(essentialColumns);
 
         // Apply search filter if provided
         if (searchTerm) {
-          query = query.ilike('title', `%${searchTerm}%`);
+          dataQuery = dataQuery.ilike('title', `%${searchTerm}%`);
         }
 
         // Apply status filter if provided
         if (statusFilter !== 'all') {
-          query = query.eq('status', statusFilter);
+          dataQuery = dataQuery.eq('status', statusFilter);
         }
 
         // Order by most recent first
-        query = query.order('created_at', { ascending: false });
+        dataQuery = dataQuery.order('created_at', { ascending: false });
         
-        // Strict limit to prevent timeouts - we'll paginate if needed later
-        query = query.limit(20);
+        // Apply a stricter limit to prevent timeouts
+        dataQuery = dataQuery.limit(10);
 
         // Execute the query with a timeout
-        const { data, error } = await Promise.race([
-          query,
+        const { data, error: dataError } = await Promise.race([
+          dataQuery,
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout')), 8000)
+            setTimeout(() => reject(new Error('Query timeout - trying to fetch too much data')), 5000)
           )
         ]) as any;
 
-        if (error) {
-          console.error("Error fetching articles:", error);
-          throw error;
+        if (dataError) {
+          console.error("Error fetching articles:", dataError);
+          throw dataError;
         }
 
         // Log the number of articles retrieved
@@ -74,7 +98,6 @@ export function useArticleFetch() {
     staleTime: 30000, // 30 seconds before refetching
     retry: 1, // Reduced retries to prevent excessive attempts on timeout
     meta: {
-      // This is the proper way to handle errors in React Query v5+
       onError: (error: Error) => {
         console.error("Error in articles query:", error);
         toast.error("Failed to load articles: " + error.message);

@@ -23,6 +23,7 @@ import Trends from "./pages/Trends";
 
 // Lazy-loaded components
 const CreateArticlePage = lazy(() => import("./pages/articles/create/CreateArticlePage"));
+const ArticleViewPage = lazy(() => import("./pages/articles/view/ArticleViewPage"));
 
 // Create a client
 const queryClient = new QueryClient();
@@ -47,6 +48,14 @@ function App() {
               element={
                 <Suspense fallback={<div>Loading...</div>}>
                   <CreateArticlePage />
+                </Suspense>
+              } 
+            />
+            <Route 
+              path="/articles/view/:id" 
+              element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ArticleViewPage />
                 </Suspense>
               } 
             />

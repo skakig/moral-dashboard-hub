@@ -82,8 +82,9 @@ export function ArticlesTab({
     }
   };
 
+  // Updated view handler to navigate to full page view
   const handleView = (article: Article) => {
-    setViewingArticle(article);
+    navigate(`/articles/view/${article.id}`);
   };
 
   const handleCreateNew = () => {

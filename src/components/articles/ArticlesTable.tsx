@@ -32,10 +32,11 @@ import {
   Play,
   Pause,
   Download,
-  FileAudio
+  FileAudio,
+  AlertTriangle
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 
@@ -64,6 +65,7 @@ export function ArticlesTable({
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [audioVolume, setAudioVolume] = useState(1);
+  const [contentError, setContentError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Update preview article when viewingArticle changes (for external control)
@@ -90,9 +92,13 @@ export function ArticlesTable({
         title: previewArticle.title,
         hasContent: Boolean(previewArticle.content),
         contentLength: previewArticle.content?.length || 0,
+        contentSample: previewArticle.content?.substring(0, 50),
         hasVoiceUrl: Boolean(previewArticle.voice_url),
         voiceGenerated: previewArticle.voice_generated
       });
+      
+      // Reset content error when new article is loaded
+      setContentError(null);
     }
   }, [previewArticle]);
 
@@ -117,6 +123,7 @@ export function ArticlesTable({
         id: article.id,
         title: article.title,
         hasContent: Boolean(article.content),
+        contentSample: article.content?.substring(0, 50),
         hasVoiceUrl: Boolean(article.voice_url)
       });
       setPreviewArticle(article);
@@ -359,6 +366,9 @@ export function ArticlesTable({
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{previewArticle?.title}</DialogTitle>
+            <DialogDescription>
+              {previewArticle?.excerpt || ""}
+            </DialogDescription>
           </DialogHeader>
 
           {previewArticle?.featured_image && (
@@ -423,10 +433,19 @@ export function ArticlesTable({
           )}
 
           <div className="prose prose-sm max-w-none">
+            {contentError && (
+              <div className="flex items-center p-4 mb-4 text-amber-800 bg-amber-50 rounded-md">
+                <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                <p>{contentError}</p>
+              </div>
+            )}
+            
             {previewArticle?.content ? (
               <div dangerouslySetInnerHTML={{ __html: previewArticle.content.replace(/\n/g, '<br />') }} />
             ) : (
-              <p className="text-muted-foreground">No content available for this article.</p>
+              <p className="text-muted-foreground py-6 text-center border border-dashed rounded-md">
+                No content available for this article.
+              </p>
             )}
           </div>
 

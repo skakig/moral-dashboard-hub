@@ -22,8 +22,7 @@ export function useArticleFetch() {
       console.log("Fetching articles with filters:", { searchTerm, statusFilter });
       
       try {
-        // Instead of just selecting essential columns, we need more data for detailed views
-        // Include content and voice-related fields for proper display
+        // We need all fields for proper display
         let query = supabase
           .from('articles')
           .select('*'); // Get all fields to ensure we have complete article data
@@ -41,7 +40,7 @@ export function useArticleFetch() {
         // Order by most recent first
         query = query.order('updated_at', { ascending: false });
         
-        // Apply limit to prevent timeouts but ensure we get enough articles
+        // Apply limit to prevent timeouts
         query = query.limit(10);
 
         console.log("Executing full article query");
@@ -50,7 +49,7 @@ export function useArticleFetch() {
         const { data, error: dataError } = await Promise.race([
           query,
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+            setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
           )
         ]) as any;
 
@@ -61,12 +60,22 @@ export function useArticleFetch() {
 
         // Log the number of articles retrieved and check for content/voice data
         console.log(`Successfully retrieved ${data?.length || 0} articles from Supabase`);
-        console.log("Sample article data:", data && data.length > 0 ? {
-          hasContent: Boolean(data[0].content),
-          contentLength: data[0].content?.length || 0,
-          hasVoiceData: Boolean(data[0].voice_url),
-          hasVoiceGenerated: data[0].voice_generated
-        } : 'No articles found');
+        
+        if (data && data.length > 0) {
+          // Sample log of first article
+          const sampleArticle = data[0];
+          console.log("Sample article data:", {
+            id: sampleArticle.id,
+            title: sampleArticle.title,
+            hasContent: Boolean(sampleArticle.content),
+            contentLength: sampleArticle.content?.length || 0,
+            contentSample: sampleArticle.content?.substring(0, 50),
+            hasVoiceData: Boolean(sampleArticle.voice_url),
+            hasVoiceGenerated: sampleArticle.voice_generated
+          });
+        } else {
+          console.log('No articles found');
+        }
         
         return data as Article[];
       } catch (error: any) {

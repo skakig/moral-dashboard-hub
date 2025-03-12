@@ -101,7 +101,7 @@ export default function ArticlesPage() {
       const refreshTimer = setTimeout(() => {
         console.log("Refreshing articles after save operation...");
         fetchArticlesWithErrorHandling();
-      }, 1500); // Wait for Supabase to complete the transaction
+      }, 2000); // Extended wait time for Supabase to complete the transaction
       
       return () => clearTimeout(refreshTimer);
     }

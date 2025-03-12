@@ -23,7 +23,7 @@ export function useArticleFetch() {
       
       try {
         // Instead of counting all articles, let's just get a paginated result set directly
-        // Select only the essential columns
+        // Select only the essential columns for the list view to reduce data transfer
         const essentialColumns = [
           'id', 'title', 'category', 'status', 
           'featured_image', 'publish_date', 'created_at', 
@@ -47,16 +47,16 @@ export function useArticleFetch() {
         // Order by most recent first (updated_at to prioritize recently edited)
         query = query.order('updated_at', { ascending: false });
         
-        // Apply a reasonable limit to prevent timeouts
-        query = query.limit(25);
+        // Apply a smaller limit to prevent timeouts
+        query = query.limit(10);
 
         console.log("Executing optimized query for articles");
         
-        // Execute the query with a timeout
+        // Execute the query with a shorter timeout - we'll retry if needed
         const { data, error: dataError } = await Promise.race([
           query,
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+            setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
           )
         ]) as any;
 
@@ -70,15 +70,15 @@ export function useArticleFetch() {
         
         return data as Article[];
       } catch (error: any) {
-        // Use our new error handling system
+        // Use our error handling system
         const errorDetails = processSupabaseError(error);
         setLastError(errorDetails);
         console.error("Error in article fetch:", errorDetails.message);
         throw errorDetails;
       }
     },
-    staleTime: 5000, // 5 seconds before refetching (reduced to be more responsive)
-    retry: 2, // Retry twice on failure
+    staleTime: 1000, // Shorter stale time (1 second) to refresh more frequently
+    retry: 1, // Reduce retry attempts to avoid excessive retries on timeout
     meta: {
       onError: (error: Error) => {
         // Use our error handling system

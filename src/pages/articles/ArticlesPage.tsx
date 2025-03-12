@@ -83,12 +83,12 @@ export default function ArticlesPage() {
 
   // Auto-retry on errors, with controlled retry count
   useEffect(() => {
-    if (articlesError && retryCount < 2) {
+    if (articlesError && retryCount < 1) { // Reduce retry count to 1
       const timer = setTimeout(() => {
         console.log(`Auto-retrying fetch (attempt ${retryCount + 1})...`);
         setRetryCount(prev => prev + 1);
         fetchArticlesWithErrorHandling();
-      }, 2000); // Wait 2 seconds before retrying
+      }, 1500); // Shorter delay between retries
       
       return () => clearTimeout(timer);
     }
@@ -100,7 +100,7 @@ export default function ArticlesPage() {
       const refreshTimer = setTimeout(() => {
         console.log("Refreshing articles after save operation...");
         fetchArticlesWithErrorHandling();
-      }, 3000); // Extended wait time for Supabase to complete the transaction
+      }, 1500); // Shorter delay after saving
       
       return () => clearTimeout(refreshTimer);
     }
@@ -175,6 +175,11 @@ export default function ArticlesPage() {
       
       // Track the save time to trigger a refresh
       setLastSaveTime(Date.now());
+      
+      // Force an immediate refresh attempt after a short delay
+      setTimeout(() => {
+        fetchArticlesWithErrorHandling();
+      }, 500);
       
     } catch (error) {
       console.error('Error saving article:', error);

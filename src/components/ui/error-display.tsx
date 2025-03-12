@@ -24,7 +24,9 @@ export function ErrorDisplay({
 
   if (!error) return null;
 
-  const errorMessage = 'message' in error ? error.message : error.toString();
+  // Fix the toString error by explicitly checking if message property exists
+  // If it does, use it directly; otherwise convert to string safely
+  const errorMessage = 'message' in error ? error.message : String(error);
   const errorType = 'type' in error ? error.type : ErrorType.UNKNOWN_ERROR;
   
   const handleRetry = async () => {

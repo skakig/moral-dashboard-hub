@@ -87,7 +87,7 @@ export default function CreateArticlePage() {
             onSubmit={handleSubmit}
             submitLabel="Create Article"
             onCancel={() => navigate("/articles")}
-            isLoading={isSaving}
+            isLoading={isSaving} {/* Changed from isSubmitting to isLoading */}
           />
         </div>
       </div>

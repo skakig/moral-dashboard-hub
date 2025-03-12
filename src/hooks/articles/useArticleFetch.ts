@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Article } from "@/types/articles";
-import { handleError, processSupabaseError, ErrorType } from "@/utils/errorHandling";
+import { handleError, processSupabaseError, ErrorType, ErrorDetails } from "@/utils/errorHandling";
 
 /**
  * Hook for fetching articles with filtering capabilities
@@ -12,7 +12,7 @@ import { handleError, processSupabaseError, ErrorType } from "@/utils/errorHandl
 export function useArticleFetch() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [lastError, setLastError] = useState<any>(null);
+  const [lastError, setLastError] = useState<ErrorDetails | null>(null);
 
   // Fetch articles from Supabase
   const { data: articles, isLoading, error, refetch } = useQuery({

@@ -2,7 +2,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ArticleToolbarProps {
@@ -10,7 +10,12 @@ interface ArticleToolbarProps {
   onSearchChange: (value: string) => void;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
-  onCreateNew?: () => void; // Optional callback for Create New button
+  onCreateNew?: () => void;
+  // Add pagination props
+  currentPage?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  isLoading?: boolean;
 }
 
 export function ArticleToolbar({
@@ -19,6 +24,10 @@ export function ArticleToolbar({
   statusFilter,
   onStatusFilterChange,
   onCreateNew,
+  currentPage = 1,
+  totalPages = 1,
+  onPageChange,
+  isLoading = false,
 }: ArticleToolbarProps) {
   const navigate = useNavigate();
   
@@ -27,6 +36,18 @@ export function ArticleToolbar({
       onCreateNew();
     } else {
       navigate("/articles/create");
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (onPageChange && currentPage > 1 && !isLoading) {
+      onPageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (onPageChange && currentPage < totalPages && !isLoading) {
+      onPageChange(currentPage + 1);
     }
   };
 
@@ -56,6 +77,31 @@ export function ArticleToolbar({
           <SelectItem value="published">Published</SelectItem>
         </SelectContent>
       </Select>
+      
+      {onPageChange && (
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handlePreviousPage}
+            disabled={currentPage <= 1 || isLoading}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm">
+            Page {currentPage}
+          </span>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleNextPage}
+            disabled={currentPage >= totalPages || isLoading}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      
       <Button className="md:ml-auto" onClick={handleCreateClick}>
         <Plus className="mr-2 h-4 w-4" />
         Create New

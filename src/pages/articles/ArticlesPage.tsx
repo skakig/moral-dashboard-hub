@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -12,13 +13,19 @@ import { useArticleVersions } from "@/hooks/articles/useArticleVersions";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { handleError, ErrorType, processSupabaseError } from "@/utils/errorHandling";
 
+// Constants to prevent DB timeout
+const ARTICLES_PER_PAGE = 5;
+const TOTAL_ESTIMATED_ARTICLES = 50; // Estimate for pagination
+
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [retryCount, setRetryCount] = useState(0); // Track retry attempts
   const [lastSaveTime, setLastSaveTime] = useState<number | null>(null); // Track when the last save occurred
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(Math.ceil(TOTAL_ESTIMATED_ARTICLES / ARTICLES_PER_PAGE));
 
-  // Articles functionality
+  // Articles functionality with pagination
   const { 
     articles, 
     isLoading: articlesLoading, 
@@ -32,8 +39,22 @@ export default function ArticlesPage() {
     updateArticle,
     deleteArticle,
     generateArticle,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
     refetch
   } = useArticles();
+
+  // Set the page size from the constant
+  useEffect(() => {
+    setPageSize(ARTICLES_PER_PAGE);
+  }, [setPageSize]);
+
+  // Update current page when page changes
+  useEffect(() => {
+    setCurrentPage(page);
+  }, [page]);
 
   // Version control for articles
   const { createVersion } = useArticleVersions();
@@ -83,7 +104,7 @@ export default function ArticlesPage() {
 
   // Auto-retry on errors, with controlled retry count
   useEffect(() => {
-    if (articlesError && retryCount < 1) { // Reduce retry count to 1
+    if (articlesError && retryCount < 1) { // Limit retries to prevent infinite loops
       const timer = setTimeout(() => {
         console.log(`Auto-retrying fetch (attempt ${retryCount + 1})...`);
         setRetryCount(prev => prev + 1);
@@ -105,6 +126,12 @@ export default function ArticlesPage() {
       return () => clearTimeout(refreshTimer);
     }
   }, [lastSaveTime]);
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    console.log(`Changing page to ${newPage}`);
+    setPage(newPage);
+  };
 
   // Handle manual refresh with error handling
   const fetchArticlesWithErrorHandling = async () => {
@@ -274,6 +301,9 @@ export default function ArticlesPage() {
               onDelete={deleteArticle.mutate}
               onRefresh={fetchArticlesWithErrorHandling}
               isRefreshing={isRefreshing}
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              totalPages={totalPages}
             />
           </TabsContent>
           

@@ -8,8 +8,22 @@ import { useArticleGeneration } from "./articles/useArticleGeneration";
  */
 export function useArticles() {
   // Use the specialized hooks
-  const { articles, isLoading, error, lastError, searchTerm, setSearchTerm, statusFilter, setStatusFilter, refetch } = 
-    useArticleFetch();
+  const { 
+    articles, 
+    isLoading, 
+    error, 
+    lastError, 
+    searchTerm, 
+    setSearchTerm, 
+    statusFilter, 
+    setStatusFilter, 
+    refetch,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    fetchArticleById
+  } = useArticleFetch();
   
   const { createArticle, updateArticle, deleteArticle } = useArticleMutations();
   
@@ -21,12 +35,17 @@ export function useArticles() {
     articles,
     isLoading,
     error,
-    lastError, // Added to fix TypeScript error
+    lastError,
     searchTerm,
     setSearchTerm,
     statusFilter,
     setStatusFilter,
     refetch,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    fetchArticleById,
     
     // From useArticleMutations
     createArticle,

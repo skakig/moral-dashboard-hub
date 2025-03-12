@@ -23,6 +23,10 @@ interface ArticlesTabProps {
   onDelete: (articleId: string) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  // Add pagination props
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
+  totalPages?: number;
 }
 
 export function ArticlesTab({
@@ -36,12 +40,14 @@ export function ArticlesTab({
   onDelete,
   onCreateNew,
   onRefresh,
-  isRefreshing = false
+  isRefreshing = false,
+  currentPage = 1,
+  onPageChange,
+  totalPages = 1
 }: ArticlesTabProps) {
   const navigate = useNavigate();
   const { updateArticle } = useArticleMutations();
   const [publishingArticle, setPublishingArticle] = useState<string | null>(null);
-  const [viewingArticle, setViewingArticle] = useState<Article | null>(null);
   const [localRefreshing, setLocalRefreshing] = useState(false);
 
   const handlePublish = async (article: Article) => {
@@ -117,6 +123,10 @@ export function ArticlesTab({
           statusFilter={statusFilter}
           onStatusFilterChange={onStatusFilterChange}
           onCreateNew={handleCreateNew}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          isLoading={isLoading || isActuallyRefreshing}
         />
         
         {onRefresh && (
@@ -152,8 +162,6 @@ export function ArticlesTab({
           onDelete={onDelete}
           onPublish={handlePublish}
           onView={handleView}
-          viewingArticle={viewingArticle}
-          setViewingArticle={setViewingArticle}
         />
       )}
       

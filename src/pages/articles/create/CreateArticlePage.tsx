@@ -7,15 +7,19 @@ import { toast } from "sonner";
 import { useArticleMutations } from "@/hooks/articles/useArticleMutations";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { handleError } from "@/utils/errorHandling";
+import { ErrorDisplay } from "@/components/ui/error-display";
 
 export default function CreateArticlePage() {
   const navigate = useNavigate();
   const { createArticle } = useArticleMutations();
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<any>(null);
   const queryClient = useQueryClient();
   
   const handleSubmit = async (data: any) => {
     setIsSaving(true);
+    setError(null);
     try {
       // Convert comma-separated keywords string to array
       const formattedData = {
@@ -40,7 +44,12 @@ export default function CreateArticlePage() {
       }, 1000);
     } catch (error) {
       console.error('Error saving article:', error);
-      toast.error('Failed to save article: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      const processedError = handleError(error, {
+        component: 'CreateArticlePage',
+        action: 'create-article',
+        articleTitle: data.title
+      });
+      setError(processedError);
       setIsSaving(false);
     }
   };
@@ -63,6 +72,15 @@ export default function CreateArticlePage() {
             Cancel
           </Button>
         </div>
+        
+        {error && (
+          <ErrorDisplay 
+            error={error}
+            title="Error creating article"
+            variant="destructive"
+            showRetry={false}
+          />
+        )}
         
         <div className="max-w-5xl mx-auto">
           <ArticleForm

@@ -3,12 +3,13 @@ import { ArticleToolbar } from "@/components/articles/ArticleToolbar";
 import { ArticlesTable } from "@/components/articles/ArticlesTable";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Article } from "@/types/articles";
-import { toast } from "sonner";
 import { useState } from "react";
 import { useArticleMutations } from "@/hooks/articles/useArticleMutations";
 import { useNavigate } from "react-router-dom";
 import { mapFormToDbArticle } from "@/hooks/articles/utils/articleMappers";
 import { Button } from "@/components/ui/button";
+import { handleError } from "@/utils/errorHandling";
+import { toast } from "sonner";
 
 interface ArticlesTabProps {
   articles: Article[];
@@ -21,6 +22,7 @@ interface ArticlesTabProps {
   onEdit: (article: Article) => void;
   onDelete: (articleId: string) => void;
   onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export function ArticlesTab({
@@ -33,13 +35,14 @@ export function ArticlesTab({
   onEdit,
   onDelete,
   onCreateNew,
-  onRefresh
+  onRefresh,
+  isRefreshing = false
 }: ArticlesTabProps) {
   const navigate = useNavigate();
   const { updateArticle } = useArticleMutations();
   const [publishingArticle, setPublishingArticle] = useState<string | null>(null);
   const [viewingArticle, setViewingArticle] = useState<Article | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [localRefreshing, setLocalRefreshing] = useState(false);
 
   const handlePublish = async (article: Article) => {
     try {
@@ -68,7 +71,12 @@ export function ArticlesTab({
       }
     } catch (error) {
       console.error("Error publishing article:", error);
-      toast.error("Failed to publish the article");
+      handleError(error, {
+        component: 'ArticlesTab',
+        action: 'publish',
+        articleId: article.id,
+        articleTitle: article.title
+      });
     } finally {
       setPublishingArticle(null);
     }
@@ -83,19 +91,21 @@ export function ArticlesTab({
   };
 
   const handleRefresh = async () => {
-    if (onRefresh && !isRefreshing) {
-      setIsRefreshing(true);
+    if (onRefresh && !isRefreshing && !localRefreshing) {
+      setLocalRefreshing(true);
       try {
         await onRefresh();
         toast.success("Articles refreshed");
       } catch (error) {
+        // Error is already handled in the parent component
         console.error("Error refreshing articles:", error);
-        toast.error("Failed to refresh articles");
       } finally {
-        setIsRefreshing(false);
+        setLocalRefreshing(false);
       }
     }
   };
+
+  const isActuallyRefreshing = isRefreshing || localRefreshing;
 
   return (
     <>
@@ -113,10 +123,10 @@ export function ArticlesTab({
             variant="outline" 
             size="sm" 
             onClick={handleRefresh}
-            disabled={isLoading || isRefreshing}
+            disabled={isLoading || isActuallyRefreshing}
             className="ml-4"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isActuallyRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         )}
@@ -129,8 +139,8 @@ export function ArticlesTab({
       ) : articles.length === 0 ? (
         <div className="text-center py-10 border rounded-lg">
           <p className="text-muted-foreground mb-4">No articles found</p>
-          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <Button variant="outline" onClick={handleRefresh} disabled={isActuallyRefreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isActuallyRefreshing ? 'animate-spin' : ''}`} />
             Refresh Articles
           </Button>
         </div>

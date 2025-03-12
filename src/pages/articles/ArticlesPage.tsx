@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -10,9 +9,8 @@ import { useThemeFormDialog } from "./hooks/useThemeFormDialog";
 import { useArticles } from "@/hooks/useArticles";
 import { useContentThemes } from "@/hooks/useContentThemes";
 import { useArticleVersions } from "@/hooks/articles/useArticleVersions";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ErrorDisplay } from "@/components/ui/error-display";
+import { handleError, ErrorType, processSupabaseError } from "@/utils/errorHandling";
 
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,6 +23,7 @@ export default function ArticlesPage() {
     articles, 
     isLoading: articlesLoading, 
     error: articlesError,
+    lastError,
     searchTerm, 
     setSearchTerm, 
     statusFilter, 
@@ -101,7 +100,7 @@ export default function ArticlesPage() {
       const refreshTimer = setTimeout(() => {
         console.log("Refreshing articles after save operation...");
         fetchArticlesWithErrorHandling();
-      }, 2000); // Extended wait time for Supabase to complete the transaction
+      }, 3000); // Extended wait time for Supabase to complete the transaction
       
       return () => clearTimeout(refreshTimer);
     }
@@ -115,18 +114,15 @@ export default function ArticlesPage() {
       console.log("Articles refetched successfully");
     } catch (err) {
       console.error("Error refetching articles:", err);
+      // Use our error handling system
+      handleError(err, { 
+        component: 'ArticlesPage',
+        action: 'manual-refresh'
+      });
     } finally {
       setIsRefreshing(false);
     }
   };
-
-  // Display error if articles failed to load
-  useEffect(() => {
-    if (articlesError) {
-      console.error("Articles fetch error:", articlesError);
-      toast.error(`Failed to load articles: ${articlesError instanceof Error ? articlesError.message : 'Unknown error'}`);
-    }
-  }, [articlesError]);
 
   // Article submission handler
   async function handleArticleSubmit(data: any) {
@@ -182,7 +178,15 @@ export default function ArticlesPage() {
       
     } catch (error) {
       console.error('Error saving article:', error);
-      toast.error('Failed to save article: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      // Use our error handling system
+      handleError(error, { 
+        component: 'ArticlesPage',
+        action: 'save-article',
+        articleData: { 
+          id: currentArticle?.id,
+          title: data.title
+        }
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -217,6 +221,17 @@ export default function ArticlesPage() {
     }
   }
 
+  // Format the error for display
+  const getFormattedError = () => {
+    if (!articlesError) return null;
+    
+    // If it's already a processed error, use it
+    if ('type' in articlesError) return articlesError;
+    
+    // Otherwise, process it
+    return processSupabaseError(articlesError);
+  };
+
   return (
     <AppLayout>
       <div className="container py-6">
@@ -228,21 +243,11 @@ export default function ArticlesPage() {
         </div>
         
         {articlesError && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>Failed to load articles: {articlesError instanceof Error ? articlesError.message : 'Unknown error'}</span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={fetchArticlesWithErrorHandling}
-                disabled={isRefreshing}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <ErrorDisplay 
+            error={getFormattedError()}
+            title="Failed to load articles"
+            onRetry={fetchArticlesWithErrorHandling}
+          />
         )}
         
         <Tabs defaultValue="articles">
@@ -263,6 +268,7 @@ export default function ArticlesPage() {
               onEdit={handleEditArticle}
               onDelete={deleteArticle.mutate}
               onRefresh={fetchArticlesWithErrorHandling}
+              isRefreshing={isRefreshing}
             />
           </TabsContent>
           

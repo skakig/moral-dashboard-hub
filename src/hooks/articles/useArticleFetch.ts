@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Article } from "@/types/articles";
+import { handleError, processSupabaseError, ErrorType } from "@/utils/errorHandling";
 
 /**
  * Hook for fetching articles with filtering capabilities
@@ -11,6 +12,7 @@ import { Article } from "@/types/articles";
 export function useArticleFetch() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [lastError, setLastError] = useState<any>(null);
 
   // Fetch articles from Supabase
   const { data: articles, isLoading, error, refetch } = useQuery({
@@ -68,16 +70,22 @@ export function useArticleFetch() {
         
         return data as Article[];
       } catch (error: any) {
-        console.error("Error in article fetch:", error.message || error);
-        throw error;
+        // Use our new error handling system
+        const errorDetails = processSupabaseError(error);
+        setLastError(errorDetails);
+        console.error("Error in article fetch:", errorDetails.message);
+        throw errorDetails;
       }
     },
     staleTime: 5000, // 5 seconds before refetching (reduced to be more responsive)
     retry: 2, // Retry twice on failure
     meta: {
       onError: (error: Error) => {
-        console.error("Error in articles query:", error);
-        toast.error("Failed to load articles: " + error.message);
+        // Use our error handling system
+        handleError(error, { 
+          component: 'useArticleFetch', 
+          filters: { searchTerm, statusFilter } 
+        });
       }
     }
   });
@@ -86,6 +94,7 @@ export function useArticleFetch() {
     articles: articles || [],
     isLoading,
     error,
+    lastError,
     searchTerm,
     setSearchTerm,
     statusFilter,

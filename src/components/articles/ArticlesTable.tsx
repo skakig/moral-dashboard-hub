@@ -82,6 +82,20 @@ export function ArticlesTable({
     }
   }, [previewDialogOpen]);
 
+  // Add logging to debug article content issues
+  useEffect(() => {
+    if (previewArticle) {
+      console.log("Preview article data:", {
+        id: previewArticle.id,
+        title: previewArticle.title,
+        hasContent: Boolean(previewArticle.content),
+        contentLength: previewArticle.content?.length || 0,
+        hasVoiceUrl: Boolean(previewArticle.voice_url),
+        voiceGenerated: previewArticle.voice_generated
+      });
+    }
+  }, [previewArticle]);
+
   const handleDeleteClick = (article: Article) => {
     setArticleToDelete(article);
     setDeleteDialogOpen(true);
@@ -99,6 +113,12 @@ export function ArticlesTable({
       onView(article);
     } else {
       // If no onView handler, open a preview dialog
+      console.log("Opening article preview:", {
+        id: article.id,
+        title: article.title,
+        hasContent: Boolean(article.content),
+        hasVoiceUrl: Boolean(article.voice_url)
+      });
       setPreviewArticle(article);
       setPreviewDialogOpen(true);
     }
@@ -151,7 +171,8 @@ export function ArticlesTable({
     setIsAudioPlaying(false);
   };
 
-  const handleAudioError = () => {
+  const handleAudioError = (e: any) => {
+    console.error("Audio error:", e);
     toast.error("Error playing audio file");
     setIsAudioPlaying(false);
   };
@@ -391,19 +412,21 @@ export function ArticlesTable({
                 
                 <audio 
                   ref={audioRef}
-                  controls 
                   src={previewArticle.voice_url} 
                   className="w-full" 
                   onEnded={handleAudioEnded}
                   onError={handleAudioError}
+                  controls
                 />
               </div>
             </div>
           )}
 
           <div className="prose prose-sm max-w-none">
-            {previewArticle?.content && (
+            {previewArticle?.content ? (
               <div dangerouslySetInnerHTML={{ __html: previewArticle.content.replace(/\n/g, '<br />') }} />
+            ) : (
+              <p className="text-muted-foreground">No content available for this article.</p>
             )}
           </div>
 

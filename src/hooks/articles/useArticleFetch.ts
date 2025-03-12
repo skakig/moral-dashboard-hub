@@ -22,17 +22,11 @@ export function useArticleFetch() {
       console.log("Fetching articles with filters:", { searchTerm, statusFilter });
       
       try {
-        // Instead of counting all articles, let's just get a paginated result set directly
-        // Select only the essential columns for the list view to reduce data transfer
-        const essentialColumns = [
-          'id', 'title', 'category', 'status', 
-          'featured_image', 'publish_date', 'created_at', 
-          'updated_at', 'view_count', 'voice_generated'
-        ].join(',');
-
+        // Instead of just selecting essential columns, we need more data for detailed views
+        // Include content and voice-related fields for proper display
         let query = supabase
           .from('articles')
-          .select(essentialColumns);
+          .select('*'); // Get all fields to ensure we have complete article data
 
         // Apply search filter if provided
         if (searchTerm) {
@@ -44,19 +38,19 @@ export function useArticleFetch() {
           query = query.eq('status', statusFilter);
         }
 
-        // Order by most recent first (updated_at to prioritize recently edited)
+        // Order by most recent first
         query = query.order('updated_at', { ascending: false });
         
-        // Apply a smaller limit to prevent timeouts
+        // Apply limit to prevent timeouts but ensure we get enough articles
         query = query.limit(10);
 
-        console.log("Executing optimized query for articles");
+        console.log("Executing full article query");
         
-        // Execute the query with a shorter timeout - we'll retry if needed
+        // Execute the query with a reasonable timeout
         const { data, error: dataError } = await Promise.race([
           query,
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
+            setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
           )
         ]) as any;
 
@@ -65,8 +59,14 @@ export function useArticleFetch() {
           throw dataError;
         }
 
-        // Log the number of articles retrieved
+        // Log the number of articles retrieved and check for content/voice data
         console.log(`Successfully retrieved ${data?.length || 0} articles from Supabase`);
+        console.log("Sample article data:", data && data.length > 0 ? {
+          hasContent: Boolean(data[0].content),
+          contentLength: data[0].content?.length || 0,
+          hasVoiceData: Boolean(data[0].voice_url),
+          hasVoiceGenerated: data[0].voice_generated
+        } : 'No articles found');
         
         return data as Article[];
       } catch (error: any) {

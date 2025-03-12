@@ -29,10 +29,20 @@ export default function CreateArticlePage() {
 
       console.log("Creating article from standalone page:", {
         title: formattedData.title,
-        hasContent: Boolean(formattedData.content)
+        hasContent: Boolean(formattedData.content),
+        contentLength: formattedData.content?.length || 0,
+        hasVoiceUrl: Boolean(formattedData.voiceUrl),
+        voiceGenerated: formattedData.voiceGenerated
       });
 
-      await createArticle.mutateAsync(formattedData);
+      const result = await createArticle.mutateAsync(formattedData);
+      
+      console.log("Article creation result:", {
+        id: result?.id,
+        title: result?.title,
+        success: Boolean(result)
+      });
+      
       toast.success("Article created successfully");
       
       // Invalidate the articles query to ensure the list is refreshed

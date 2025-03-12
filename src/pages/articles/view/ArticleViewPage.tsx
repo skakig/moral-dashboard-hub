@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export default function ArticleViewPage() {
   const [error, setError] = useState<any>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [audioVolume, setAudioVolume] = useState(1);
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -46,10 +46,17 @@ export default function ArticleViewPage() {
             hasContent: Boolean(data.content),
             contentLength: data.content?.length || 0,
             contentSample: data.content?.substring(0, 50),
-            hasVoiceUrl: Boolean(data.voice_url)
+            hasVoiceUrl: Boolean(data.voice_url),
+            status: data.status
           });
           
-          setArticle(data);
+          // Make sure status is one of the valid types
+          const validatedData: Article = {
+            ...data,
+            status: (data.status as "draft" | "scheduled" | "published") || "draft"
+          };
+          
+          setArticle(validatedData);
           
           // Update view count
           const { error: updateError } = await supabase

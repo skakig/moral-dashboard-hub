@@ -12,7 +12,7 @@ interface ErrorDisplayProps {
   onRetry?: () => Promise<void> | void;
   variant?: "default" | "destructive";
   showRetry?: boolean;
-  className?: string; // Added className prop
+  className?: string;
 }
 
 export function ErrorDisplay({ 

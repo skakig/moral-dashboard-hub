@@ -49,11 +49,6 @@ export default function CreateArticlePage() {
         return;
       }
 
-      if (!formattedData.content) {
-        toast.warning("Content is empty. Are you sure you want to create an article without content?");
-        // We continue anyway as this might be intentional
-      }
-
       // Make the mutation with improved error handling
       toast.info("Creating article...");
       

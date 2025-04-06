@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ErrorDetails, ErrorType } from "@/utils/errorHandling";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface ErrorDisplayProps {
   error: ErrorDetails | Error | null | undefined;
@@ -11,6 +12,7 @@ interface ErrorDisplayProps {
   onRetry?: () => Promise<void> | void;
   variant?: "default" | "destructive";
   showRetry?: boolean;
+  className?: string; // Added className prop
 }
 
 export function ErrorDisplay({ 
@@ -18,7 +20,8 @@ export function ErrorDisplay({
   title = "An error occurred", 
   onRetry, 
   variant = "destructive",
-  showRetry = true 
+  showRetry = true,
+  className
 }: ErrorDisplayProps) {
   const [isRetrying, setIsRetrying] = useState(false);
 
@@ -43,7 +46,7 @@ export function ErrorDisplay({
   };
 
   return (
-    <Alert variant={variant} className="mb-6">
+    <Alert variant={variant} className={cn("mb-6", className)}>
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription className="flex items-center justify-between">

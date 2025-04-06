@@ -19,7 +19,7 @@ interface GenerateArticleParams {
 export function useArticleGeneration() {
   const [loading, setLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 3; // Increased max retries
   
   // Generate article using AI
   const generateArticle = async (params: GenerateArticleParams) => {

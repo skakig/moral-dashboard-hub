@@ -25,7 +25,7 @@ export class EdgeFunctionService {
       retryDelay = 1500, 
       silent = false,
       customErrorMessage,
-      timeout = 30000 // Default timeout of 30 seconds
+      timeout = 60000 // Increased default timeout to 60 seconds
     } = options;
     
     let currentAttempt = 0;
@@ -90,8 +90,8 @@ export class EdgeFunctionService {
         }
         
         // Exponential backoff with jitter for retries
-        const baseDelay = retryDelay * Math.pow(1.5, currentAttempt - 1);
-        const jitter = Math.random() * 300; // Add up to 300ms of jitter
+        const baseDelay = retryDelay * Math.pow(2, currentAttempt - 1);
+        const jitter = Math.random() * 500; // Add up to 500ms of jitter
         const delay = baseDelay + jitter;
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -107,7 +107,7 @@ export class EdgeFunctionService {
       }
       
       // Trim text if it's very long to avoid API issues
-      const trimmedText = text.length > 4000 ? text.substring(0, 4000) + "..." : text;
+      const trimmedText = text.length > 3000 ? text.substring(0, 3000) + "..." : text;
       
       return await this.callFunction<{
         audioUrl: string;
@@ -148,9 +148,9 @@ export class EdgeFunctionService {
       'generate-article',
       params,
       { 
-        retries: 2,
+        retries: 3, // Increased retries for article generation
         retryDelay: 3000,
-        timeout: 60000, // Increased timeout for article generation
+        timeout: 90000, // Increased timeout for article generation to 90 seconds
         customErrorMessage: 'Content generation failed. Please try again later or with a simpler theme.'
       }
     );

@@ -35,6 +35,13 @@ export default function CreateArticlePage() {
         voiceGenerated: formattedData.voiceGenerated
       });
 
+      // Ensure we have required fields
+      if (!formattedData.title) {
+        toast.error("Title is required");
+        setIsSaving(false);
+        return;
+      }
+
       const result = await createArticle.mutateAsync(formattedData);
       
       console.log("Article creation result:", {
@@ -60,6 +67,7 @@ export default function CreateArticlePage() {
         articleTitle: data.title
       });
       setError(processedError);
+    } finally {
       setIsSaving(false);
     }
   };

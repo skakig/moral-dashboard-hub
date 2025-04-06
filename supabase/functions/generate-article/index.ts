@@ -102,7 +102,7 @@ Return ONLY a JSON object with this structure:
 }`;
 
     try {
-      // Use gpt-4o-mini for faster responses
+      // Use gpt-3.5-turbo for faster responses
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -110,13 +110,13 @@ Return ONLY a JSON object with this structure:
           "Authorization": `Bearer ${openAIApiKey}`,
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini", // Faster model
+          model: "gpt-3.5-turbo", // More stable and faster model
           messages: [
             { role: "system", content: systemMessage },
             { role: "user", content: userPrompt },
           ],
           temperature: 0.7,
-          max_tokens: 1500, // Limit response size for faster generation
+          max_tokens: 1500,
         }),
       });
 
@@ -143,12 +143,15 @@ Return ONLY a JSON object with this structure:
       // Parse the JSON response from OpenAI with better error handling
       let parsedContent;
       try {
-        // Try to extract JSON if it's wrapped in any code blocks or text
+        // Try different approaches to extract JSON
         const jsonMatch = generatedText.match(/```json\s*([\s\S]*?)\s*```/) || 
                           generatedText.match(/```\s*([\s\S]*?)\s*```/) || 
                           generatedText.match(/{[\s\S]*}/);
                           
-        const jsonString = jsonMatch ? jsonMatch[0].replace(/```json|```/g, '') : generatedText;
+        const jsonString = jsonMatch 
+          ? jsonMatch[0].replace(/```json|```/g, '') 
+          : generatedText;
+        
         parsedContent = JSON.parse(jsonString);
         
         // Ensure we have required fields
@@ -159,13 +162,24 @@ Return ONLY a JSON object with this structure:
         console.error("Error parsing generated content:", error);
         console.log("Raw content:", generatedText.substring(0, 500));
         
-        // If JSON parsing fails, try to create a structured response from the raw text
-        const title = generatedText.split('\n')[0].replace(/^#+ /, '').trim();
-        const content = generatedText;
+        // If JSON parsing fails, create a structured response from the raw text
+        const lines = generatedText.split('\n');
+        let title = theme;
+        let content = generatedText;
+        
+        // Try to extract a title from the first line
+        if (lines.length > 0) {
+          const potentialTitle = lines[0].replace(/^#+ |^Title: /, '').trim();
+          if (potentialTitle && potentialTitle.length < 100) {
+            title = potentialTitle;
+          }
+        }
+        
         parsedContent = { 
-          title: title || theme, 
-          content: content || "Failed to generate structured content", 
-          metaDescription: theme
+          title: title, 
+          content: content, 
+          metaDescription: `${theme.substring(0, 150)}...`,
+          keywords: []
         };
       }
       

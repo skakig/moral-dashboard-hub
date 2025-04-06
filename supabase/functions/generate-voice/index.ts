@@ -34,7 +34,21 @@ serve(async (req) => {
     }
 
     // Parse request data
-    const requestData = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to parse request JSON", 
+          details: String(parseError)
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400
+        }
+      );
+    }
     
     // Extract text and voiceId, with validation
     const { text, voiceId } = requestData;
@@ -55,9 +69,9 @@ serve(async (req) => {
     // Safe text processing - convert to string and limit length
     let processedText = "";
     if (typeof text === 'string') {
-      processedText = text.substring(0, 4000); // Reduced from 5000 to 4000 to avoid potential API limits
+      processedText = text.substring(0, 3000); // Reduced to 3000 to avoid potential API limits
     } else {
-      processedText = String(text).substring(0, 4000);
+      processedText = String(text).substring(0, 3000);
     }
     
     // Log request details for debugging
@@ -74,7 +88,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           text: processedText,
-          model_id: "eleven_turbo_v2", // Using faster model which is more reliable
+          model_id: "eleven_monolingual_v1", // Using a stable model
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
@@ -84,7 +98,13 @@ serve(async (req) => {
 
       // Handle API response errors
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorText = "";
+        try {
+          errorText = await response.text();
+        } catch (e) {
+          errorText = "Could not retrieve error details";
+        }
+        
         console.error(`ElevenLabs API error (${response.status}): ${errorText}`);
         return new Response(
           JSON.stringify({ 

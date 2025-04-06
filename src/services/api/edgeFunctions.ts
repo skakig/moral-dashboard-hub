@@ -73,7 +73,7 @@ export class EdgeFunctionService {
         console.log(`Edge function ${functionName} response:`, 
           functionName === 'generate-voice' 
             ? { success: true, audioUrlLength: (response.data as any)?.audioUrl?.length || 0 }
-            : response.data
+            : { success: true }
         );
         
         return response.data as T;
@@ -103,7 +103,7 @@ export class EdgeFunctionService {
       }
       
       // Trim text if it's very long to avoid API issues
-      const trimmedText = text.length > 10000 ? text.substring(0, 10000) + "..." : text;
+      const trimmedText = text.length > 5000 ? text.substring(0, 5000) + "..." : text;
       
       return await this.callFunction<{
         audioUrl: string;
@@ -117,32 +117,11 @@ export class EdgeFunctionService {
           retries: 2,
           retryDelay: 2000,
           timeout: 60000, // 60 seconds for voice generation
-          customErrorMessage: 'Voice generation failed. Please try again later.'
+          customErrorMessage: 'Voice generation failed. Please try again with shorter text.'
         }
       );
     } catch (error) {
       console.error("Voice generation error:", error);
-      throw error;
-    }
-  }
-
-  static async generateImage(prompt: string) {
-    console.log('Calling generateImage with prompt:', prompt);
-    
-    try {
-      return await this.callFunction<{
-        image: string;
-      }>(
-        'generate-image',
-        { prompt },
-        { 
-          retries: 2,
-          retryDelay: 2000,
-          customErrorMessage: 'Image generation failed. Please try again later.'
-        }
-      );
-    } catch (error) {
-      console.error("Image generation error:", error);
       throw error;
     }
   }
@@ -167,9 +146,30 @@ export class EdgeFunctionService {
       { 
         retries: 2,
         retryDelay: 3000,
-        timeout: 45000, // 45 seconds for article generation
-        customErrorMessage: 'Content generation failed. Please try again later.'
+        timeout: 60000, // Increased timeout for article generation
+        customErrorMessage: 'Content generation failed. Please try again later or with a simpler theme.'
       }
     );
+  }
+
+  static async generateImage(prompt: string) {
+    console.log('Calling generateImage with prompt:', prompt);
+    
+    try {
+      return await this.callFunction<{
+        image: string;
+      }>(
+        'generate-image',
+        { prompt },
+        { 
+          retries: 2,
+          retryDelay: 2000,
+          customErrorMessage: 'Image generation failed. Please try again later.'
+        }
+      );
+    } catch (error) {
+      console.error("Image generation error:", error);
+      throw error;
+    }
   }
 }

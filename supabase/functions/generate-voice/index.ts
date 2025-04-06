@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,8 +49,10 @@ serve(async (req) => {
       );
     }
 
-    // Simple text processing - convert to string and limit length
-    // Use a simple substring to avoid any potential stack issues
+    // Using a reasonable default voice ID if not provided
+    const finalVoiceId = voiceId || "21m00Tcm4TlvDq8ikWAM"; // Default to 'Rachel' voice
+
+    // Safe text processing - convert to string and limit length
     let processedText = "";
     if (typeof text === 'string') {
       processedText = text.substring(0, 5000); // Limit to 5000 characters
@@ -60,26 +61,23 @@ serve(async (req) => {
     }
     
     // Log request details for debugging
-    console.log(`Generating voice with ElevenLabs: length=${processedText.length}, voiceId=${voiceId || "21m00Tcm4TlvDq8ikWAM"}`);
-    
-    // Prepare the request payload
-    const requestBody = JSON.stringify({
-      text: processedText,
-      model_id: "eleven_multilingual_v2",
-      voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.75,
-      },
-    });
+    console.log(`Generating voice with ElevenLabs: length=${processedText.length}, voiceId=${finalVoiceId}`);
     
     // Call ElevenLabs API
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId || "21m00Tcm4TlvDq8ikWAM"}`, {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${finalVoiceId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "xi-api-key": elevenLabsApiKey,
       },
-      body: requestBody,
+      body: JSON.stringify({
+        text: processedText,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        },
+      }),
     });
 
     // Handle API response errors
@@ -103,14 +101,11 @@ serve(async (req) => {
     // Process the audio response
     const audioArrayBuffer = await response.arrayBuffer();
     
-    // Convert to base64 without using btoa (which can cause stack issues with large files)
-    let binary = '';
-    const bytes = new Uint8Array(audioArrayBuffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64Audio = btoa(binary);
+    // Safely convert to base64
+    const base64Audio = btoa(
+      new Uint8Array(audioArrayBuffer)
+        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
 
     const fileName = `voice_${Date.now()}.mp3`;
 
@@ -131,8 +126,8 @@ serve(async (req) => {
     // Return a structured error response
     return new Response(
       JSON.stringify({ 
-        error: error.message || "Failed to generate voice content",
-        details: error.toString()
+        error: error instanceof Error ? error.message : "Failed to generate voice content",
+        details: String(error)
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },

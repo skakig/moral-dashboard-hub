@@ -25,7 +25,7 @@ export function useVoiceGeneration(form: any) {
   const generateVoiceContent = async (voiceId: string) => {
     const content = form.getValues('content');
     
-    if (!content) {
+    if (!content || content.trim() === '') {
       toast.error('Please add content before generating voice');
       return;
     }
@@ -42,68 +42,37 @@ export function useVoiceGeneration(form: any) {
       
       toast.info('Generating voice content...');
       
-      // Implement retry logic
-      let attempts = 0;
-      let lastError = null;
-      const maxAttempts = retryCount + 1;
-      
-      while (attempts < maxAttempts) {
-        attempts++;
-        
-        try {
-          if (attempts > 1) {
-            toast.info(`Retry attempt ${attempts} of ${maxAttempts}`);
-          }
-          
-          // If content is too long, trim it for better voice generation
-          let textToConvert = content;
-          if (content.length > 5000) {
-            textToConvert = content.substring(0, 5000);
-            toast.warning("Content is too long for voice generation. Using first 5000 characters.");
-          }
-          
-          // Call the edge function to generate voice
-          const result = await EdgeFunctionService.generateVoice(textToConvert, voiceId);
-          
-          if (!result) {
-            throw new Error('Failed to generate voice content. Empty response received.');
-          }
-
-          // Set the audio URL and update form values
-          setAudioUrl(result.audioUrl);
-          form.setValue('voiceGenerated', true);
-          form.setValue('voiceUrl', result.audioUrl);
-          form.setValue('voiceFileName', result.fileName || `voice_${Date.now()}.mp3`);
-          form.setValue('voiceBase64', result.base64Audio);
-
-          // Mark the form as dirty to ensure the updated values are saved
-          form.trigger('voiceGenerated');
-          form.trigger('voiceUrl');
-          form.trigger('voiceFileName');
-          form.trigger('voiceBase64');
-          
-          toast.success('Voice generation complete!');
-          console.log("Voice generation successful");
-          
-          // Reset retry count on success
-          setRetryCount(0);
-          return;
-        } catch (error: any) {
-          console.error(`Error generating voice content (Attempt ${attempts}/${maxAttempts}):`, error);
-          lastError = error;
-          
-          if (attempts < maxAttempts) {
-            // Wait before retrying (increasing delay with each retry)
-            await new Promise(resolve => setTimeout(resolve, attempts * 1500));
-          } else {
-            // On final attempt, throw the error
-            throw error;
-          }
-        }
+      let textToConvert = content;
+      if (content.length > 5000) {
+        textToConvert = content.substring(0, 5000);
+        toast.warning("Content is too long for voice generation. Using first 5000 characters.");
       }
       
-      // This should never be reached, but just in case
-      throw lastError || new Error("Failed to generate voice content after retries");
+      // Call the edge function to generate voice
+      const result = await EdgeFunctionService.generateVoice(textToConvert, voiceId);
+      
+      if (!result) {
+        throw new Error('Failed to generate voice content. Empty response received.');
+      }
+
+      // Set the audio URL and update form values
+      setAudioUrl(result.audioUrl);
+      form.setValue('voiceGenerated', true);
+      form.setValue('voiceUrl', result.audioUrl);
+      form.setValue('voiceFileName', result.fileName || `voice_${Date.now()}.mp3`);
+      form.setValue('voiceBase64', result.base64Audio);
+
+      // Mark the form as dirty to ensure the updated values are saved
+      form.trigger('voiceGenerated');
+      form.trigger('voiceUrl');
+      form.trigger('voiceFileName');
+      form.trigger('voiceBase64');
+      
+      toast.success('Voice generation complete!');
+      console.log("Voice generation successful");
+      
+      // Reset retry count on success
+      setRetryCount(0);
     } catch (error: any) {
       console.error('Voice generation error:', error);
       toast.error(error.message || 'Failed to generate voice content.');
@@ -158,13 +127,16 @@ export function useVoiceGeneration(form: any) {
         });
       }
     } catch (error) {
-      console.error('Audio control error:', error);
-      toast.error('Failed to control audio playback');
+      console.error('Audio playback error:', error);
+      toast.error('Failed to play audio');
+      setIsPlaying(false);
     }
   };
 
   const downloadAudio = () => {
     const url = audioUrl || form.getValues('voiceUrl');
+    const fileName = form.getValues('voiceFileName') || 'voice-content.mp3';
+    
     if (!url) {
       toast.error('No audio available to download');
       return;
@@ -173,7 +145,7 @@ export function useVoiceGeneration(form: any) {
     try {
       const a = document.createElement('a');
       a.href = url;
-      a.download = form.getValues('voiceFileName') || 'voice-content.mp3';
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -185,13 +157,12 @@ export function useVoiceGeneration(form: any) {
   };
 
   return {
-    generateVoiceContent,
     isGenerating,
     audioUrl,
     isPlaying,
     setIsPlaying,
+    generateVoiceContent,
     togglePlayPause,
-    downloadAudio,
-    retryCount
+    downloadAudio
   };
 }

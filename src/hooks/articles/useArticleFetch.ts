@@ -15,6 +15,7 @@ export function useArticleFetch() {
   const [lastError, setLastError] = useState<ErrorDetails | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5); // Keep page size small to prevent timeouts
+  const [totalCount, setTotalCount] = useState(0);
 
   // Fetch articles from Supabase with pagination and optimized query
   const { data: articles, isLoading, error, refetch } = useQuery({
@@ -24,6 +25,32 @@ export function useArticleFetch() {
       console.log("Fetching articles with filters:", { searchTerm, statusFilter, page, pageSize });
       
       try {
+        // First, get the count of articles that match the filter criteria
+        let countQuery = supabase
+          .from('articles')
+          .select('id', { count: 'exact', head: true });
+
+        // Apply search filter if provided
+        if (searchTerm) {
+          countQuery = countQuery.ilike('title', `%${searchTerm}%`);
+        }
+
+        // Apply status filter if provided
+        if (statusFilter !== 'all') {
+          countQuery = countQuery.eq('status', statusFilter);
+        }
+
+        const { count, error: countError } = await countQuery;
+        
+        if (countError) {
+          console.error("Error fetching article count:", countError);
+          throw countError;
+        }
+        
+        if (count !== null) {
+          setTotalCount(count);
+        }
+
         // We need selected fields but not content (which can be large)
         // Select only essential fields to reduce data transfer
         let query = supabase
@@ -130,6 +157,7 @@ export function useArticleFetch() {
     isLoading,
     error,
     lastError,
+    totalCount,
     searchTerm,
     setSearchTerm,
     statusFilter,

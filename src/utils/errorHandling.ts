@@ -66,20 +66,29 @@ export function processSupabaseError(error: any): ErrorDetails {
   let type = ErrorType.UNKNOWN_ERROR;
   let message = "An unexpected error occurred";
   
-  // Handle timeout errors
-  if (error?.message?.includes('timeout') || error?.code === '57014') {
+  // Look for specific error messages in different possible error structures
+  const errorMessage = error?.message || error?.error?.message || error?.data?.message || '';
+  const errorCode = error?.code || error?.error?.code || error?.data?.code || '';
+  
+  // Handle timeout errors - check multiple possible patterns
+  if (
+    errorMessage.includes('timeout') || 
+    errorMessage.includes('timed out') || 
+    errorCode === '57014' ||
+    errorMessage.includes('canceled due to statement timeout')
+  ) {
     type = ErrorType.DATABASE_TIMEOUT;
     message = "The database query timed out. Please try again with more specific filters or contact support.";
   } 
   // Handle connection errors
-  else if (error?.message?.includes('network') || error?.message?.includes('connection')) {
+  else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
     type = ErrorType.DATABASE_CONNECTION;
     message = "Failed to connect to the database. Please check your internet connection and try again.";
   }
   // Handle query errors
-  else if (error?.code) {
+  else if (errorCode) {
     type = ErrorType.DATABASE_QUERY;
-    message = `Database error: ${error.message || 'Unknown database error'}`;
+    message = `Database error: ${errorMessage || 'Unknown database error'}`;
   }
   
   return createError(type, message, error);
@@ -89,12 +98,18 @@ export function processSupabaseError(error: any): ErrorDetails {
  * Display a user-friendly error message
  */
 export function displayError(error: ErrorDetails): void {
+  let duration = 5000;
+  
   // Show toast message with appropriate severity
+  if (error.type === ErrorType.DATABASE_TIMEOUT) {
+    duration = 8000; // Give more time to read timeout errors
+  }
+  
   toast.error(error.message, {
     description: error.type !== ErrorType.UNKNOWN_ERROR 
       ? `Error type: ${error.type}`
       : "Please try again or contact support if the problem persists",
-    duration: 5000
+    duration: duration
   });
 }
 

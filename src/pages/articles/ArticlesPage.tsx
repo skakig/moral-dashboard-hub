@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -12,10 +11,8 @@ import { useContentThemes } from "@/hooks/useContentThemes";
 import { useArticleVersions } from "@/hooks/articles/useArticleVersions";
 import { ErrorDisplay } from "@/components/ui/error-display";
 import { handleError, ErrorType, processSupabaseError } from "@/utils/errorHandling";
-
-// Constants to prevent DB timeout
-const ARTICLES_PER_PAGE = 5;
-const TOTAL_ESTIMATED_ARTICLES = 50; // Estimate for pagination
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function ArticlesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,7 +20,6 @@ export default function ArticlesPage() {
   const [retryCount, setRetryCount] = useState(0); // Track retry attempts
   const [lastSaveTime, setLastSaveTime] = useState<number | null>(null); // Track when the last save occurred
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(Math.ceil(TOTAL_ESTIMATED_ARTICLES / ARTICLES_PER_PAGE));
 
   // Articles functionality with pagination
   const { 
@@ -31,6 +27,7 @@ export default function ArticlesPage() {
     isLoading: articlesLoading, 
     error: articlesError,
     lastError,
+    totalCount, // Get the total count for pagination
     searchTerm, 
     setSearchTerm, 
     statusFilter, 
@@ -46,15 +43,8 @@ export default function ArticlesPage() {
     refetch
   } = useArticles();
 
-  // Set the page size from the constant
-  useEffect(() => {
-    setPageSize(ARTICLES_PER_PAGE);
-  }, [setPageSize]);
-
-  // Update current page when page changes
-  useEffect(() => {
-    setCurrentPage(page);
-  }, [page]);
+  // Calculate total pages based on total count and page size
+  const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 1;
 
   // Version control for articles
   const { createVersion } = useArticleVersions();
@@ -109,7 +99,7 @@ export default function ArticlesPage() {
         console.log(`Auto-retrying fetch (attempt ${retryCount + 1})...`);
         setRetryCount(prev => prev + 1);
         fetchArticlesWithErrorHandling();
-      }, 1500); // Shorter delay between retries
+      }, 2000); // Slightly longer delay to give server time to recover
       
       return () => clearTimeout(timer);
     }
@@ -127,10 +117,17 @@ export default function ArticlesPage() {
     }
   }, [lastSaveTime]);
 
+  // Update current page when page changes
+  useEffect(() => {
+    setCurrentPage(page);
+  }, [page]);
+
   // Handle page change
   const handlePageChange = (newPage: number) => {
     console.log(`Changing page to ${newPage}`);
     setPage(newPage);
+    // Reset retry count when changing pages
+    setRetryCount(0);
   };
 
   // Handle manual refresh with error handling
@@ -139,6 +136,8 @@ export default function ArticlesPage() {
     try {
       await refetch();
       console.log("Articles refetched successfully");
+      // Reset retry count on successful fetch
+      setRetryCount(0);
     } catch (err) {
       console.error("Error refetching articles:", err);
       // Use our error handling system
@@ -264,6 +263,28 @@ export default function ArticlesPage() {
     return processSupabaseError(articlesError);
   };
 
+  // Get timeout message based on the error type
+  const getTimeoutTip = () => {
+    if (lastError?.type === ErrorType.DATABASE_TIMEOUT) {
+      return (
+        <Alert variant="warning" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Database Timeout Tips</AlertTitle>
+          <AlertDescription>
+            <p>Try these solutions to resolve database timeout issues:</p>
+            <ul className="list-disc pl-5 mt-2">
+              <li>Use more specific search terms to reduce query size</li>
+              <li>Try viewing smaller date ranges or specific categories</li>
+              <li>Your database may be experiencing high load or connection issues</li>
+              <li>If persistence, contact your database administrator</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    return null;
+  };
+
   return (
     <AppLayout>
       <div className="container py-6">
@@ -275,11 +296,15 @@ export default function ArticlesPage() {
         </div>
         
         {articlesError && (
-          <ErrorDisplay 
-            error={getFormattedError()}
-            title="Failed to load articles"
-            onRetry={fetchArticlesWithErrorHandling}
-          />
+          <>
+            {getTimeoutTip()}
+            <ErrorDisplay 
+              error={getFormattedError()}
+              title="Failed to load articles"
+              onRetry={fetchArticlesWithErrorHandling}
+              className="mb-6"
+            />
+          </>
         )}
         
         <Tabs defaultValue="articles">

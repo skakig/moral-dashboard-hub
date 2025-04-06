@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +17,6 @@ export function useArticleMutations() {
       try {
         const dbArticle = mapFormToDbArticle(article);
         
-        // Log what we're sending to Supabase
         console.log("Creating article:", {
           title: dbArticle.title,
           hasContent: Boolean(dbArticle.content),

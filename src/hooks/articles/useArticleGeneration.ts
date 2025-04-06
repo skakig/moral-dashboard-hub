@@ -38,20 +38,25 @@ export function useArticleGeneration() {
         return null;
       }
 
-      // Prepare the parameters, ensuring keywords is properly handled
+      // Safely handle keywords, ensuring it's always an array
+      let keywordsArray: string[] = [];
+      
+      if (Array.isArray(params.keywords)) {
+        keywordsArray = params.keywords;
+      } else if (typeof params.keywords === 'string' && params.keywords) {
+        keywordsArray = params.keywords.split(',').map(k => k.trim());
+      }
+
+      // Prepare the parameters with properly formatted keywords
       const normalizedParams = {
         ...params,
-        keywords: Array.isArray(params.keywords) 
-          ? params.keywords 
-          : (typeof params.keywords === 'string' && params.keywords 
-              ? params.keywords.split(',').map(k => k.trim()) 
-              : [])
+        keywords: keywordsArray
       };
       
       console.log("Generating article with params:", {
         theme: normalizedParams.theme,
         contentType: normalizedParams.contentType,
-        keywordCount: normalizedParams.keywords?.length || 0,
+        keywordCount: normalizedParams.keywords.length,
         moralLevel: normalizedParams.moralLevel
       });
 

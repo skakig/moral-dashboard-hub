@@ -76,4 +76,3 @@ verify_jwt = false
 verify_jwt = false
 [functions.generate-voice]
 verify_jwt = false
-

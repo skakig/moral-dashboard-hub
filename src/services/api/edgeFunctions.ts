@@ -148,6 +148,8 @@ export class EdgeFunctionService {
       'generate-article',
       params,
       { 
+        retries: 2,
+        retryDelay: 2000,
         customErrorMessage: 'Content generation failed. Please try again later.'
       }
     );

@@ -28,6 +28,7 @@ export function useArticleGeneration() {
       const response = await EdgeFunctionService.generateArticle(params);
       
       if (!response) {
+        toast.error("Failed to generate content. Please try again.");
         return null;
       }
 
@@ -35,6 +36,7 @@ export function useArticleGeneration() {
       return response;
     } catch (error) {
       console.error("Error generating article:", error);
+      toast.error(`Failed to generate content: ${error instanceof Error ? error.message : "Unknown error"}`);
       // The error is already handled by the service
       return null;
     } finally {

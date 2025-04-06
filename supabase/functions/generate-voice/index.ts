@@ -22,7 +22,16 @@ serve(async (req) => {
     // Check if API key is available
     if (!elevenLabsApiKey) {
       console.error("Missing API key: ELEVENLABS_API_KEY is not configured");
-      throw new Error("API key not configured. Please set ELEVENLABS_API_KEY.");
+      return new Response(
+        JSON.stringify({
+          error: "API key not configured. Please set ELEVENLABS_API_KEY.",
+          details: "Contact administrator to configure the API key"
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500
+        }
+      );
     }
 
     // Parse request data
@@ -32,19 +41,36 @@ serve(async (req) => {
     const { text, voiceId } = requestData;
 
     if (!text) {
-      throw new Error("Text is required");
+      return new Response(
+        JSON.stringify({ error: "Text is required", details: "The text parameter cannot be empty" }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400
+        }
+      );
     }
 
     // Simple text processing - convert to string and limit length
     // Use a simple substring to avoid any potential stack issues
     let processedText = "";
     if (typeof text === 'string') {
-      processedText = text.substring(0, 5000);
+      processedText = text.substring(0, 5000); // Limit to 5000 characters
     } else {
       processedText = String(text).substring(0, 5000);
     }
     
+    // Log request details for debugging
     console.log(`Generating voice with ElevenLabs: length=${processedText.length}, voiceId=${voiceId || "21m00Tcm4TlvDq8ikWAM"}`);
+    
+    // Prepare the request payload
+    const requestBody = JSON.stringify({
+      text: processedText,
+      model_id: "eleven_multilingual_v2",
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+      },
+    });
     
     // Call ElevenLabs API
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId || "21m00Tcm4TlvDq8ikWAM"}`, {
@@ -53,14 +79,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
         "xi-api-key": elevenLabsApiKey,
       },
-      body: JSON.stringify({
-        text: processedText,
-        model_id: "eleven_multilingual_v2",
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-        },
-      }),
+      body: requestBody,
     });
 
     // Handle API response errors
@@ -74,7 +93,7 @@ serve(async (req) => {
         }),
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400
+          status: response.status
         }
       );
     }
@@ -83,7 +102,6 @@ serve(async (req) => {
     
     // Process the audio response
     const audioArrayBuffer = await response.arrayBuffer();
-    const audioUint8Array = new Uint8Array(audioArrayBuffer);
     
     // Convert to base64 without using btoa (which can cause stack issues with large files)
     let binary = '';

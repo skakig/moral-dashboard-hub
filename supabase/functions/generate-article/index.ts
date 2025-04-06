@@ -19,7 +19,13 @@ serve(async (req) => {
     const openAIApiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("OPEN_AI_TMH");
     
     if (!openAIApiKey) {
-      throw new Error("OpenAI API key not configured. Please set OPENAI_API_KEY or OPEN_AI_TMH environment variable.");
+      console.error("Missing API key: OPENAI_API_KEY or OPEN_AI_TMH");
+      return new Response(
+        JSON.stringify({ 
+          error: "OpenAI API key not configured. Please set OPENAI_API_KEY or OPEN_AI_TMH environment variable." 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
     }
 
     const requestData = await req.json().catch(e => {
@@ -38,7 +44,10 @@ serve(async (req) => {
     } = requestData;
 
     if (!theme) {
-      throw new Error("Theme parameter is required");
+      return new Response(
+        JSON.stringify({ error: "Theme parameter is required" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
     }
 
     console.log(`Generating ${contentType} for ${platform} with moral level ${moralLevel}`);
@@ -110,7 +119,10 @@ Return ONLY a JSON object with this structure:
       }
       
       console.error("OpenAI API error:", errorMessage);
-      throw new Error(errorMessage);
+      return new Response(
+        JSON.stringify({ error: errorMessage }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: response.status }
+      );
     }
 
     const responseData = await response.json();

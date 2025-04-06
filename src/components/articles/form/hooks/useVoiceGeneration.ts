@@ -8,6 +8,8 @@ export function useVoiceGeneration(form: any) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
 
   // Initialize audio element on mount
   useEffect(() => {
@@ -40,32 +42,76 @@ export function useVoiceGeneration(form: any) {
       
       toast.info('Generating voice content...');
       
-      // Call the edge function to generate voice
-      const result = await EdgeFunctionService.generateVoice(content, voiceId);
+      // Implement retry logic
+      let attempts = 0;
+      let lastError = null;
+      const maxAttempts = retryCount + 1;
       
-      if (!result) {
-        toast.error('Failed to generate voice content.');
-        return;
+      while (attempts < maxAttempts) {
+        attempts++;
+        
+        try {
+          if (attempts > 1) {
+            toast.info(`Retry attempt ${attempts} of ${maxAttempts}`);
+          }
+          
+          // If content is too long, trim it for better voice generation
+          let textToConvert = content;
+          if (content.length > 5000) {
+            textToConvert = content.substring(0, 5000);
+            toast.warning("Content is too long for voice generation. Using first 5000 characters.");
+          }
+          
+          // Call the edge function to generate voice
+          const result = await EdgeFunctionService.generateVoice(textToConvert, voiceId);
+          
+          if (!result) {
+            throw new Error('Failed to generate voice content. Empty response received.');
+          }
+
+          // Set the audio URL and update form values
+          setAudioUrl(result.audioUrl);
+          form.setValue('voiceGenerated', true);
+          form.setValue('voiceUrl', result.audioUrl);
+          form.setValue('voiceFileName', result.fileName || `voice_${Date.now()}.mp3`);
+          form.setValue('voiceBase64', result.base64Audio);
+
+          // Mark the form as dirty to ensure the updated values are saved
+          form.trigger('voiceGenerated');
+          form.trigger('voiceUrl');
+          form.trigger('voiceFileName');
+          form.trigger('voiceBase64');
+          
+          toast.success('Voice generation complete!');
+          console.log("Voice generation successful");
+          
+          // Reset retry count on success
+          setRetryCount(0);
+          return;
+        } catch (error: any) {
+          console.error(`Error generating voice content (Attempt ${attempts}/${maxAttempts}):`, error);
+          lastError = error;
+          
+          if (attempts < maxAttempts) {
+            // Wait before retrying (increasing delay with each retry)
+            await new Promise(resolve => setTimeout(resolve, attempts * 1500));
+          } else {
+            // On final attempt, throw the error
+            throw error;
+          }
+        }
       }
-
-      // Set the audio URL and update form values
-      setAudioUrl(result.audioUrl);
-      form.setValue('voiceGenerated', true);
-      form.setValue('voiceUrl', result.audioUrl);
-      form.setValue('voiceFileName', result.fileName || `voice_${Date.now()}.mp3`);
-      form.setValue('voiceBase64', result.base64Audio);
-
-      // Mark the form as dirty to ensure the updated values are saved
-      form.trigger('voiceGenerated');
-      form.trigger('voiceUrl');
-      form.trigger('voiceFileName');
-      form.trigger('voiceBase64');
       
-      toast.success('Voice generation complete!');
-      console.log("Voice generation successful");
+      // This should never be reached, but just in case
+      throw lastError || new Error("Failed to generate voice content after retries");
     } catch (error: any) {
-      console.error('Error generating voice content:', error);
+      console.error('Voice generation error:', error);
       toast.error(error.message || 'Failed to generate voice content.');
+      
+      // Increase retry count for next attempt, up to max retries
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prevCount => prevCount + 1);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -91,6 +137,11 @@ export function useVoiceGeneration(form: any) {
         audio.addEventListener('ended', () => setIsPlaying(false));
         audio.addEventListener('pause', () => setIsPlaying(false));
         audio.addEventListener('play', () => setIsPlaying(true));
+        audio.addEventListener('error', (e) => {
+          console.error('Audio playback error:', e);
+          toast.error('Error playing audio. Please try again.');
+          setIsPlaying(false);
+        });
       }
       
       if (isPlaying) {
@@ -103,7 +154,7 @@ export function useVoiceGeneration(form: any) {
         
         audio.play().catch(error => {
           console.error('Audio playback error:', error);
-          toast.error('Error playing audio');
+          toast.error('Error playing audio. Please try regenerating the voice content.');
         });
       }
     } catch (error) {
@@ -140,6 +191,7 @@ export function useVoiceGeneration(form: any) {
     isPlaying,
     setIsPlaying,
     togglePlayPause,
-    downloadAudio
+    downloadAudio,
+    retryCount
   };
 }

@@ -17,13 +17,15 @@ export class EdgeFunctionService {
       retryDelay?: number;
       silent?: boolean;
       customErrorMessage?: string;
+      timeout?: number;
     } = {}
   ): Promise<T | null> {
     const { 
-      retries = 1, 
-      retryDelay = 1000, 
+      retries = 2, 
+      retryDelay = 1500, 
       silent = false,
-      customErrorMessage
+      customErrorMessage,
+      timeout = 30000 // Default timeout of 30 seconds
     } = options;
     
     let currentAttempt = 0;
@@ -33,7 +35,7 @@ export class EdgeFunctionService {
       
       try {
         if (!silent && currentAttempt > 1) {
-          toast.warning(`Retrying... (Attempt ${currentAttempt}/${retries + 1})`);
+          toast.warning(`Retrying request... (Attempt ${currentAttempt}/${retries + 1})`);
         }
         
         console.log(`Calling edge function ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, 
@@ -42,12 +44,21 @@ export class EdgeFunctionService {
             : payload
         );
         
-        const response = await supabase.functions.invoke<EdgeFunctionResponse<T>>(
+        // Create a promise that will be rejected if the timeout is reached
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`Request to ${functionName} timed out after ${timeout}ms`)), timeout);
+        });
+        
+        // Create the actual request promise
+        const requestPromise = supabase.functions.invoke<EdgeFunctionResponse<T>>(
           functionName,
           { 
             body: payload
           }
         );
+        
+        // Race the request against the timeout
+        const response = await Promise.race([requestPromise, timeoutPromise]);
         
         if (response.error) {
           console.error(`Edge function HTTP error (${functionName}):`, response.error);
@@ -76,7 +87,9 @@ export class EdgeFunctionService {
           throw error;
         }
         
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        // Exponential backoff
+        const delay = retryDelay * Math.pow(1.5, currentAttempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
     
@@ -89,6 +102,9 @@ export class EdgeFunctionService {
         throw new Error("Text content is required for voice generation");
       }
       
+      // Trim text if it's very long to avoid API issues
+      const trimmedText = text.length > 10000 ? text.substring(0, 10000) + "..." : text;
+      
       return await this.callFunction<{
         audioUrl: string;
         fileName: string;
@@ -96,10 +112,11 @@ export class EdgeFunctionService {
         service: string;
       }>(
         'generate-voice',
-        { text, voiceId },
+        { text: trimmedText, voiceId },
         { 
-          retries: 1,
-          retryDelay: 1000,
+          retries: 2,
+          retryDelay: 2000,
+          timeout: 60000, // 60 seconds for voice generation
           customErrorMessage: 'Voice generation failed. Please try again later.'
         }
       );
@@ -120,7 +137,7 @@ export class EdgeFunctionService {
         { prompt },
         { 
           retries: 2,
-          retryDelay: 1000,
+          retryDelay: 2000,
           customErrorMessage: 'Image generation failed. Please try again later.'
         }
       );
@@ -149,7 +166,8 @@ export class EdgeFunctionService {
       params,
       { 
         retries: 2,
-        retryDelay: 2000,
+        retryDelay: 3000,
+        timeout: 45000, // 45 seconds for article generation
         customErrorMessage: 'Content generation failed. Please try again later.'
       }
     );

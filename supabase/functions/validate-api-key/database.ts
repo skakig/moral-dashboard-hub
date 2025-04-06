@@ -1,104 +1,88 @@
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
-import { ApiKeyData, DbOperationResult } from "./types.ts";
-import { 
-  getExistingApiKey, 
-  resetPrimaryKeysInCategory, 
-  updateApiKey, 
-  insertApiKey, 
-  fetchUpdatedApiKey 
-} from "./queries.ts";
-
 /**
  * Updates or inserts an API key in the database
- * @param supabase Supabase client instance
- * @param data API key data to save
- * @returns Operation result with success status and data or error
+ * @param supabaseClient The initialized Supabase client
+ * @param params API key data to update or insert
+ * @returns Result object with success status, data and optional error
  */
-export async function updateOrInsertApiKey(
-  supabase: SupabaseClient, 
-  data: ApiKeyData
-): Promise<DbOperationResult> {
-  const { serviceName, category, apiKey, baseUrl, isPrimary = false } = data;
-
+export async function updateOrInsertApiKey(supabaseClient, params) {
   try {
-    console.log(`Attempting to update/insert API key for ${serviceName} in category ${category}`);
-    console.log(`Using base URL: ${baseUrl || 'None provided'}`);
+    const { serviceName, category, apiKey, baseUrl, isPrimary } = params;
     
-    // Check if the service exists first to handle the unique constraint
-    const { data: existingKeys, error: queryError } = await getExistingApiKey(supabase, serviceName);
+    console.log(`Checking if API key for ${serviceName} exists`);
     
-    if (queryError) {
-      console.error("Error querying existing key:", queryError);
-      return { error: queryError };
+    // Check if there's an existing key for this service
+    const { data: existingKeys, error: fetchError } = await supabaseClient
+      .from("api_keys")
+      .select("id, service_name")
+      .eq("service_name", serviceName)
+      .limit(1);
+    
+    if (fetchError) {
+      console.error("Error fetching existing keys:", fetchError);
+      return { success: false, error: fetchError };
     }
     
-    let result;
+    const now = new Date().toISOString();
     
-    // If this key is being set as primary, reset other keys in the same category
+    // If primary is specified, reset other keys in the same category first
     if (isPrimary) {
-      console.log(`Setting ${serviceName} as primary key for ${category}. Resetting other keys...`);
-      const { error: resetError } = await resetPrimaryKeysInCategory(supabase, category);
+      console.log(`Setting this key as primary for category: ${category}`);
+      
+      const { error: resetError } = await supabaseClient
+        .from("api_keys")
+        .update({ is_primary: false, updated_at: now })
+        .eq("category", category);
       
       if (resetError) {
-        console.warn("Error resetting primary status for other keys:", resetError);
+        console.warn("Error resetting other keys' primary status:", resetError);
         // Continue anyway
       }
     }
     
+    // Prepare the record for insertion/update
+    const record = {
+      service_name: serviceName,
+      category: category,
+      api_key: apiKey,
+      base_url: baseUrl || "",
+      is_primary: isPrimary === true,
+      created_at: now,
+      updated_at: now,
+      last_validated: now,
+      validation_errors: null
+    };
+    
+    let result;
+    
+    // Update or insert based on whether the key exists
     if (existingKeys && existingKeys.length > 0) {
-      const existingKey = existingKeys[0];
-      console.log(`Found existing key for ${serviceName}, updating...`);
+      console.log(`Updating existing API key for ${serviceName}`);
       
-      // Update existing record
-      result = await updateApiKey(supabase, existingKey.id, {
-        apiKey,
-        category,
-        baseUrl: baseUrl || '',
-        isPrimary
-      });
+      const { data, error } = await supabaseClient
+        .from("api_keys")
+        .update({
+          ...record,
+          updated_at: now
+        })
+        .eq("id", existingKeys[0].id)
+        .select();
+      
+      result = { success: !error, data, error };
     } else {
-      console.log(`No existing key for ${serviceName}, inserting new...`);
-      // Insert new record
-      result = await insertApiKey(supabase, {
-        serviceName,
-        category,
-        apiKey,
-        baseUrl: baseUrl || '',
-        isPrimary
-      });
-    }
-    
-    if (result.error) {
-      console.error("Error updating/inserting API key:", result.error);
-      return { error: result.error };
-    }
-    
-    // Fetch and return the updated record
-    const { data: updatedKeys, error: fetchError } = await fetchUpdatedApiKey(supabase, serviceName);
+      console.log(`Creating new API key for ${serviceName}`);
       
-    if (fetchError) {
-      console.error("Error fetching updated key:", fetchError);
-      return { 
-        success: true, 
-        data: result.data, 
-        warning: "Successfully saved but couldn't fetch updated record" 
-      };
+      const { data, error } = await supabaseClient
+        .from("api_keys")
+        .insert(record)
+        .select();
+      
+      result = { success: !error, data, error };
     }
     
-    if (!updatedKeys || updatedKeys.length === 0) {
-      console.error("No records found after update/insert");
-      return { 
-        success: true, 
-        data: null, 
-        warning: "Successfully saved but couldn't find the record afterward" 
-      };
-    }
-    
-    console.log(`Successfully updated/inserted API key for ${serviceName}`);
-    return { success: true, data: updatedKeys[0] };
+    return result;
   } catch (error) {
-    console.error("Exception in database operation:", error);
-    return { error };
+    console.error("Error in updateOrInsertApiKey:", error);
+    return { success: false, error };
   }
 }

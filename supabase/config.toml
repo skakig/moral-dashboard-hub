@@ -71,10 +71,6 @@ url = ""
 [functions]
 # This block lets you configure the functions service.
 [functions.generate-article]
-# Deprecated: use verify_jwt instead
-# Specifies whether Function requires an API key from the request header X-API-KEY to be invoked.
-authorized_api_key_enabled = false
-# Specifies whether the Function requires a valid JWT in the request header to be invoked.
 verify_jwt = false
 [functions.validate-api-key]
 verify_jwt = false

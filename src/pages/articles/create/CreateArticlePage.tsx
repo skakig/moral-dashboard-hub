@@ -37,7 +37,8 @@ export default function CreateArticlePage() {
         contentLength: formattedData.content?.length || 0,
         hasVoiceUrl: Boolean(formattedData.voiceUrl),
         voiceGenerated: formattedData.voiceGenerated,
-        keywordsCount: formattedData.seo_keywords?.length || 0
+        keywordsCount: formattedData.seo_keywords?.length || 0,
+        moralLevel: formattedData.moralLevel
       });
 
       // Ensure we have required fields

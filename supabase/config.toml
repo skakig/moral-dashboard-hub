@@ -27,8 +27,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.generate-article]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-image]
-verify_jwt = false
-
+verify_jwt = true

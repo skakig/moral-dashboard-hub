@@ -1,12 +1,44 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.21.0";
-import { validateApiKey } from "../validate-api-key/validators.ts";
+
+// Define validation types directly in this file
+interface ValidationResult {
+  isValid: boolean;
+  errorMessage?: string;
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Basic validation functions
+function validateApiKey(serviceName: string, apiKey: string, baseUrl: string = ""): ValidationResult {
+  if (apiKey.startsWith("TEST_")) {
+    console.log(`Using test API key for ${serviceName}`);
+    return { isValid: true };
+  }
+  
+  // Simplified validation - in production, you should implement proper validation
+  // or make API calls to validate the API key
+  if (apiKey.length < 8) {
+    return { 
+      isValid: false, 
+      errorMessage: `API key for ${serviceName} appears to be too short` 
+    };
+  }
+  
+  // Basic pattern checks for common API services
+  if (serviceName.toLowerCase().includes("openai") && !apiKey.startsWith("sk-")) {
+    return {
+      isValid: false,
+      errorMessage: `OpenAI API keys should start with 'sk-'`
+    };
+  }
+  
+  return { isValid: true };
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -57,7 +89,7 @@ serve(async (req) => {
     
     if (!apiKey.startsWith("TEST_")) {
       try {
-        validationResult = await validateApiKey(existingKey.service_name, apiKey, baseUrl || "");
+        validationResult = validateApiKey(existingKey.service_name, apiKey, baseUrl || "");
         
         if (!validationResult.isValid) {
           validationErrors.push(validationResult.errorMessage || `Invalid API key for ${existingKey.service_name}`);

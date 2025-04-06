@@ -38,7 +38,7 @@ export class EdgeFunctionService {
           toast.warning(`Retrying request... (Attempt ${currentAttempt}/${retries + 1})`);
         }
         
-        console.log(`Calling edge function ${functionName} (Attempt ${currentAttempt}/${retries + 1}):`, 
+        console.log(`Calling edge function ${functionName} with payload:`, 
           functionName === 'generate-voice' 
             ? { voiceId: payload.voiceId, textLength: payload.text?.length || 0 } 
             : payload
@@ -49,7 +49,7 @@ export class EdgeFunctionService {
           setTimeout(() => reject(new Error(`Request to ${functionName} timed out after ${timeout}ms`)), timeout);
         });
         
-        // Create the actual request promise - with proper auth handling
+        // Create the actual request promise
         const requestPromise = supabase.functions.invoke<EdgeFunctionResponse<T>>(
           functionName,
           { 
@@ -62,11 +62,13 @@ export class EdgeFunctionService {
         
         // Check if the response contains an error property
         if (response.error) {
+          console.error(`Error from ${functionName}:`, response.error);
           throw new Error(response.error.message || `Failed to call ${functionName}`);
         }
         
         // Check if the data property contains an error property
         if (response.data?.error) {
+          console.error(`Error in response data from ${functionName}:`, response.data.error);
           throw new Error(response.data.error);
         }
         
@@ -141,6 +143,18 @@ export class EdgeFunctionService {
       // Log that we're generating content
       console.log('Generating article with parameters:', params);
       
+      // Ensure we have the required parameters
+      if (!params.theme || !params.theme.trim()) {
+        throw new Error("Theme is required for article generation");
+      }
+      
+      // Ensure keywords is an array if provided
+      const normalizedParams = {
+        ...params,
+        keywords: Array.isArray(params.keywords) ? params.keywords : 
+                  (typeof params.keywords === 'string' ? [params.keywords] : [])
+      };
+      
       return await this.callFunction<{
         title: string;
         content: string;
@@ -148,7 +162,7 @@ export class EdgeFunctionService {
         keywords?: string[];
       }>(
         'generate-article',
-        params,
+        normalizedParams,
         { 
           retries: 3, // Increased retries for article generation
           retryDelay: 3000,
@@ -182,4 +196,3 @@ export class EdgeFunctionService {
       throw error;
     }
   }
-}

@@ -196,3 +196,4 @@ export class EdgeFunctionService {
       throw error;
     }
   }
+}

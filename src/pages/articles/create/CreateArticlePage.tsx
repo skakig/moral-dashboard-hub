@@ -21,10 +21,14 @@ export default function CreateArticlePage() {
     setIsSaving(true);
     setError(null);
     try {
-      // Convert comma-separated keywords string to array
+      // Format SEO keywords if they exist
       const formattedData = {
         ...data,
-        seo_keywords: data.seoKeywords ? data.seoKeywords.split(',').map((k: string) => k.trim()) : []
+        seo_keywords: data.seoKeywords 
+          ? (typeof data.seoKeywords === 'string' 
+              ? data.seoKeywords.split(',').map((k: string) => k.trim()) 
+              : data.seoKeywords) 
+          : []
       };
 
       console.log("Creating article from standalone page:", {
@@ -32,7 +36,8 @@ export default function CreateArticlePage() {
         hasContent: Boolean(formattedData.content),
         contentLength: formattedData.content?.length || 0,
         hasVoiceUrl: Boolean(formattedData.voiceUrl),
-        voiceGenerated: formattedData.voiceGenerated
+        voiceGenerated: formattedData.voiceGenerated,
+        keywordsCount: formattedData.seo_keywords?.length || 0
       });
 
       // Ensure we have required fields
@@ -67,6 +72,7 @@ export default function CreateArticlePage() {
         articleTitle: data.title
       });
       setError(processedError);
+      toast.error(`Failed to create article: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsSaving(false);
     }

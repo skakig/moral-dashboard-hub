@@ -8,14 +8,12 @@ import { ArticleFormValues } from "@/components/articles/form";
  */
 export const mapFormToDbArticle = (formValues: Partial<ArticleFormValues> & { id?: string, publish_date?: string }) => {
   // Extract keywords from comma-separated string if present
-  let seoKeywords;
+  let seoKeywords: string[] = [];
   
   if (Array.isArray(formValues.seoKeywords)) {
-    seoKeywords = formValues.seoKeywords;
+    seoKeywords = formValues.seoKeywords.filter(Boolean);
   } else if (typeof formValues.seoKeywords === 'string' && formValues.seoKeywords.trim() !== '') {
     seoKeywords = formValues.seoKeywords.split(',').map(k => k.trim()).filter(Boolean);
-  } else {
-    seoKeywords = [];
   }
     
   // Log what we're saving to help debug
@@ -27,7 +25,8 @@ export const mapFormToDbArticle = (formValues: Partial<ArticleFormValues> & { id
     voiceFileName: formValues.voiceFileName,
     hasVoiceBase64: Boolean(formValues.voiceBase64),
     publishDate: formValues.publish_date,
-    keywordsCount: seoKeywords.length
+    keywordsCount: seoKeywords.length,
+    moralLevel: formValues.moralLevel
   });
   
   // Create the article object, handling both partial and complete updates
@@ -44,6 +43,7 @@ export const mapFormToDbArticle = (formValues: Partial<ArticleFormValues> & { id
   if (formValues.voiceGenerated !== undefined) article.voice_generated = formValues.voiceGenerated || false;
   if (formValues.voiceFileName !== undefined) article.voice_file_name = formValues.voiceFileName || null;
   if (formValues.voiceBase64 !== undefined) article.voice_base64 = formValues.voiceBase64 || null;
+  
   if (formValues.moralLevel !== undefined) {
     let moralLevel: number;
     if (typeof formValues.moralLevel === 'string') {

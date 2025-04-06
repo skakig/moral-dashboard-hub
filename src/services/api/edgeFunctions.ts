@@ -25,7 +25,7 @@ export class EdgeFunctionService {
       retryDelay = 1500, 
       silent = false,
       customErrorMessage,
-      timeout = 60000 // Increased default timeout to 60 seconds
+      timeout = 60000 // Default timeout to 60 seconds
     } = options;
     
     let currentAttempt = 0;
@@ -60,15 +60,13 @@ export class EdgeFunctionService {
         // Race the request against the timeout
         const response = await Promise.race([requestPromise, timeoutPromise]);
         
-        // Handle HTTP-level errors
+        // Check if the response contains an error property
         if (response.error) {
-          console.error(`Edge function HTTP error (${functionName}):`, response.error);
           throw new Error(response.error.message || `Failed to call ${functionName}`);
         }
         
-        // Handle application-level errors
+        // Check if the data property contains an error property
         if (response.data?.error) {
-          console.error(`Function response error (${functionName}):`, response.data.error, response.data.details || '');
           throw new Error(response.data.error);
         }
         
@@ -139,27 +137,35 @@ export class EdgeFunctionService {
     contentLength?: string;
     tone?: string;
   }) {
-    return this.callFunction<{
-      title: string;
-      content: string;
-      metaDescription?: string;
-      keywords?: string[];
-    }>(
-      'generate-article',
-      params,
-      { 
-        retries: 3, // Increased retries for article generation
-        retryDelay: 3000,
-        timeout: 90000, // Increased timeout for article generation to 90 seconds
-        customErrorMessage: 'Content generation failed. Please try again later or with a simpler theme.'
-      }
-    );
+    try {
+      // Log that we're generating content
+      console.log('Generating article with parameters:', params);
+      
+      return await this.callFunction<{
+        title: string;
+        content: string;
+        metaDescription?: string;
+        keywords?: string[];
+      }>(
+        'generate-article',
+        params,
+        { 
+          retries: 3, // Increased retries for article generation
+          retryDelay: 3000,
+          timeout: 90000, // Increased timeout for article generation to 90 seconds
+          customErrorMessage: 'Content generation failed. Please try again later or with a simpler theme.'
+        }
+      );
+    } catch (error) {
+      console.error("Article generation error:", error);
+      throw error;
+    }
   }
 
   static async generateImage(prompt: string) {
-    console.log('Calling generateImage with prompt:', prompt);
-    
     try {
+      console.log('Calling generateImage with prompt:', prompt);
+      
       return await this.callFunction<{
         image: string;
       }>(

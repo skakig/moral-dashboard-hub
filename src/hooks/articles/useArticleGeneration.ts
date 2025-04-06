@@ -19,7 +19,7 @@ interface GenerateArticleParams {
 export function useArticleGeneration() {
   const [loading, setLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3; // Increased max retries
+  const MAX_RETRIES = 3;
   
   // Generate article using AI
   const generateArticle = async (params: GenerateArticleParams) => {
@@ -38,13 +38,13 @@ export function useArticleGeneration() {
         return null;
       }
 
-      // Safely handle keywords, ensuring it's always an array
+      // Safely handle keywords, ensuring it's always an array of strings
       let keywordsArray: string[] = [];
       
       if (Array.isArray(params.keywords)) {
-        keywordsArray = params.keywords;
-      } else if (typeof params.keywords === 'string' && params.keywords) {
-        keywordsArray = params.keywords.split(',').map(k => k.trim());
+        keywordsArray = params.keywords.filter(k => typeof k === 'string');
+      } else if (typeof params.keywords === 'string' && params.keywords.trim()) {
+        keywordsArray = params.keywords.split(',').map(k => k.trim()).filter(Boolean);
       }
 
       // Prepare the parameters with properly formatted keywords
@@ -57,10 +57,13 @@ export function useArticleGeneration() {
         theme: normalizedParams.theme,
         contentType: normalizedParams.contentType,
         keywordCount: normalizedParams.keywords.length,
-        moralLevel: normalizedParams.moralLevel
+        moralLevel: normalizedParams.moralLevel,
+        platform: normalizedParams.platform,
+        contentLength: normalizedParams.contentLength,
+        tone: normalizedParams.tone
       });
 
-      // Invoke the edge function with more resilient error handling
+      // Invoke the edge function with better error handling
       const result = await EdgeFunctionService.generateArticle(normalizedParams);
       
       if (result) {

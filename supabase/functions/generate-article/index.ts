@@ -32,7 +32,7 @@ serve(async (req) => {
       );
     }
 
-    // Parse request data with more robust error handling
+    // Parse request data with robust error handling
     let requestData;
     try {
       requestData = await req.json();

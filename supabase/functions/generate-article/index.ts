@@ -18,6 +18,7 @@ serve(async (req) => {
 
   try {
     if (!openAIApiKey) {
+      console.error("OpenAI API key is not configured");
       return new Response(
         JSON.stringify({ error: 'OpenAI API key is not configured' }),
         { 
@@ -32,6 +33,7 @@ serve(async (req) => {
     try {
       requestBody = await req.json();
     } catch (parseError) {
+      console.error("Invalid request body:", parseError);
       return new Response(
         JSON.stringify({ error: 'Invalid request body: ' + parseError.message }),
         { 
@@ -52,6 +54,7 @@ serve(async (req) => {
     } = requestBody;
     
     if (!theme) {
+      console.error("Theme is required but not provided");
       return new Response(
         JSON.stringify({ error: 'Theme is required' }),
         { 
@@ -116,7 +119,8 @@ serve(async (req) => {
       "keywords": ["keyword1", "keyword2"]
     }`;
 
-    // Call OpenAI
+    console.log("Sending request to OpenAI API");
+    
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -152,6 +156,7 @@ serve(async (req) => {
         );
       }
 
+      console.log("Received response from OpenAI");
       const openAiResponse = await response.json();
       
       // Check if we got a valid response
@@ -168,19 +173,55 @@ serve(async (req) => {
 
       let result;
       const content = openAiResponse.choices[0].message.content;
+      console.log("Got content from OpenAI, parsing...");
       
       try {
         // Try to parse the response as JSON
-        result = JSON.parse(content);
+        // Find JSON object in the response
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : content;
+        
+        try {
+          result = JSON.parse(jsonString);
+        } catch (innerError) {
+          // If direct parsing fails, try a more lenient approach
+          console.warn("Direct JSON parsing failed, trying alternative approach:", innerError);
+          
+          // Try to extract the JSON structure with regex
+          const titleMatch = content.match(/"title":\s*"([^"]*)"/);
+          const contentMatch = content.match(/"content":\s*"([^"]*)"/);
+          const metaMatch = content.match(/"metaDescription":\s*"([^"]*)"/);
+          
+          if (titleMatch || contentMatch) {
+            result = {
+              title: titleMatch ? titleMatch[1] : theme,
+              content: contentMatch ? contentMatch[1] : content,
+              metaDescription: metaMatch ? metaMatch[1] : '',
+              keywords: []
+            };
+          } else {
+            // Ultimate fallback - use the raw text
+            result = {
+              title: theme || "Generated Content",
+              content: content,
+              metaDescription: '',
+              keywords: []
+            };
+          }
+        }
         
         // Validate required fields
-        if (!result.title || !result.content) {
-          throw new Error("Missing required fields in response");
+        if (!result.title) {
+          result.title = theme || "Generated Content";
+        }
+        
+        if (!result.content) {
+          result.content = content;
         }
         
         console.log("Generated content successfully:", {
           title: result.title,
-          contentLength: result.content.length,
+          contentLength: result.content?.length || 0,
           hasMetaDescription: Boolean(result.metaDescription)
         });
         
@@ -197,7 +238,7 @@ serve(async (req) => {
         console.log("Raw content:", content);
         
         // Try to extract a title and content from the raw text as a fallback
-        let title = '';
+        let title = theme || 'Generated Content';
         let extractedContent = content;
         
         // Try to split by newlines and extract a title
@@ -213,14 +254,14 @@ serve(async (req) => {
           }
           
           // Use the rest as content
-          if (title) {
+          if (title !== theme) {
             extractedContent = lines.slice(1).join('\n').trim();
           }
         }
         
         return new Response(
           JSON.stringify({ 
-            title: title || 'Generated Content',
+            title: title,
             content: extractedContent,
             metaDescription: '',
             keywords: []

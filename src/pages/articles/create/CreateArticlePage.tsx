@@ -20,13 +20,14 @@ export default function CreateArticlePage() {
   const handleSubmit = async (data: any) => {
     setIsSaving(true);
     setError(null);
+    
     try {
       // Format SEO keywords if they exist
       const formattedData = {
         ...data,
         seo_keywords: data.seoKeywords 
           ? (typeof data.seoKeywords === 'string' 
-              ? data.seoKeywords.split(',').map((k: string) => k.trim()) 
+              ? data.seoKeywords.split(',').map((k: string) => k.trim()).filter(Boolean) 
               : data.seoKeywords) 
           : []
       };
@@ -48,7 +49,14 @@ export default function CreateArticlePage() {
         return;
       }
 
-      // Make the mutation in a try-catch block for better error handling
+      if (!formattedData.content) {
+        toast.warning("Content is empty. Are you sure you want to create an article without content?");
+        // We continue anyway as this might be intentional
+      }
+
+      // Make the mutation with improved error handling
+      toast.info("Creating article...");
+      
       const result = await createArticle.mutateAsync(formattedData);
       
       console.log("Article creation result:", {
@@ -57,23 +65,34 @@ export default function CreateArticlePage() {
         success: Boolean(result)
       });
       
-      toast.success("Article created successfully");
+      toast.success(`"${formattedData.title}" created successfully`);
       
       // Invalidate the articles query to ensure the list is refreshed
       await queryClient.invalidateQueries({ queryKey: ['articles'] });
       
-      // Give Supabase a moment to complete the transaction
+      // Navigate back to the articles list after a short delay
       setTimeout(() => {
-        navigate("/articles"); // Return to articles list
+        navigate("/articles");
       }, 1000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving article:', error);
+      
+      // Enhanced error logging
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause
+      });
+
       const processedError = handleError(error, {
         component: 'CreateArticlePage',
         action: 'create-article',
         articleTitle: data.title
       });
+      
       setError(processedError);
+      
       toast.error(`Failed to create article: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsSaving(false);
@@ -105,13 +124,14 @@ export default function CreateArticlePage() {
             title="Error creating article"
             variant="destructive"
             showRetry={false}
+            className="mb-6"
           />
         )}
         
         <div className="max-w-5xl mx-auto">
           <ArticleForm
             onSubmit={handleSubmit}
-            submitLabel="Create Article"
+            submitLabel={isSaving ? "Creating..." : "Create Article"}
             onCancel={() => navigate("/articles")}
             isLoading={isSaving}
           />

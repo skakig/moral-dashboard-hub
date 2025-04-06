@@ -24,8 +24,8 @@ serve(async (req) => {
       );
     }
     
-    // Here you would typically validate the API key against the service
-    // For this example, we'll just simulate a successful validation
+    // For now, just simulate a valid API key for any service
+    console.log(`API key validation requested for service: ${service || "unknown"}`);
     
     return new Response(
       JSON.stringify({
@@ -38,6 +38,8 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    console.error("Error validating API key:", error);
+    
     return new Response(
       JSON.stringify({ 
         error: `Error validating API key: ${error.message}` 

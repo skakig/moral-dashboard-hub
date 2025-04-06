@@ -60,6 +60,10 @@ export class EdgeFunctionService {
         // Race the request against the timeout
         const response = await Promise.race([requestPromise, timeoutPromise]);
         
+        if (!response) {
+          throw new Error(`Received empty response from ${functionName}`);
+        }
+        
         // Check if the response contains an error property
         if (response.error) {
           console.error(`Error from ${functionName}:`, response.error);

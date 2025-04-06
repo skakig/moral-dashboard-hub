@@ -48,6 +48,7 @@ export default function CreateArticlePage() {
         return;
       }
 
+      // Make the mutation in a try-catch block for better error handling
       const result = await createArticle.mutateAsync(formattedData);
       
       console.log("Article creation result:", {

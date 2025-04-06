@@ -27,7 +27,29 @@ serve(async (req) => {
       );
     }
 
-    const { theme, keywords = [], contentType = 'blog post', moralLevel = 5, platform = 'General', contentLength = 'medium', tone = 'informative' } = await req.json();
+    // Safely parse the request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body: ' + parseError.message }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const { 
+      theme = '', 
+      keywords = [], 
+      contentType = 'blog post', 
+      moralLevel = 5, 
+      platform = 'General', 
+      contentLength = 'medium', 
+      tone = 'informative' 
+    } = requestBody;
     
     if (!theme) {
       return new Response(
@@ -95,103 +117,126 @@ serve(async (req) => {
     }`;
 
     // Call OpenAI
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openAIApiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // Using a reliable, fast model
-        messages: [
-          {
-            role: "system",
-            content: moralSystemPrompt
-          },
-          {
-            role: "user",
-            content: mainPrompt
-          }
-        ],
-        temperature: 0.7
-      })
-    });
-
-    const openAiResponse = await response.json();
-    
-    // Check if we got a valid response
-    if (!openAiResponse.choices || openAiResponse.choices.length === 0) {
-      console.error("Invalid response from OpenAI:", openAiResponse);
-      return new Response(
-        JSON.stringify({ error: 'Failed to generate content', details: openAiResponse.error?.message || 'Unknown error' }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    let result;
-    const content = openAiResponse.choices[0].message.content;
-    
     try {
-      // Try to parse the response as JSON
-      result = JSON.parse(content);
-      
-      // Validate required fields
-      if (!result.title || !result.content) {
-        throw new Error("Missing required fields in response");
-      }
-      
-      console.log("Generated content successfully:", {
-        title: result.title,
-        contentLength: result.content.length,
-        hasMetaDescription: Boolean(result.metaDescription)
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openAIApiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini", // Using a reliable, fast model
+          messages: [
+            {
+              role: "system",
+              content: moralSystemPrompt
+            },
+            {
+              role: "user",
+              content: mainPrompt
+            }
+          ],
+          temperature: 0.7
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("OpenAI API error:", errorData);
+        return new Response(
+          JSON.stringify({ error: 'Failed to generate content', details: errorData.error?.message || 'API response error' }),
+          { 
+            status: response.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      const openAiResponse = await response.json();
       
-      // Return the formatted result
-      return new Response(
-        JSON.stringify(result),
-        { 
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      // Check if we got a valid response
+      if (!openAiResponse.choices || openAiResponse.choices.length === 0) {
+        console.error("Invalid response from OpenAI:", openAiResponse);
+        return new Response(
+          JSON.stringify({ error: 'Failed to generate content', details: openAiResponse.error?.message || 'Unknown error' }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      let result;
+      const content = openAiResponse.choices[0].message.content;
+      
+      try {
+        // Try to parse the response as JSON
+        result = JSON.parse(content);
+        
+        // Validate required fields
+        if (!result.title || !result.content) {
+          throw new Error("Missing required fields in response");
         }
-      );
-    } catch (error) {
-      console.error("Error parsing OpenAI response:", error);
-      console.log("Raw content:", content);
-      
-      // Try to extract a title and content from the raw text as a fallback
-      let title = '';
-      let extractedContent = content;
-      
-      // Try to split by newlines and extract a title
-      const lines = content.split('\n');
-      if (lines.length > 0) {
-        // Use the first non-empty line as title
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (trimmedLine && !trimmedLine.startsWith('{') && !trimmedLine.startsWith('"')) {
-            title = trimmedLine.replace(/^#+ /, ''); // Remove markdown headings
-            break;
+        
+        console.log("Generated content successfully:", {
+          title: result.title,
+          contentLength: result.content.length,
+          hasMetaDescription: Boolean(result.metaDescription)
+        });
+        
+        // Return the formatted result
+        return new Response(
+          JSON.stringify(result),
+          { 
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      } catch (error) {
+        console.error("Error parsing OpenAI response:", error);
+        console.log("Raw content:", content);
+        
+        // Try to extract a title and content from the raw text as a fallback
+        let title = '';
+        let extractedContent = content;
+        
+        // Try to split by newlines and extract a title
+        const lines = content.split('\n');
+        if (lines.length > 0) {
+          // Use the first non-empty line as title
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine && !trimmedLine.startsWith('{') && !trimmedLine.startsWith('"')) {
+              title = trimmedLine.replace(/^#+ /, ''); // Remove markdown headings
+              break;
+            }
+          }
+          
+          // Use the rest as content
+          if (title) {
+            extractedContent = lines.slice(1).join('\n').trim();
           }
         }
         
-        // Use the rest as content
-        if (title) {
-          extractedContent = lines.slice(1).join('\n').trim();
-        }
+        return new Response(
+          JSON.stringify({ 
+            title: title || 'Generated Content',
+            content: extractedContent,
+            metaDescription: '',
+            keywords: []
+          }),
+          { 
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
       }
-      
+    } catch (apiError) {
+      console.error("Error calling OpenAI API:", apiError);
       return new Response(
-        JSON.stringify({ 
-          title: title || 'Generated Content',
-          content: extractedContent,
-          metaDescription: '',
-          keywords: []
-        }),
+        JSON.stringify({ error: 'Failed to generate content', details: apiError.message }),
         { 
-          status: 200,
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );

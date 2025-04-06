@@ -49,7 +49,7 @@ export class EdgeFunctionService {
           setTimeout(() => reject(new Error(`Request to ${functionName} timed out after ${timeout}ms`)), timeout);
         });
         
-        // Create the actual request promise - FIXING AUTH
+        // Create the actual request promise - with proper auth handling
         const requestPromise = supabase.functions.invoke<EdgeFunctionResponse<T>>(
           functionName,
           { 

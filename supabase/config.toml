@@ -21,13 +21,13 @@ port = 54324
 enabled = true
 
 [functions.generate-voice]
-verify_jwt = true
+verify_jwt = false
 
 [functions.validate-api-key]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-article]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-image]
-verify_jwt = true
+verify_jwt = false

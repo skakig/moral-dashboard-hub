@@ -16,22 +16,36 @@ serve(async (req) => {
   }
 
   try {
-    const openAIApiKey = Deno.env.get("OPENAI_API_KEY") || Deno.env.get("OPEN_AI_TMH");
+    // Try multiple potential API key environment variables
+    const openAIApiKey = Deno.env.get("OPENAI_API_KEY") || 
+                        Deno.env.get("OPEN_AI_TMH") || 
+                        Deno.env.get("OPENAI_KEY") ||
+                        Deno.env.get("OPENAI_SECRET");
     
     if (!openAIApiKey) {
-      console.error("Missing API key: OPENAI_API_KEY or OPEN_AI_TMH");
+      console.error("Missing API key: No OpenAI API key found in environment variables");
       return new Response(
         JSON.stringify({ 
-          error: "OpenAI API key not configured. Please set OPENAI_API_KEY or OPEN_AI_TMH environment variable." 
+          error: "OpenAI API key not configured. Please set an OpenAI API key in your environment variables." 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
 
-    const requestData = await req.json().catch(e => {
-      console.error("Failed to parse request JSON:", e);
-      throw new Error("Invalid request format");
-    });
+    // Parse request data with more robust error handling
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("Failed to parse request JSON:", parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid request format. Please provide valid JSON.", 
+          details: parseError instanceof Error ? parseError.message : String(parseError)
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
     
     const {
       theme, 
@@ -63,7 +77,7 @@ serve(async (req) => {
     const tokenLimit = tokenLimits[contentLength as keyof typeof tokenLimits] || tokenLimits.medium;
     
     // Format keywords as string
-    const keywordsString = keywords.length > 0 
+    const keywordsString = Array.isArray(keywords) && keywords.length > 0 
       ? `Keywords: ${keywords.join(', ')}`
       : 'Generate appropriate keywords for this content';
 
@@ -84,91 +98,102 @@ Return ONLY a JSON object with this structure:
   "title": "A catchy title",
   "content": "The main content", 
   "metaDescription": "A brief SEO description",
-  "keywords": ["keyword1", "keyword2"]  // Optional array of relevant hashtags/keywords
+  "keywords": ["keyword1", "keyword2"]
 }`;
 
-    // Use gpt-4o-mini for faster responses
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openAIApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // Faster model
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 1500, // Limit response size for faster generation
-      }),
-    }).catch(error => {
-      console.error("Network error calling OpenAI:", error);
-      throw new Error("Failed to connect to OpenAI API. Please try again.");
-    });
+    try {
+      // Use gpt-4o-mini for faster responses
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openAIApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini", // Faster model
+          messages: [
+            { role: "system", content: systemMessage },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 1500, // Limit response size for faster generation
+        }),
+      });
 
-    if (!response.ok) {
-      let errorMessage = `OpenAI API error: ${response.status} ${response.statusText}`;
+      if (!response.ok) {
+        let errorMessage = `OpenAI API error: ${response.status} ${response.statusText}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error?.message || errorMessage;
+        } catch (e) {
+          // Use default error message if we can't parse the response
+        }
+        
+        console.error("OpenAI API error:", errorMessage);
+        return new Response(
+          JSON.stringify({ error: errorMessage }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: response.status }
+        );
+      }
+
+      const responseData = await response.json();
+      const generatedText = responseData.choices[0].message.content;
       
+      // Parse the JSON response from OpenAI with better error handling
+      let parsedContent;
       try {
-        const errorData = await response.json();
-        errorMessage = errorData.error?.message || errorMessage;
-      } catch (e) {
-        // Use default error message if we can't parse the response
+        // Try to extract JSON if it's wrapped in any code blocks or text
+        const jsonMatch = generatedText.match(/```json\s*([\s\S]*?)\s*```/) || 
+                          generatedText.match(/```\s*([\s\S]*?)\s*```/) || 
+                          generatedText.match(/{[\s\S]*}/);
+                          
+        const jsonString = jsonMatch ? jsonMatch[0].replace(/```json|```/g, '') : generatedText;
+        parsedContent = JSON.parse(jsonString);
+        
+        // Ensure we have required fields
+        if (!parsedContent.title || !parsedContent.content) {
+          throw new Error("Missing required fields in generated content");
+        }
+      } catch (error) {
+        console.error("Error parsing generated content:", error);
+        console.log("Raw content:", generatedText.substring(0, 500));
+        
+        // If JSON parsing fails, try to create a structured response from the raw text
+        const title = generatedText.split('\n')[0].replace(/^#+ /, '').trim();
+        const content = generatedText;
+        parsedContent = { 
+          title: title || theme, 
+          content: content || "Failed to generate structured content", 
+          metaDescription: theme
+        };
       }
       
-      console.error("OpenAI API error:", errorMessage);
+      console.log("Successfully generated content with title:", parsedContent.title);
+      
       return new Response(
-        JSON.stringify({ error: errorMessage }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: response.status }
+        JSON.stringify(parsedContent),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (apiError) {
+      console.error("Error calling OpenAI API:", apiError);
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to generate content with OpenAI", 
+          details: apiError instanceof Error ? apiError.message : String(apiError)
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500
+        }
       );
     }
-
-    const responseData = await response.json();
-    const generatedText = responseData.choices[0].message.content;
-    
-    // Parse the JSON response from OpenAI
-    let parsedContent;
-    try {
-      // Try to extract JSON if it's wrapped in any code blocks or text
-      const jsonMatch = generatedText.match(/```json\s*([\s\S]*?)\s*```/) || 
-                        generatedText.match(/```\s*([\s\S]*?)\s*```/) || 
-                        generatedText.match(/{[\s\S]*}/);
-                        
-      const jsonString = jsonMatch ? jsonMatch[0].replace(/```json|```/g, '') : generatedText;
-      parsedContent = JSON.parse(jsonString);
-      
-      // Ensure we have required fields
-      if (!parsedContent.title || !parsedContent.content) {
-        throw new Error("Missing required fields in generated content");
-      }
-    } catch (error) {
-      console.error("Error parsing generated content:", error);
-      console.log("Raw content:", generatedText.substring(0, 500));
-      
-      // If JSON parsing fails, try to create a structured response from the raw text
-      const title = generatedText.split('\n')[0].replace(/^#+ /, '').trim();
-      const content = generatedText;
-      parsedContent = { 
-        title: title || theme, 
-        content: content || "Failed to generate structured content", 
-        metaDescription: theme
-      };
-    }
-    
-    console.log("Successfully generated content with title:", parsedContent.title);
-    
-    return new Response(
-      JSON.stringify(parsedContent),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (error) {
     console.error("Content generation error:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || "Failed to generate content",
-        details: error.toString() 
+        error: error instanceof Error ? error.message : "Failed to generate content",
+        details: String(error)
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },

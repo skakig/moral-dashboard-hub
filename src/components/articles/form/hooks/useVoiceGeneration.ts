@@ -43,16 +43,20 @@ export function useVoiceGeneration(form: any) {
       toast.info('Generating voice content...');
       
       let textToConvert = content;
-      if (content.length > 5000) {
-        textToConvert = content.substring(0, 5000);
-        toast.warning("Content is too long for voice generation. Using first 5000 characters.");
+      if (content.length > 4000) {
+        textToConvert = content.substring(0, 4000);
+        toast.warning("Content is too long for voice generation. Using first 4000 characters.");
       }
       
-      // Call the edge function to generate voice
+      // Call the edge function to generate voice with improved error handling
       const result = await EdgeFunctionService.generateVoice(textToConvert, voiceId);
       
       if (!result) {
         throw new Error('Failed to generate voice content. Empty response received.');
+      }
+
+      if (!result.audioUrl || !result.base64Audio) {
+        throw new Error('Invalid response format from voice generation service.');
       }
 
       // Set the audio URL and update form values
@@ -75,7 +79,17 @@ export function useVoiceGeneration(form: any) {
       setRetryCount(0);
     } catch (error: any) {
       console.error('Voice generation error:', error);
-      toast.error(error.message || 'Failed to generate voice content.');
+      
+      const errorMessage = error.message || 'Failed to generate voice content.';
+      
+      // Check for potential API key issues
+      if (errorMessage.toLowerCase().includes('api key') || errorMessage.includes('401')) {
+        toast.error('Voice generation failed: API key issue. Please check your ElevenLabs API key.');
+      } else if (errorMessage.includes('429')) {
+        toast.error('Voice generation failed: Rate limit exceeded. Please try again later.');
+      } else {
+        toast.error(`Voice generation failed: ${errorMessage}`);
+      }
       
       // Increase retry count for next attempt, up to max retries
       if (retryCount < MAX_RETRIES) {

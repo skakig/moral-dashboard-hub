@@ -5,7 +5,7 @@ import { EdgeFunctionService } from "@/services/api/edgeFunctions";
 
 interface GenerateArticleParams {
   theme: string;
-  keywords: string[] | string;
+  keywords: string[] | string | undefined | null;
   contentType: string;
   moralLevel: number;
   platform?: string;
@@ -38,7 +38,7 @@ export function useArticleGeneration() {
         return null;
       }
 
-      // Prepare the parameters, ensuring keywords is an array
+      // Prepare the parameters, ensuring keywords is properly handled
       const normalizedParams = {
         ...params,
         keywords: Array.isArray(params.keywords) 

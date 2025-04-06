@@ -55,71 +55,90 @@ serve(async (req) => {
     // Safe text processing - convert to string and limit length
     let processedText = "";
     if (typeof text === 'string') {
-      processedText = text.substring(0, 5000); // Limit to 5000 characters
+      processedText = text.substring(0, 4000); // Reduced from 5000 to 4000 to avoid potential API limits
     } else {
-      processedText = String(text).substring(0, 5000);
+      processedText = String(text).substring(0, 4000);
     }
     
     // Log request details for debugging
     console.log(`Generating voice with ElevenLabs: length=${processedText.length}, voiceId=${finalVoiceId}`);
     
-    // Call ElevenLabs API
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${finalVoiceId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key": elevenLabsApiKey,
-      },
-      body: JSON.stringify({
-        text: processedText,
-        model_id: "eleven_multilingual_v2", // Using the more reliable multilingual model
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
+    try {
+      // Call ElevenLabs API with improved error handling
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${finalVoiceId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "xi-api-key": elevenLabsApiKey,
+          "Accept": "audio/mpeg",
         },
-      }),
-    });
+        body: JSON.stringify({
+          text: processedText,
+          model_id: "eleven_turbo_v2", // Using faster model which is more reliable
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          },
+        }),
+      });
 
-    // Handle API response errors
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`ElevenLabs API error (${response.status}): ${errorText}`);
+      // Handle API response errors
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`ElevenLabs API error (${response.status}): ${errorText}`);
+        return new Response(
+          JSON.stringify({ 
+            error: `ElevenLabs API error: ${response.status} ${response.statusText}`,
+            details: errorText
+          }),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: response.status
+          }
+        );
+      }
+
+      console.log("ElevenLabs response received successfully");
+      
+      // Process the audio response
+      const audioArrayBuffer = await response.arrayBuffer();
+      
+      // Check if the response is empty or invalid
+      if (!audioArrayBuffer || audioArrayBuffer.byteLength === 0) {
+        throw new Error("Received empty audio data from ElevenLabs");
+      }
+      
+      // Safely convert to base64
+      const base64Audio = btoa(
+        new Uint8Array(audioArrayBuffer)
+          .reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      const fileName = `voice_${Date.now()}.mp3`;
+
+      // Return the processed audio
+      return new Response(
+        JSON.stringify({
+          audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
+          fileName: fileName,
+          base64Audio: base64Audio,
+          service: "elevenlabs"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (apiError) {
+      console.error("ElevenLabs API call failed:", apiError);
       return new Response(
         JSON.stringify({ 
-          error: `ElevenLabs API error: ${response.status} ${response.statusText}`,
-          details: errorText
+          error: "Failed to generate audio with ElevenLabs", 
+          details: apiError instanceof Error ? apiError.message : String(apiError)
         }),
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: response.status
+          status: 500
         }
       );
     }
-
-    console.log("ElevenLabs response received successfully");
-    
-    // Process the audio response
-    const audioArrayBuffer = await response.arrayBuffer();
-    
-    // Safely convert to base64
-    const base64Audio = btoa(
-      new Uint8Array(audioArrayBuffer)
-        .reduce((data, byte) => data + String.fromCharCode(byte), '')
-    );
-
-    const fileName = `voice_${Date.now()}.mp3`;
-
-    // Return the processed audio
-    return new Response(
-      JSON.stringify({
-        audioUrl: `data:audio/mpeg;base64,${base64Audio}`,
-        fileName: fileName,
-        base64Audio: base64Audio,
-        service: "elevenlabs"
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
   } catch (error) {
     console.error("Voice generation error:", error);
     

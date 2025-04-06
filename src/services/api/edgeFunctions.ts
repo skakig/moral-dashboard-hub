@@ -60,17 +60,19 @@ export class EdgeFunctionService {
         // Race the request against the timeout
         const response = await Promise.race([requestPromise, timeoutPromise]);
         
+        // Handle HTTP-level errors
         if (response.error) {
           console.error(`Edge function HTTP error (${functionName}):`, response.error);
           throw new Error(response.error.message || `Failed to call ${functionName}`);
         }
         
+        // Handle application-level errors
         if (response.data?.error) {
           console.error(`Function response error (${functionName}):`, response.data.error, response.data.details || '');
           throw new Error(response.data.error);
         }
         
-        console.log(`Edge function ${functionName} response:`, 
+        console.log(`Edge function ${functionName} response success:`, 
           functionName === 'generate-voice' 
             ? { success: true, audioUrlLength: (response.data as any)?.audioUrl?.length || 0 }
             : { success: true }
@@ -87,8 +89,10 @@ export class EdgeFunctionService {
           throw error;
         }
         
-        // Exponential backoff
-        const delay = retryDelay * Math.pow(1.5, currentAttempt - 1);
+        // Exponential backoff with jitter for retries
+        const baseDelay = retryDelay * Math.pow(1.5, currentAttempt - 1);
+        const jitter = Math.random() * 300; // Add up to 300ms of jitter
+        const delay = baseDelay + jitter;
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -103,7 +107,7 @@ export class EdgeFunctionService {
       }
       
       // Trim text if it's very long to avoid API issues
-      const trimmedText = text.length > 5000 ? text.substring(0, 5000) + "..." : text;
+      const trimmedText = text.length > 4000 ? text.substring(0, 4000) + "..." : text;
       
       return await this.callFunction<{
         audioUrl: string;
@@ -114,7 +118,7 @@ export class EdgeFunctionService {
         'generate-voice',
         { text: trimmedText, voiceId },
         { 
-          retries: 2,
+          retries: 1, // Reduce retries for voice generation as it's expensive
           retryDelay: 2000,
           timeout: 60000, // 60 seconds for voice generation
           customErrorMessage: 'Voice generation failed. Please try again with shorter text.'
@@ -128,7 +132,7 @@ export class EdgeFunctionService {
 
   static async generateArticle(params: {
     theme: string;
-    keywords?: string[];
+    keywords?: string[] | null;
     contentType?: string;
     moralLevel?: number;
     platform?: string;
